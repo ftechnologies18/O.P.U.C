@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect x="4" y="4" width="112" height="112" rx="28" fill="url(#g)"/>
+  <!-- Building -->
+  <rect x="18" y="36" width="50" height="62" rx="3" fill="#1C1917"/>
+  <rect x="14" y="32" width="58" height="6" rx="2.5" fill="#1C1917"/>
+  <!-- Windows (checkerboard lit/unlit) -->
+  <rect x="24" y="42" width="8" height="8" rx="1.5" fill="#FEF3C7" opacity="0.95"/>
+  <rect x="38" y="42" width="8" height="8" rx="1.5" fill="#44403C" opacity="0.5"/>
+  <rect x="52" y="42" width="8" height="8" rx="1.5" fill="#FEF3C7" opacity="0.95"/>
+  <rect x="24" y="56" width="8" height="8" rx="1.5" fill="#44403C" opacity="0.5"/>
+  <rect x="38" y="56" width="8" height="8" rx="1.5" fill="#FEF3C7" opacity="0.95"/>
+  <rect x="52" y="56" width="8" height="8" rx="1.5" fill="#44403C" opacity="0.5"/>
+  <rect x="24" y="70" width="8" height="8" rx="1.5" fill="#FEF3C7" opacity="0.95"/>
+  <rect x="38" y="70" width="8" height="8" rx="1.5" fill="#44403C" opacity="0.5"/>
+  <rect x="52" y="70" width="8" height="8" rx="1.5" fill="#FEF3C7" opacity="0.95"/>
+  <rect x="24" y="84" width="8" height="8" rx="1.5" fill="#44403C" opacity="0.5"/>
+  <rect x="38" y="84" width="8" height="8" rx="1.5" fill="#FEF3C7" opacity="0.95"/>
+  <rect x="52" y="84" width="8" height="8" rx="1.5" fill="#44403C" opacity="0.5"/>
+  <!-- Side block -->
+  <rect x="6" y="70" width="16" height="26" rx="2" fill="#292524"/>
+  <rect x="9" y="74" width="4" height="4" rx="1" fill="#FEF3C7" opacity="0.8"/>
+  <rect x="15" y="74" width="4" height="4" rx="1" fill="#44403C" opacity="0.5"/>
+  <rect x="9" y="82" width="4" height="4" rx="1" fill="#44403C" opacity="0.5"/>
+  <rect x="15" y="82" width="4" height="4" rx="1" fill="#FEF3C7" opacity="0.8"/>
+  <!-- Crane mast -->
+  <rect x="78" y="14" width="7" height="84" rx="2.5" fill="#451A03"/>
+  <!-- Crane boom -->
+  <rect x="40" y="12" width="52" height="6" rx="2.5" fill="#451A03"/>
+  <polygon points="90,8 90,20 99,14" fill="#451A03"/>
+  <!-- Counter-jib -->
+  <rect x="66" y="12" width="16" height="6" rx="2.5" fill="#57534E"/>
+  <!-- Counterweight -->
+  <rect x="62" y="6" width="12" height="9" rx="2.5" fill="#57534E"/>
+  <!-- Cables -->
+  <line x1="84" y1="0" x2="98" y2="12" stroke="#FCD34D" stroke-width="2" stroke-linecap="round"/>
+  <line x1="84" y1="0" x2="66" y2="12" stroke="#FCD34D" stroke-width="2" stroke-linecap="round"/>
+  <!-- Hook -->
+  <line x1="96" y1="14" x2="96" y2="34" stroke="#FCD34D" stroke-width="1.8"/>
+  <path d="M92,34 L96,41 L100,34" stroke="#FCD34D" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Ground -->
+  <rect x="2" y="96" width="116" height="5" rx="2" fill="#78350F" opacity="0.5"/>
+</svg>
