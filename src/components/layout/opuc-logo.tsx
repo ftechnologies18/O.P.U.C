@@ -6,9 +6,9 @@ interface OpucLogoProps {
 
 /**
  * OPUC Logo — Professional construction management mark.
- * Combines a building structure with crane arm in a bold geometric composition.
+ * Dark silhouette building + crane on amber gradient for maximum contrast.
  */
-export function OpucLogo({ size = 40, className, variant = 'icon' }: OpucLogoProps) {
+export function OpucLogo({ size = 40, className }: OpucLogoProps) {
   return (
     <svg
       width={size}
@@ -22,133 +22,134 @@ export function OpucLogo({ size = 40, className, variant = 'icon' }: OpucLogoPro
       <defs>
         {/* Main gradient: amber → orange */}
         <linearGradient id="logoGradMain" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#F59E0B" />
-          <stop offset="50%" stopColor="#F97316" />
-          <stop offset="100%" stopColor="#EA580C" />
+          <stop offset="0%" stopColor="#FBBF24" />
+          <stop offset="50%" stopColor="#F59E0B" />
+          <stop offset="100%" stopColor="#D97706" />
         </linearGradient>
 
-        {/* Crane / accent gradient */}
-        <linearGradient id="logoGradAccent" x1="0" y1="0" x2="80" y2="60" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#FCD34D" />
-          <stop offset="100%" stopColor="#F59E0B" />
+        {/* Crane gradient */}
+        <linearGradient id="logoGradCrane" x1="0" y1="0" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#78350F" />
+          <stop offset="100%" stopColor="#451A03" />
         </linearGradient>
 
-        {/* Inner glow */}
-        <linearGradient id="logoGradInner" x1="60" y1="0" x2="60" y2="120" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="white" stopOpacity="0.25" />
+        {/* Building gradient */}
+        <linearGradient id="logoGradBldg" x1="20" y1="30" x2="70" y2="100" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#1C1917" />
+          <stop offset="100%" stopColor="#292524" />
+        </linearGradient>
+
+        {/* Window glow */}
+        <linearGradient id="logoGradWin" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#FEF3C7" />
+          <stop offset="100%" stopColor="#FDE68A" />
+        </linearGradient>
+
+        {/* Inner glass highlight */}
+        <linearGradient id="logoGradShine" x1="60" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="white" stopOpacity="0.30" />
           <stop offset="100%" stopColor="white" stopOpacity="0" />
         </linearGradient>
 
-        {/* Drop shadow filter */}
-        <filter id="logoShadow" x="-10%" y="-10%" width="130%" height="130%">
-          <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#F97316" floodOpacity="0.35" />
+        {/* Drop shadow */}
+        <filter id="logoShadow" x="-15%" y="-10%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#92400E" floodOpacity="0.4" />
         </filter>
 
-        {/* Clip for rounded container */}
         <clipPath id="logoClip">
           <rect x="4" y="4" width="112" height="112" rx="28" />
         </clipPath>
       </defs>
 
-      {/* Background container with gradient */}
-      <rect
-        x="4" y="4"
-        width="112" height="112"
-        rx="28"
-        fill="url(#logoGradMain)"
-        filter="url(#logoShadow)"
-      />
+      {/* ═══ Background Container ═══ */}
+      <rect x="4" y="4" width="112" height="112" rx="28" fill="url(#logoGradMain)" filter="url(#logoShadow)" />
 
-      {/* Subtle inner glass effect */}
-      <rect
-        x="4" y="4"
-        width="112" height="56"
-        rx="28"
-        fill="url(#logoGradInner)"
-        clipPath="url(#logoClip)"
-      />
+      {/* Top glass highlight */}
+      <rect x="4" y="4" width="112" height="50" rx="28" fill="url(#logoGradShine)" clipPath="url(#logoClip)" />
 
       <g clipPath="url(#logoClip)">
-        {/* ═══ Building Structure ═══ */}
-        {/* Main tower body */}
-        <rect x="22" y="38" width="48" height="58" rx="3" fill="white" fillOpacity="0.95" />
+        {/* ═══════════════════════════════
+            BUILDING STRUCTURE — dark silhouette
+           ═══════════════════════════════ */}
+        {/* Main tower */}
+        <rect x="18" y="36" width="50" height="62" rx="3" fill="url(#logoGradBldg)" />
 
-        {/* Tower floors — window grid */}
-        {[0, 1, 2, 3].map((row) => (
-          <g key={`row-${row}`}>
-            {[0, 1, 2].map((col) => (
+        {/* Roof cornice */}
+        <rect x="14" y="32" width="58" height="6" rx="2.5" fill="#1C1917" />
+        <rect x="16" y="30" width="54" height="3" rx="1.5" fill="#292524" />
+
+        {/* Roof antenna */}
+        <rect x="43" y="22" width="2" height="10" fill="#44403C" />
+        <circle cx="44" cy="20" r="2" fill="#EF4444" />
+
+        {/* ═══ Windows — glowing amber/yellow ═══ */}
+        {[0, 1, 2, 3].map((row) =>
+          [0, 1, 2].map((col) => {
+            const lit = (row + col) % 2 !== 0
+            return (
               <rect
-                key={`win-${row}-${col}`}
-                x={28 + col * 14}
-                y={44 + row * 14}
-                width="8" height="8"
+                key={`w-${row}-${col}`}
+                x={24 + col * 14}
+                y={42 + row * 14}
+                width="8"
+                height="8"
                 rx="1.5"
-                fill={row < 3 && col < 2 ? "url(#logoGradMain)" : "white"}
-                fillOpacity={row < 3 && col < 2 ? 0.7 : 0.85}
+                fill={lit ? "url(#logoGradWin)" : "#44403C"}
+                opacity={lit ? 0.95 : 0.5}
               />
-            ))}
-          </g>
-        ))}
+            )
+          })
+        )}
 
-        {/* Tower roof detail */}
-        <rect x="18" y="34" width="56" height="6" rx="2" fill="white" fillOpacity="0.95" />
+        {/* ═══ Secondary block (left) ═══ */}
+        <rect x="6" y="70" width="16" height="26" rx="2" fill="#292524" />
+        <rect x="9" y="74" width="4" height="4" rx="1" fill="url(#logoGradWin)" opacity="0.8" />
+        <rect x="15" y="74" width="4" height="4" rx="1" fill="#44403C" opacity="0.5" />
+        <rect x="9" y="82" width="4" height="4" rx="1" fill="#44403C" opacity="0.5" />
+        <rect x="15" y="82" width="4" height="4" rx="1" fill="url(#logoGradWin)" opacity="0.8" />
 
-        {/* ═══ Crane Arm ═══ */}
+        {/* ═══════════════════════════════
+            CRANE — dark with gold cables
+           ═══════════════════════════════ */}
         {/* Vertical mast */}
-        <rect x="76" y="18" width="6" height="78" rx="2" fill="url(#logoGradAccent)" />
+        <rect x="78" y="14" width="7" height="84" rx="2.5" fill="url(#logoGradCrane)" />
 
         {/* Horizontal boom */}
-        <rect x="42" y="16" width="50" height="5" rx="2" fill="url(#logoGradAccent)" />
+        <rect x="40" y="12" width="52" height="6" rx="2.5" fill="url(#logoGradCrane)" />
 
-        {/* Boom tip triangle */}
-        <polygon points="90,13 90,24 98,18.5" fill="#FCD34D" />
+        {/* Boom tip arrow */}
+        <polygon points="90,8 90,20 99,14" fill="#451A03" />
 
-        {/* Counter-jib (short side) */}
-        <rect x="68" y="16" width="14" height="5" rx="2" fill="#FBBF24" />
+        {/* Counter-jib */}
+        <rect x="66" y="12" width="16" height="6" rx="2.5" fill="#57534E" />
 
         {/* Counterweight */}
-        <rect x="64" y="12" width="10" height="7" rx="2" fill="white" fillOpacity="0.8" />
+        <rect x="62" y="6" width="12" height="9" rx="2.5" fill="#57534E" />
+        <rect x="64" y="8" width="8" height="5" rx="1.5" fill="#44403C" />
 
-        {/* Crane support cables (lines) */}
-        <line x1="82" y1="4" x2="95" y2="16" stroke="#FCD34D" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="82" y1="4" x2="68" y2="16" stroke="#FCD34D" strokeWidth="1.5" strokeLinecap="round" />
+        {/* ═══ Crane cables — gold ═══ */}
+        <line x1="84" y1="0" x2="98" y2="12" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
+        <line x1="84" y1="0" x2="66" y2="12" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
 
-        {/* Crane hook (dangling from boom tip) */}
-        <line x1="95" y1="18.5" x2="95" y2="32" stroke="#FCD34D" strokeWidth="1.2" strokeLinecap="round" />
-        <path d="M91,32 L95,38 L99,32" stroke="#FCD34D" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Crane cabin */}
+        <rect x="76" y="14" width="11" height="9" rx="2" fill="#44403C" />
+        <rect x="78" y="16" width="7" height="4" rx="1" fill="url(#logoGradWin)" opacity="0.6" />
 
-        {/* Crane base (on the building) */}
-        <rect x="73" y="94" width="12" height="6" rx="2" fill="white" fillOpacity="0.6" />
+        {/* Crane hook */}
+        <line x1="96" y1="14" x2="96" y2="34" stroke="#FCD34D" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M92,34 L96,41 L100,34" stroke="#FCD34D" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
 
-        {/* ═══ Ground / Foundation line ═══ */}
-        <rect x="14" y="96" width="92" height="4" rx="2" fill="white" fillOpacity="0.3" />
+        {/* ═══ Ground line ═══ */}
+        <rect x="2" y="96" width="116" height="5" rx="2" fill="#78350F" opacity="0.5" />
 
-        {/* Small construction elements — concrete block */}
-        <rect x="14" y="72" width="14" height="22" rx="2" fill="white" fillOpacity="0.4" />
-        <line x1="21" y1="72" x2="21" y2="94" stroke="white" strokeOpacity="0.25" strokeWidth="1" />
-
-        {/* Tiny scaffolding detail */}
-        <rect x="14" y="68" width="1.5" height="4" fill="white" fillOpacity="0.3" />
-        <rect x="26.5" y="68" width="1.5" height="4" fill="white" fillOpacity="0.3" />
-        <rect x="14" y="70" width="14" height="1.2" fill="white" fillOpacity="0.2" />
-
-        {/* ═══ Decorative dots — construction particles ═══ */}
-        <circle cx="100" cy="45" r="1.8" fill="white" fillOpacity="0.5" />
-        <circle cx="106" cy="52" r="1.2" fill="white" fillOpacity="0.35" />
-        <circle cx="97" cy="56" r="1" fill="white" fillOpacity="0.25" />
-        <circle cx="104" cy="40" r="0.8" fill="white" fillOpacity="0.3" />
+        {/* ═══ Scaffolding detail ═══ */}
+        <rect x="5" y="66" width="1.5" height="6" fill="#57534E" />
+        <rect x="21.5" y="66" width="1.5" height="6" fill="#57534E" />
+        <rect x="5" y="69" width="18" height="1.5" fill="#57534E" />
       </g>
 
-      {/* Border highlight — top-left shine */}
-      <rect
-        x="4" y="4"
-        width="112" height="112"
-        rx="28"
-        fill="none"
-        stroke="white"
-        strokeOpacity="0.15"
-        strokeWidth="1.5"
-      />
+      {/* ═══ Border highlight ═══ */}
+      <rect x="4" y="4" width="112" height="112" rx="28" fill="none" stroke="white" strokeOpacity="0.18" strokeWidth="1.5" />
     </svg>
   )
 }
@@ -168,33 +169,36 @@ export function OpucLogoSmall({ size = 16, className }: { size?: number; classNa
     >
       <defs>
         <linearGradient id="smGrad" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#F59E0B" />
-          <stop offset="100%" stopColor="#EA580C" />
+          <stop offset="0%" stopColor="#FBBF24" />
+          <stop offset="100%" stopColor="#D97706" />
         </linearGradient>
       </defs>
       <rect x="4" y="4" width="112" height="112" rx="28" fill="url(#smGrad)" />
-      {/* Simplified building */}
-      <rect x="22" y="38" width="48" height="58" rx="3" fill="white" fillOpacity="0.95" />
+      {/* Building */}
+      <rect x="18" y="36" width="50" height="62" rx="3" fill="#1C1917" />
+      <rect x="14" y="32" width="58" height="6" rx="2.5" fill="#1C1917" />
+      {/* Windows — lit pattern */}
       {[0, 1, 2, 3].map((r) =>
         [0, 1, 2].map((c) => (
-          <rect key={`${r}-${c}`} x={28 + c * 14} y={44 + r * 14} width="8" height="8" rx="1.5"
-            fill={r < 3 && c < 2 ? '#EA580C' : 'white'} fillOpacity={r < 3 && c < 2 ? 0.7 : 0.85} />
+          <rect key={`${r}-${c}`} x={24 + c * 14} y={42 + r * 14} width="8" height="8" rx="1.5"
+            fill={(r + c) % 2 !== 0 ? '#FEF3C7' : '#44403C'} opacity={(r + c) % 2 !== 0 ? 0.95 : 0.5} />
         ))
       )}
-      <rect x="18" y="34" width="56" height="6" rx="2" fill="white" fillOpacity="0.95" />
+      {/* Side block */}
+      <rect x="6" y="70" width="16" height="26" rx="2" fill="#292524" />
       {/* Crane mast */}
-      <rect x="76" y="18" width="6" height="78" rx="2" fill="#FCD34D" />
+      <rect x="78" y="14" width="7" height="84" rx="2.5" fill="#451A03" />
       {/* Crane boom */}
-      <rect x="42" y="16" width="50" height="5" rx="2" fill="#FCD34D" />
-      <polygon points="90,13 90,24 98,18.5" fill="#FCD34D" />
-      <line x1="82" y1="4" x2="95" y2="16" stroke="#FCD34D" strokeWidth="1.5" strokeLinecap="round" />
-      <line x1="82" y1="4" x2="68" y2="16" stroke="#FCD34D" strokeWidth="1.5" strokeLinecap="round" />
+      <rect x="40" y="12" width="52" height="6" rx="2.5" fill="#451A03" />
+      <polygon points="90,8 90,20 99,14" fill="#451A03" />
+      {/* Cables */}
+      <line x1="84" y1="0" x2="98" y2="12" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
+      <line x1="84" y1="0" x2="66" y2="12" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
       {/* Hook */}
-      <line x1="95" y1="18.5" x2="95" y2="32" stroke="#FCD34D" strokeWidth="1.2" />
-      <path d="M91,32 L95,38 L99,32" stroke="#FCD34D" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <line x1="96" y1="14" x2="96" y2="34" stroke="#FCD34D" strokeWidth="1.8" />
+      <path d="M92,34 L96,41 L100,34" stroke="#FCD34D" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
       {/* Ground */}
-      <rect x="14" y="96" width="92" height="4" rx="2" fill="white" fillOpacity="0.3" />
-      <rect x="14" y="72" width="14" height="22" rx="2" fill="white" fillOpacity="0.4" />
+      <rect x="2" y="96" width="116" height="5" rx="2" fill="#78350F" opacity="0.5" />
     </svg>
   )
 }
