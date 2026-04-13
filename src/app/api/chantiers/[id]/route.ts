@@ -10,6 +10,9 @@ export async function GET(
     const chantier = await db.chantier.findUnique({
       where: { id },
       include: {
+        entreprise: {
+          select: { id: true, nom: true, telephone: true, email: true },
+        },
         phases: {
           orderBy: { ordre: 'asc' },
           include: {
@@ -23,11 +26,40 @@ export async function GET(
             },
           },
         },
+        journaliers: {
+          where: { actif: true },
+          include: {
+            journalier: {
+              select: {
+                id: true,
+                nom: true,
+                prenom: true,
+                specialite: true,
+                telephone: true,
+              },
+            },
+          },
+        },
+        equipements: {
+          include: {
+            equipement: {
+              select: {
+                id: true,
+                designation: true,
+                immatriculation: true,
+                etat: true,
+              },
+            },
+          },
+        },
         _count: {
           select: {
             phases: true,
             journaliers: true,
             pointages: true,
+            photos: true,
+            rapports: true,
+            contratsST: true,
           },
         },
       },
@@ -40,7 +72,56 @@ export async function GET(
       )
     }
 
-    return NextResponse.json(chantier)
+    // Compute avancementGlobal from phases
+    const avancementGlobal =
+      chantier.phases.length > 0
+        ? Math.round(
+            chantier.phases.reduce((sum, p) => sum + p.avancement, 0) /
+              chantier.phases.length
+          )
+        : 0
+
+    // Compute financial data
+    const [budgetReelResult, coutPersonnelResult, coutSousTraitantsResult] =
+      await Promise.all([
+        // Budget réel = sum of validated pointage amounts
+        db.pointage.aggregate({
+          _sum: { tauxJournalier: true },
+          where: {
+            chantierId: id,
+            present: true,
+            valide: true,
+          },
+        }),
+        // Coût personnel = same as budget reel for pointages
+        db.pointage.aggregate({
+          _sum: { tauxJournalier: true },
+          where: {
+            chantierId: id,
+            present: true,
+            valide: true,
+          },
+        }),
+        // Coût sous-traitants = sum of ContratST amounts (excluding cancelled)
+        db.contratST.aggregate({
+          _sum: { montantHT: true },
+          where: {
+            chantierId: id,
+            statut: { not: 'ANNULE' },
+          },
+        }),
+      ])
+
+    // Build response with computed fields
+    const response = {
+      ...chantier,
+      avancementGlobal,
+      budgetReel: budgetReelResult._sum.tauxJournalier || 0,
+      coutPersonnel: coutPersonnelResult._sum.tauxJournalier || 0,
+      coutSousTraitants: coutSousTraitantsResult._sum.montantHT || 0,
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error('GET /api/chantiers/[id] error:', error)
     return NextResponse.json(
