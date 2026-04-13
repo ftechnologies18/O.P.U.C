@@ -7,6 +7,19 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { LoginForm } from '@/components/auth/login-form'
 import { DashboardView } from '@/components/dashboard/dashboard-view'
 import { PlaceholderView } from '@/components/dashboard/placeholder-view'
+import { ChantiersView } from '@/components/chantiers/chantiers-view'
+import { ChantierDetailView } from '@/components/chantiers/chantier-detail-view'
+import { PersonnelView } from '@/components/personnel/personnel-view'
+import { PointageView } from '@/components/pointage/pointage-view'
+import { PaieView } from '@/components/paie/paie-view'
+import { StocksView } from '@/components/stocks/stocks-view'
+import { BudgetView } from '@/components/budget/budget-view'
+import { RapportsView } from '@/components/rapports/rapports-view'
+import { PlanningView } from '@/components/planning/planning-view'
+import { SousTraitantsView } from '@/components/sous-traitants/sous-traitants-view'
+import { DocumentsView } from '@/components/documents/documents-view'
+import { ParametresView } from '@/components/parametres/parametres-view'
+import { PhotosView } from '@/components/photos/photos-view'
 import { useAppStore } from '@/store/app-store'
 import { Loader2 } from 'lucide-react'
 
@@ -33,6 +46,32 @@ function AppContent() {
     switch (currentView) {
       case 'dashboard':
         return <DashboardView />
+      case 'chantiers':
+        return <ChantiersView />
+      case 'chantier-detail':
+        return <ChantierDetailView />
+      case 'personnel':
+        return <PersonnelView />
+      case 'pointage':
+        return <PointageView />
+      case 'paie':
+        return <PaieView />
+      case 'stocks':
+        return <StocksView />
+      case 'budget':
+        return <BudgetView />
+      case 'rapports':
+        return <RapportsView />
+      case 'planning':
+        return <PlanningView />
+      case 'sous-traitants':
+        return <SousTraitantsView />
+      case 'photos':
+        return <PhotosView />
+      case 'documents':
+        return <DocumentsView />
+      case 'parametres':
+        return <ParametresView />
       default:
         return <PlaceholderView viewId={currentView} />
     }

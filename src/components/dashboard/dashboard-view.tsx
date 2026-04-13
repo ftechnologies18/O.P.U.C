@@ -1,6 +1,10 @@
 'use client'
 
-import { Building2, Users, ClipboardList, Bell, TrendingUp, Calendar, Package, FileText } from 'lucide-react'
+import {
+  Building2, Users, ClipboardList, Bell, TrendingUp, Calendar,
+  Package, FileText, AlertTriangle, ArrowRight, CheckCircle2,
+  Wallet, BarChart3,
+} from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,23 +15,36 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Cell, PieChart, Pie,
 } from 'recharts'
+import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
 
 interface DashboardData {
   chantiersActifs: number
   journaliersSurSite: number
   pointagesAujourdhui: number
   alertesActives: number
+  tachesEnRetard: number
   chantiers: Array<{
     id: string
     nom: string
     budgetPrevisionnel: number
     statut: string
   }>
+  budgetData: Array<{
+    chantierId: string
+    nom: string
+    budgetPrevisionnel: number
+    budgetReel: number
+    personnelCost: number
+    materiauxCost: number
+    stCost: number
+  }>
   phasesProgress: Array<{
     nom: string
     avancement: number
     ordre: number
   }>
+  activeChantierNom: string
   recentNotifications: Array<{
     id: string
     titre: string
@@ -35,6 +52,23 @@ interface DashboardData {
     type: string
     lu: boolean
     createdAt: string
+  }>
+  stockAlerts: Array<{
+    id: string
+    reference: string
+    designation: string
+    categorie: string | null
+    unite: string
+    seuilAlerte: number
+    quantiteDisponible: number
+    chantier: { nom: string }
+  }>
+  tachesEnRetardDetails: Array<{
+    id: string
+    nom: string
+    dateFin: string | null
+    avancement: number
+    phase: { nom: string; chantier: { nom: string } }
   }>
   userName: string
   userRole: string
@@ -57,6 +91,10 @@ const statutLabels: Record<string, string> = {
 }
 
 const AMBER_COLORS = ['#f59e0b', '#d97706', '#b45309', '#92400e', '#78350f']
+
+const formatFCFA = (value: number) => {
+  return new Intl.NumberFormat('fr-FR').format(Math.round(value))
+}
 
 export function DashboardView() {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -104,40 +142,41 @@ export function DashboardView() {
       value: data.chantiersActifs,
       icon: Building2,
       color: 'text-amber-600',
-      bg: 'bg-amber-50',
-      borderColor: 'border-amber-200',
+      bg: 'bg-amber-50 dark:bg-amber-500/10',
+      borderColor: 'border-amber-200 dark:border-amber-500/20',
     },
     {
       title: 'Journaliers sur site',
       value: data.journaliersSurSite,
       icon: Users,
       color: 'text-emerald-600',
-      bg: 'bg-emerald-50',
-      borderColor: 'border-emerald-200',
+      bg: 'bg-emerald-50 dark:bg-emerald-500/10',
+      borderColor: 'border-emerald-200 dark:border-emerald-500/20',
     },
     {
-      title: 'Pointages aujourd\'hui',
+      title: "Pointages aujourd'hui",
       value: data.pointagesAujourdhui,
       icon: ClipboardList,
       color: 'text-orange-600',
-      bg: 'bg-orange-50',
-      borderColor: 'border-orange-200',
+      bg: 'bg-orange-50 dark:bg-orange-500/10',
+      borderColor: 'border-orange-200 dark:border-orange-500/20',
     },
     {
       title: 'Alertes actives',
       value: data.alertesActives,
       icon: Bell,
       color: 'text-red-600',
-      bg: 'bg-red-50',
-      borderColor: 'border-red-200',
+      bg: data.alertesActives > 0 ? 'bg-red-50 dark:bg-red-500/10' : 'bg-red-50 dark:bg-red-500/10',
+      borderColor: 'border-red-200 dark:border-red-500/20',
+      highlight: data.alertesActives > 0,
     },
   ]
 
-  // Budget data for chart (simulate some real data)
-  const budgetChartData = data.chantiers.map((c) => ({
-    name: c.nom.split(' - ')[0],
-    prévisionnel: c.budgetPrevisionnel / 1000000,
-    réel: Math.round(c.budgetPrevisionnel * (0.3 + Math.random() * 0.2)) / 1000000,
+  // Budget data for chart — REAL data from API
+  const budgetChartData = data.budgetData.map((b) => ({
+    name: b.nom.length > 18 ? b.nom.substring(0, 16) + '…' : b.nom.split(' - ')[0],
+    prévisionnel: Math.round(b.budgetPrevisionnel / 1000000),
+    réel: Math.round(b.budgetReel / 1000000),
   }))
 
   // Chantier status distribution
@@ -150,10 +189,12 @@ export function DashboardView() {
   const pieData = Object.entries(statusDistribution).map(([name, value]) => ({ name, value }))
 
   const quickActions = [
-    { label: 'Nouveau pointage', icon: ClipboardList, view: 'pointage' },
-    { label: 'Ajouter au stock', icon: Package, view: 'stocks' },
-    { label: 'Rapport journalier', icon: FileText, view: 'rapports' },
-    { label: 'Voir le planning', icon: Calendar, view: 'planning' },
+    { label: 'Nouveau pointage', icon: ClipboardList, view: 'pointage', description: 'Enregistrer la présence' },
+    { label: 'Gérer les stocks', icon: Package, view: 'stocks', description: 'Entrées & sorties' },
+    { label: 'Rapport journalier', icon: FileText, view: 'rapports', description: 'Rédiger un rapport' },
+    { label: 'Suivi budget', icon: BarChart3, view: 'budget', description: 'Consulter les dépenses' },
+    { label: 'Planning', icon: Calendar, view: 'planning', description: 'Diagramme de Gantt' },
+    { label: 'Paie hebdo', icon: Wallet, view: 'paie', description: 'Valider les paiements' },
   ]
 
   const notificationTypeIcons: Record<string, string> = {
@@ -164,15 +205,28 @@ export function DashboardView() {
     DOCUMENT: '📄',
   }
 
+  const roleLabels: Record<string, string> = {
+    ADMIN: 'Administrateur',
+    CHEF_ENTREPRISE: "Chef d'entreprise",
+    CONDUCTEUR: 'Conducteur de travaux',
+    CHEF_CHANTIER: 'Chef de chantier',
+    SOUS_TRAITANT: 'Sous-traitant',
+  }
+
   return (
     <div className="space-y-6">
       {/* Welcome header */}
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">
-          Bonjour, {data.userName} 👋
-        </h2>
-        <p className="text-muted-foreground mt-1">
-          Voici un aperçu de vos chantiers et de l&apos;activité du jour.
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">
+            Bonjour, {data.userName} 👋
+          </h2>
+          <p className="text-muted-foreground mt-1">
+            {roleLabels[data.userRole] || data.userRole} — Voici un aperçu de vos chantiers et de l&apos;activité du jour.
+          </p>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {format(new Date(), 'EEEE d MMMM yyyy', { locale: fr })}
         </p>
       </div>
 
@@ -181,7 +235,7 @@ export function DashboardView() {
         {summaryCards.map((card) => {
           const Icon = card.icon
           return (
-            <Card key={card.title} className="border shadow-sm hover:shadow-md transition-shadow">
+            <Card key={card.title} className={`border shadow-sm hover:shadow-md transition-shadow ${card.highlight ? 'ring-2 ring-red-300 dark:ring-red-500/40' : ''}`}>
               <CardContent className="p-4 lg:p-5">
                 <div className="flex items-start justify-between">
                   <div>
@@ -198,6 +252,84 @@ export function DashboardView() {
         })}
       </div>
 
+      {/* Alert banners row */}
+      {(data.stockAlerts.length > 0 || data.tachesEnRetard > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Stock alerts */}
+          {data.stockAlerts.length > 0 && (
+            <Card className="border border-red-200 dark:border-red-500/30 bg-red-50/50 dark:bg-red-500/5 shadow-sm">
+              <CardHeader className="pb-2 px-4 pt-4">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-red-700 dark:text-red-400">
+                  <AlertTriangle className="w-4 h-4" />
+                  Alertes de stock ({data.stockAlerts.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {data.stockAlerts.map((alert) => (
+                    <div key={alert.id} className="flex items-center justify-between text-xs bg-white dark:bg-background rounded-lg px-3 py-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">{alert.designation}</p>
+                        <p className="text-muted-foreground">{alert.chantier.nom} · {alert.reference}</p>
+                      </div>
+                      <Badge variant="destructive" className="ml-2 shrink-0 text-[10px]">
+                        {Math.round(alert.quantiteDisponible)} {alert.unite}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full h-8 text-xs border-red-200 hover:bg-red-100 dark:border-red-500/30 dark:hover:bg-red-500/10"
+                  onClick={() => setCurrentView('stocks')}
+                >
+                  Voir le stock <ArrowRight className="w-3 h-3 ml-1" />
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tasks en retard */}
+          {data.tachesEnRetard > 0 && (
+            <Card className="border border-orange-200 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-500/5 shadow-sm">
+              <CardHeader className="pb-2 px-4 pt-4">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-orange-700 dark:text-orange-400">
+                  <AlertTriangle className="w-4 h-4" />
+                  Tâches en retard ({data.tachesEnRetard})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {data.tachesEnRetardDetails.map((tache) => (
+                    <div key={tache.id} className="flex items-center justify-between text-xs bg-white dark:bg-background rounded-lg px-3 py-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">{tache.nom}</p>
+                        <p className="text-muted-foreground">{tache.phase.chantier.nom} · {tache.phase.nom}</p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-2 shrink-0">
+                        <span className="text-muted-foreground">{Math.round(tache.avancement)}%</span>
+                        <Badge variant="outline" className="text-[10px] border-orange-300 text-orange-700 dark:text-orange-400">
+                          {tache.dateFin ? format(new Date(tache.dateFin), 'dd MMM', { locale: fr }) : '—'}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full h-8 text-xs border-orange-200 hover:bg-orange-100 dark:border-orange-500/30 dark:hover:bg-orange-500/10"
+                  onClick={() => setCurrentView('planning')}
+                >
+                  Voir le planning <ArrowRight className="w-3 h-3 ml-1" />
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Budget chart */}
@@ -209,46 +341,54 @@ export function DashboardView() {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-5 pb-5">
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={budgetChartData} barGap={8}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(0 0% 90%)" />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 12, fill: 'hsl(0 0% 40%)' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: 'hsl(0 0% 40%)' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={50}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: '1px solid hsl(0 0% 90%)',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                      fontSize: '12px',
-                    }}
-                    formatter={(value: number) => [`${value}M FCFA`]}
-                  />
-                  <Bar dataKey="prévisionnel" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={32} />
-                  <Bar dataKey="réel" fill="#fbbf24" radius={[4, 4, 0, 0]} barSize={32} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex items-center justify-center gap-6 mt-3">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-amber-500" />
-                <span className="text-xs text-muted-foreground">Prévisionnel</span>
+            {budgetChartData.length > 0 ? (
+              <>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={budgetChartData} barGap={8}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(0 0% 90%)" />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 12, fill: 'hsl(0 0% 40%)' }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 11, fill: 'hsl(0 0% 40%)' }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={50}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: '8px',
+                          border: '1px solid hsl(0 0% 90%)',
+                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                          fontSize: '12px',
+                        }}
+                        formatter={(value: number) => [`${value}M FCFA`]}
+                      />
+                      <Bar dataKey="prévisionnel" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={32} />
+                      <Bar dataKey="réel" fill="#fbbf24" radius={[4, 4, 0, 0]} barSize={32} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex items-center justify-center gap-6 mt-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-amber-500" />
+                    <span className="text-xs text-muted-foreground">Prévisionnel</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-amber-400" />
+                    <span className="text-xs text-muted-foreground">Réel (dépenses)</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">
+                Aucune donnée budgétaire disponible
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-amber-400" />
-                <span className="text-xs text-muted-foreground">Réel</span>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -258,42 +398,57 @@ export function DashboardView() {
             <CardTitle className="text-base font-semibold">Statut des chantiers</CardTitle>
           </CardHeader>
           <CardContent className="px-5 pb-5">
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={70}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {pieData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={AMBER_COLORS[index % AMBER_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: '1px solid hsl(0 0% 90%)',
-                      fontSize: '12px',
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="space-y-2 mt-2">
-              {data.chantiers.map((c) => (
-                <div key={c.id} className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground truncate max-w-[140px]">{c.nom.split(' - ')[0]}</span>
-                  <Badge variant="outline" className={`text-[10px] ${statutColors[c.statut] || ''}`}>
-                    {statutLabels[c.statut] || c.statut}
-                  </Badge>
+            {pieData.length > 0 ? (
+              <>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={70}
+                        paddingAngle={3}
+                        dataKey="value"
+                      >
+                        {pieData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={AMBER_COLORS[index % AMBER_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: '8px',
+                          border: '1px solid hsl(0 0% 90%)',
+                          fontSize: '12px',
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
-            </div>
+                <div className="space-y-2 mt-2">
+                  {data.chantiers.map((c) => (
+                    <button
+                      key={c.id}
+                      className="flex items-center justify-between text-sm w-full text-left hover:bg-muted/50 rounded-md px-2 py-1 -mx-2 transition-colors"
+                      onClick={() => {
+                        useAppStore.getState().setSelectedChantierId(c.id)
+                        setCurrentView('chantier-detail')
+                      }}
+                    >
+                      <span className="text-muted-foreground truncate max-w-[140px]">{c.nom.split(' - ')[0]}</span>
+                      <Badge variant="outline" className={`text-[10px] ${statutColors[c.statut] || ''}`}>
+                        {statutLabels[c.statut] || c.statut}
+                      </Badge>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
+                Aucun chantier
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -304,23 +459,48 @@ export function DashboardView() {
         <Card className="border shadow-sm">
           <CardHeader className="pb-2 px-5 pt-5">
             <CardTitle className="text-base font-semibold">Avancement des phases</CardTitle>
-            <p className="text-xs text-muted-foreground">Résidence Les Palmiers</p>
+            {data.activeChantierNom && (
+              <p className="text-xs text-muted-foreground">{data.activeChantierNom}</p>
+            )}
           </CardHeader>
           <CardContent className="px-5 pb-5">
-            <div className="space-y-4">
-              {data.phasesProgress.map((phase) => (
-                <div key={phase.ordre} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-foreground">{phase.nom}</span>
-                    <span className="text-muted-foreground text-xs">{Math.round(phase.avancement)}%</span>
+            {data.phasesProgress.length > 0 ? (
+              <div className="space-y-4">
+                {data.phasesProgress.map((phase) => (
+                  <div key={phase.ordre} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-foreground">{phase.nom}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-xs font-medium ${
+                          phase.avancement >= 100 ? 'text-emerald-600' :
+                          phase.avancement >= 50 ? 'text-amber-600' :
+                          'text-muted-foreground'
+                        }`}>
+                          {Math.round(phase.avancement)}%
+                        </span>
+                        {phase.avancement >= 100 && (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        )}
+                      </div>
+                    </div>
+                    <Progress value={phase.avancement} className="h-2" />
                   </div>
-                  <Progress
-                    value={phase.avancement}
-                    className="h-2"
-                  />
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                <Building2 className="w-8 h-8 mb-2 opacity-50" />
+                <p className="text-sm">Aucune phase à afficher</p>
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="mt-1 text-amber-600"
+                  onClick={() => setCurrentView('chantiers')}
+                >
+                  Voir les chantiers
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -332,18 +512,18 @@ export function DashboardView() {
               <CardTitle className="text-base font-semibold">Actions rapides</CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-5">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {quickActions.map((action) => {
                   const Icon = action.icon
                   return (
                     <Button
                       key={action.view}
                       variant="outline"
-                      className="h-auto py-3 flex flex-col items-center gap-2 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-700 transition-colors"
+                      className="h-auto py-3 flex flex-col items-center gap-2 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-700 dark:hover:bg-amber-500/10 dark:hover:border-amber-500/30 transition-colors"
                       onClick={() => setCurrentView(action.view)}
                     >
                       <Icon className="w-5 h-5" />
-                      <span className="text-xs font-medium">{action.label}</span>
+                      <span className="text-xs font-medium text-center leading-tight">{action.label}</span>
                     </Button>
                   )
                 })}
@@ -360,28 +540,100 @@ export function DashboardView() {
               </CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-5">
-              <div className="space-y-3 max-h-48 overflow-y-auto">
-                {data.recentNotifications.map((notif) => (
-                  <div
-                    key={notif.id}
-                    className={`flex items-start gap-3 p-2.5 rounded-lg text-sm ${
-                      notif.lu ? 'bg-muted/50' : 'bg-amber-50 border border-amber-200/50'
-                    }`}
-                  >
-                    <span className="text-base mt-0.5">
-                      {notificationTypeIcons[notif.type] || '📌'}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground text-xs">{notif.titre}</p>
-                      <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
+              {data.recentNotifications.length > 0 ? (
+                <div className="space-y-3 max-h-48 overflow-y-auto">
+                  {data.recentNotifications.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className={`flex items-start gap-3 p-2.5 rounded-lg text-sm transition-colors ${
+                        notif.lu
+                          ? 'bg-muted/50'
+                          : 'bg-amber-50 border border-amber-200/50 dark:bg-amber-500/10 dark:border-amber-500/20'
+                      }`}
+                    >
+                      <span className="text-base mt-0.5">
+                        {notificationTypeIcons[notif.type] || '📌'}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground text-xs">{notif.titre}</p>
+                        <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
+                      </div>
+                      {!notif.lu && <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />}
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-4 text-muted-foreground">
+                  <Bell className="w-6 h-6 mb-1 opacity-50" />
+                  <p className="text-xs">Aucune notification</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Budget summary row */}
+      {data.budgetData.length > 0 && (
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-2 px-5 pt-5">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <BarChart3 className="w-4.5 h-4.5 text-amber-500" />
+              Résumé budgétaire
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 pb-5">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 pr-4 font-medium text-muted-foreground text-xs">Chantier</th>
+                    <th className="text-right py-2 px-4 font-medium text-muted-foreground text-xs">Prévisionnel</th>
+                    <th className="text-right py-2 px-4 font-medium text-muted-foreground text-xs">Réel</th>
+                    <th className="text-right py-2 px-4 font-medium text-muted-foreground text-xs">Consommé</th>
+                    <th className="text-right py-2 pl-4 font-medium text-muted-foreground text-xs">Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.budgetData.map((b) => {
+                    const pct = b.budgetPrevisionnel > 0
+                      ? Math.round((b.budgetReel / b.budgetPrevisionnel) * 100)
+                      : 0
+                    const statusColor = pct >= 100 ? 'text-red-600' : pct >= 80 ? 'text-amber-600' : 'text-emerald-600'
+                    const statusLabel = pct >= 100 ? 'Critique' : pct >= 80 ? 'Attention' : 'OK'
+                    return (
+                      <tr key={b.chantierId} className="border-b border-border/50 last:border-0">
+                        <td className="py-2.5 pr-4 font-medium text-foreground text-xs">{b.nom}</td>
+                        <td className="text-right py-2.5 px-4 text-xs text-muted-foreground">
+                          {formatFCFA(b.budgetPrevisionnel)} <span className="text-[10px]">FCFA</span>
+                        </td>
+                        <td className="text-right py-2.5 px-4 text-xs font-medium text-foreground">
+                          {formatFCFA(b.budgetReel)} <span className="text-[10px] text-muted-foreground">FCFA</span>
+                        </td>
+                        <td className="text-right py-2.5 px-4 text-xs">
+                          <span className={`font-medium ${statusColor}`}>{pct}%</span>
+                        </td>
+                        <td className="text-right py-2.5 pl-4">
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${
+                              pct >= 100 ? 'border-red-200 text-red-700 dark:text-red-400' :
+                              pct >= 80 ? 'border-amber-200 text-amber-700 dark:text-amber-400' :
+                              'border-emerald-200 text-emerald-700 dark:text-emerald-400'
+                            }`}
+                          >
+                            {statusLabel}
+                          </Badge>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
