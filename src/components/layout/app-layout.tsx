@@ -1,13 +1,10 @@
 'use client'
 
-import { signOut, useSession } from 'next-auth/react'
 import { useAppStore } from '@/store/app-store'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   LayoutDashboard,
@@ -23,7 +20,6 @@ import {
   FileStack,
   UserCog,
   Settings,
-  LogOut,
   Menu,
   X,
   ChevronRight,
@@ -55,16 +51,6 @@ interface AppLayoutProps {
 
 function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
   const { currentView, setCurrentView } = useAppStore()
-  const { data: session } = useSession()
-
-  const userInitials = session?.user?.name
-    ? session.user.name
-        .split(' ')
-        .map((n: string) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    : 'OP'
 
   return (
     <div className="flex flex-col h-full">
@@ -76,27 +62,6 @@ function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
         <div>
           <h1 className="text-xl font-extrabold text-sidebar-foreground tracking-tight">O.P.U.C.</h1>
           <p className="text-xs text-sidebar-foreground/50 leading-tight font-medium">Pilotage de Chantier</p>
-        </div>
-      </div>
-
-      <Separator className="bg-sidebar-border" />
-
-      {/* User info card in sidebar */}
-      <div className="px-3 py-3">
-        <div className="flex items-center gap-3 p-2.5 rounded-lg bg-sidebar-accent/60">
-          <Avatar className="h-9 w-9 border-2 border-amber-400/40">
-            <AvatarFallback className="bg-amber-500 text-white text-xs font-bold">
-              {userInitials}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-[15px] font-semibold text-sidebar-foreground truncate leading-tight">
-              {session?.user?.name || 'Utilisateur'}
-            </p>
-            <Badge variant="secondary" className="text-[11px] px-1.5 py-0 bg-amber-500/20 text-amber-300 border-amber-500/30 mt-0.5">
-              {(session?.user as { role: string })?.role?.replace('_', ' ') || 'Rôle'}
-            </Badge>
-          </div>
         </div>
       </div>
 
@@ -139,19 +104,6 @@ function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
         </nav>
       </ScrollArea>
 
-      <Separator className="bg-sidebar-border" />
-
-      {/* Logout */}
-      <div className="p-3">
-        <Button
-          variant="ghost"
-          onClick={() => signOut()}
-          className="w-full justify-start gap-3 text-sidebar-foreground/60 hover:text-red-400 hover:bg-red-500/10 h-10 rounded-lg"
-        >
-          <LogOut className="w-4 h-4" />
-          <span className="text-[15px]">Déconnexion</span>
-        </Button>
-      </div>
     </div>
   )
 }
