@@ -34,21 +34,57 @@ import { UserMenu } from './user-menu'
 import { NotificationBell } from './notification-bell'
 import { OpucLogo } from './opuc-logo'
 
-const navItems = [
-  { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-  { id: 'chantiers', label: 'Chantiers', icon: Building2 },
-  { id: 'personnel', label: 'Personnel', icon: Users },
-  { id: 'pointage', label: 'Pointage', icon: ClipboardList },
-  { id: 'paie', label: 'Paie', icon: Wallet },
-  { id: 'stocks', label: 'Stocks', icon: Package },
-  { id: 'budget', label: 'Budget', icon: PieChart },
-  { id: 'planning', label: 'Planning', icon: CalendarRange },
-  { id: 'rapports', label: 'Rapports', icon: FileText },
-  { id: 'photos', label: 'Photos', icon: Camera },
-  { id: 'documents', label: 'Documents', icon: FileStack },
-  { id: 'sous-traitants', label: 'Sous-traitants', icon: UserCog },
-  { id: 'parametres', label: 'Paramètres', icon: Settings },
+/* ═══════════════════════════════════════════════
+   Navigation grouping — sidebar categories
+   ═══════════════════════════════════════════════ */
+const navSections = [
+  {
+    group: 'Principal',
+    items: [
+      { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+    ],
+  },
+  {
+    group: 'Gestion Chantier',
+    items: [
+      { id: 'chantiers', label: 'Chantiers', icon: Building2 },
+      { id: 'planning', label: 'Planning', icon: CalendarRange },
+      { id: 'pointage', label: 'Pointage', icon: ClipboardList },
+    ],
+  },
+  {
+    group: 'Ressources Humaines',
+    items: [
+      { id: 'personnel', label: 'Personnel', icon: Users },
+      { id: 'paie', label: 'Paie', icon: Wallet },
+      { id: 'sous-traitants', label: 'Sous-traitants', icon: UserCog },
+    ],
+  },
+  {
+    group: 'Logistique & Finance',
+    items: [
+      { id: 'budget', label: 'Budget', icon: PieChart },
+      { id: 'stocks', label: 'Stocks', icon: Package },
+    ],
+  },
+  {
+    group: 'Documents & Médias',
+    items: [
+      { id: 'rapports', label: 'Rapports', icon: FileText },
+      { id: 'photos', label: 'Photos', icon: Camera },
+      { id: 'documents', label: 'Documents', icon: FileStack },
+    ],
+  },
+  {
+    group: 'Configuration',
+    items: [
+      { id: 'parametres', label: 'Paramètres', icon: Settings },
+    ],
+  },
 ]
+
+// Flat list for header breadcrumb lookup
+const navItems = navSections.flatMap((s) => s.items)
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -85,56 +121,75 @@ function SidebarContent({
 
       <Separator className="bg-sidebar-border" />
 
-      {/* Navigation */}
+      {/* Navigation — grouped by category */}
       <ScrollArea className="flex-1 px-2 py-2">
-        <nav className="space-y-0.5">
-          {navItems.map((item) => {
-            const Icon = item.icon
-            const isActive = currentView === item.id
-            return (
-              <Tooltip key={item.id} delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => {
-                      setCurrentView(item.id)
-                      onNavigate()
-                    }}
-                    className={cn(
-                      'w-full flex items-center rounded-lg transition-all duration-200',
-                      compact
-                        ? 'justify-center px-0 py-2.5 mx-auto w-11 h-11'
-                        : 'gap-3 px-3 py-2.5 text-[15px]',
-                      isActive
-                        ? 'bg-gradient-to-r from-amber-500/20 to-amber-500/5 text-amber-300 font-medium shadow-sm border border-amber-500/10'
-                        : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent'
-                    )}
-                  >
-                    <div className={cn(
-                      'flex items-center justify-center shrink-0 transition-colors',
-                      compact ? 'w-9 h-9' : 'w-8 h-8 rounded-lg',
-                      isActive ? (compact ? 'bg-amber-500/20' : 'bg-amber-500/20') : 'bg-transparent'
-                    )}>
-                      <Icon className={cn(
-                        compact ? 'w-5 h-5' : 'w-4.5 h-4.5',
-                        isActive ? 'text-amber-400' : 'text-sidebar-foreground/50'
-                      )} />
-                    </div>
-                    {!compact && (
-                      <>
-                        <span className="truncate">{item.label}</span>
-                        {isActive && <ChevronRight className="w-4 h-4 ml-auto text-amber-400/50" />}
-                      </>
-                    )}
-                  </button>
-                </TooltipTrigger>
-                {compact && (
-                  <TooltipContent side="right" sideOffset={8} className="font-medium text-[15px]">
-                    {item.label}
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            )
-          })}
+        <nav className="space-y-1">
+          {navSections.map((section, sIdx) => (
+            <div key={section.group} className={cn(sIdx > 0 && 'mt-3')}>
+              {/* Category header — expanded mode */}
+              {!compact && (
+                <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sidebar-foreground/30 select-none">
+                  {section.group}
+                </p>
+              )}
+              {/* Compact separator dot */}
+              {compact && sIdx > 0 && (
+                <div className="flex justify-center py-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-sidebar-foreground/15" />
+                </div>
+              )}
+              {/* Items */}
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const Icon = item.icon
+                  const isActive = currentView === item.id
+                  return (
+                    <Tooltip key={item.id} delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => {
+                            setCurrentView(item.id)
+                            onNavigate()
+                          }}
+                          className={cn(
+                            'w-full flex items-center rounded-lg transition-all duration-200',
+                            compact
+                              ? 'justify-center px-0 py-2.5 mx-auto w-11 h-11'
+                              : 'gap-3 px-3 py-2.5 text-[15px]',
+                            isActive
+                              ? 'bg-gradient-to-r from-amber-500/20 to-amber-500/5 text-amber-300 font-medium shadow-sm border border-amber-500/10'
+                              : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent'
+                          )}
+                        >
+                          <div className={cn(
+                            'flex items-center justify-center shrink-0 transition-colors',
+                            compact ? 'w-9 h-9' : 'w-8 h-8 rounded-lg',
+                            isActive ? 'bg-amber-500/20' : 'bg-transparent'
+                          )}>
+                            <Icon className={cn(
+                              compact ? 'w-5 h-5' : 'w-4.5 h-4.5',
+                              isActive ? 'text-amber-400' : 'text-sidebar-foreground/50'
+                            )} />
+                          </div>
+                          {!compact && (
+                            <>
+                              <span className="truncate">{item.label}</span>
+                              {isActive && <ChevronRight className="w-4 h-4 ml-auto text-amber-400/50" />}
+                            </>
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      {compact && (
+                        <TooltipContent side="right" sideOffset={8} className="font-medium text-[15px]">
+                          {item.label}
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
       </ScrollArea>
 
