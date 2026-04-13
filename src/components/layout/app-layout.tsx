@@ -122,24 +122,24 @@ function SidebarContent({
       <Separator className="bg-sidebar-border" />
 
       {/* Navigation — grouped by category */}
-      <ScrollArea className="flex-1 px-2 py-2">
-        <nav className="space-y-1">
+      <ScrollArea className="flex-1 overflow-hidden px-2">
+        <nav className="py-1">
           {navSections.map((section, sIdx) => (
-            <div key={section.group} className={cn(sIdx > 0 && 'mt-3')}>
+            <div key={section.group} className={cn(sIdx > 0 && 'mt-1.5')}>
               {/* Category header — expanded mode */}
               {!compact && (
-                <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sidebar-foreground/30 select-none">
+                <p className="px-3 pt-1.5 pb-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-sidebar-foreground/30 select-none">
                   {section.group}
                 </p>
               )}
               {/* Compact separator dot */}
               {compact && sIdx > 0 && (
-                <div className="flex justify-center py-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-sidebar-foreground/15" />
+                <div className="flex justify-center py-1">
+                  <div className="w-1 h-1 rounded-full bg-sidebar-foreground/15" />
                 </div>
               )}
               {/* Items */}
-              <div className="space-y-0.5">
+              <div className="space-y-px">
                 {section.items.map((item) => {
                   const Icon = item.icon
                   const isActive = currentView === item.id
@@ -154,8 +154,8 @@ function SidebarContent({
                           className={cn(
                             'w-full flex items-center rounded-lg transition-all duration-200',
                             compact
-                              ? 'justify-center px-0 py-2.5 mx-auto w-11 h-11'
-                              : 'gap-3 px-3 py-2.5 text-[15px]',
+                              ? 'justify-center px-0 py-2 mx-auto w-10 h-10'
+                              : 'gap-3 px-3 py-1.5 text-[14px]',
                             isActive
                               ? 'bg-gradient-to-r from-amber-500/20 to-amber-500/5 text-amber-300 font-medium shadow-sm border border-amber-500/10'
                               : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent'
@@ -163,11 +163,11 @@ function SidebarContent({
                         >
                           <div className={cn(
                             'flex items-center justify-center shrink-0 transition-colors',
-                            compact ? 'w-9 h-9' : 'w-8 h-8 rounded-lg',
+                            compact ? 'w-8 h-8' : 'w-7 h-7 rounded-lg',
                             isActive ? 'bg-amber-500/20' : 'bg-transparent'
                           )}>
                             <Icon className={cn(
-                              compact ? 'w-5 h-5' : 'w-4.5 h-4.5',
+                              compact ? 'w-4.5 h-4.5' : 'w-4 h-4',
                               isActive ? 'text-amber-400' : 'text-sidebar-foreground/50'
                             )} />
                           </div>
