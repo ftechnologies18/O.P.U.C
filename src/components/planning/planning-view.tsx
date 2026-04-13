@@ -182,10 +182,10 @@ function EmptyState({ hasChantier }: { hasChantier: boolean }) {
         <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 mb-4">
           <GanttChart className="w-10 h-10 text-amber-500" />
         </div>
-        <h3 className="text-base font-semibold text-foreground mb-1">
+        <h3 className="text-[17px] font-semibold text-foreground mb-1">
           {hasChantier ? 'Aucune phase planifiée' : 'Sélectionnez un chantier'}
         </h3>
-        <p className="text-sm text-muted-foreground text-center max-w-sm">
+        <p className="text-[15px] text-muted-foreground text-center max-w-sm">
           {hasChantier
             ? 'Ce chantier ne comporte pas encore de phases avec des dates. Ajoutez des phases et tâches depuis la vue détail du chantier.'
             : 'Choisissez un chantier dans le menu déroulant ci-dessus pour visualiser son planning.'}
@@ -466,7 +466,7 @@ export function PlanningView() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-foreground">Planning</h2>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Diagramme de Gantt des phases et tâches
               </p>
             </div>
@@ -585,12 +585,12 @@ export function PlanningView() {
                           ) : (
                             <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           )}
-                          <span className="text-sm font-bold text-foreground truncate">
+                          <span className="text-[15px] font-bold text-foreground truncate">
                             {phase.nom}
                           </span>
                           <Badge
                             variant="outline"
-                            className="text-[10px] bg-amber-50 text-amber-700 border-amber-200 shrink-0 ml-auto"
+                            className="text-xs bg-amber-50 text-amber-700 border-amber-200 shrink-0 ml-auto"
                           >
                             {Math.round(phase.avancement)}%
                           </Badge>
@@ -610,7 +610,7 @@ export function PlanningView() {
                         }
                       >
                         <div className={`w-1 h-5 rounded-full shrink-0 ${colors.bar}`} />
-                        <span className="text-xs text-foreground truncate">
+                        <span className="text-sm text-foreground truncate">
                           {task.nom}
                         </span>
                       </div>
@@ -712,7 +712,7 @@ export function PlanningView() {
                               >
                                 <div className="absolute inset-0 rounded-md bg-gradient-to-b from-white/20 to-black/10" />
                                 {bar.width > 6 && (
-                                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-amber-900 truncate px-1">
+                                  <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-amber-900 truncate px-1">
                                     {phase.nom} — {Math.round(phase.avancement)}%
                                   </span>
                                 )}
@@ -863,22 +863,22 @@ export function PlanningView() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card className="border shadow-sm">
               <CardContent className="p-3">
-                <p className="text-xs text-muted-foreground">Phases</p>
-                <p className="text-lg font-bold">{chantier.phases.length}</p>
+                <p className="text-sm text-muted-foreground">Phases</p>
+                <p className="text-xl font-bold">{chantier.phases.length}</p>
               </CardContent>
             </Card>
             <Card className="border shadow-sm">
               <CardContent className="p-3">
-                <p className="text-xs text-muted-foreground">Tâches</p>
-                <p className="text-lg font-bold">
+                <p className="text-sm text-muted-foreground">Tâches</p>
+                <p className="text-xl font-bold">
                   {chantier.phases.reduce((a, p) => a + p.taches.length, 0)}
                 </p>
               </CardContent>
             </Card>
             <Card className="border shadow-sm">
               <CardContent className="p-3">
-                <p className="text-xs text-muted-foreground">En cours</p>
-                <p className="text-lg font-bold text-amber-600">
+                <p className="text-sm text-muted-foreground">En cours</p>
+                <p className="text-xl font-bold text-amber-600">
                   {
                     chantier.phases.reduce(
                       (a, p) =>
@@ -891,8 +891,8 @@ export function PlanningView() {
             </Card>
             <Card className="border shadow-sm">
               <CardContent className="p-3">
-                <p className="text-xs text-muted-foreground">En retard</p>
-                <p className="text-lg font-bold text-red-600">
+                <p className="text-sm text-muted-foreground">En retard</p>
+                <p className="text-xl font-bold text-red-600">
                   {
                     chantier.phases.reduce(
                       (a, p) =>
@@ -966,20 +966,20 @@ export function PlanningView() {
                 {/* Dates */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       Date début
                     </p>
-                    <p className="text-sm font-medium">
+                    <p className="text-[15px] font-medium">
                       {fmtDate(selectedTask.data.dateDebut)}
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       Date fin
                     </p>
-                    <p className="text-sm font-medium">
+                    <p className="text-[15px] font-medium">
                       {fmtDate(selectedTask.data.dateFin)}
                     </p>
                   </div>
@@ -1015,8 +1015,8 @@ export function PlanningView() {
                   <>
                     <Separator />
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Description</p>
-                      <p className="text-sm text-foreground/80 whitespace-pre-line">
+                      <p className="text-sm text-muted-foreground">Description</p>
+                      <p className="text-[15px] text-foreground/80 whitespace-pre-line">
                         {selectedTask.data.description}
                       </p>
                     </div>
@@ -1028,7 +1028,7 @@ export function PlanningView() {
                   <>
                     <Separator />
                     <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground font-medium">
+                      <p className="text-sm text-muted-foreground font-medium">
                         Tâches ({(selectedTask.data as Phase).taches.length})
                       </p>
                       <div className="space-y-1.5 max-h-48 overflow-y-auto">
@@ -1040,12 +1040,12 @@ export function PlanningView() {
                               className="flex items-center gap-2 p-2 rounded-lg border border-border/50 bg-muted/30"
                             >
                               <div className={`w-1.5 h-4 rounded-full shrink-0 ${c.bar}`} />
-                              <span className="text-xs font-medium flex-1 truncate">
+                              <span className="text-sm font-medium flex-1 truncate">
                                 {t.nom}
                               </span>
                               <Badge
                                 variant="outline"
-                                className={`text-[10px] shrink-0 ${c.bg} ${c.text} ${c.border}`}
+                                className={`text-xs shrink-0 ${c.bg} ${c.text} ${c.border}`}
                               >
                                 {Math.round(t.avancement)}%
                               </Badge>

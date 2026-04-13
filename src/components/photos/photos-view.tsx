@@ -144,7 +144,7 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
       <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
         <Camera className="w-8 h-8 text-muted-foreground" />
       </div>
-      <h3 className="text-lg font-semibold text-foreground mb-1">Aucune photo</h3>
+      <h3 className="text-xl font-semibold text-foreground mb-1">Aucune photo</h3>
       <p className="text-sm text-muted-foreground max-w-sm">
         {hasFilters
           ? 'Aucune photo ne correspond à vos critères de filtrage.'
@@ -173,7 +173,7 @@ function StatCard({
           <Icon className="w-4 h-4 text-white" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs text-muted-foreground truncate">{label}</p>
+          <p className="text-sm text-muted-foreground truncate">{label}</p>
           <p className="text-lg font-bold leading-tight">{count}</p>
         </div>
       </div>
@@ -454,8 +454,8 @@ export function PhotosView() {
             <Camera className="w-5 h-5 text-amber-600" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground">Photothèque</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-2xl font-bold text-foreground">Photothèque</h1>
+            <p className="text-[15px] text-muted-foreground">
               Gestion des photos de chantier
             </p>
           </div>
@@ -472,7 +472,7 @@ export function PhotosView() {
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
             <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto">
               <FolderOpen className="w-4 h-4 text-amber-500 shrink-0" />
-              <Label className="text-sm font-medium whitespace-nowrap">Chantier :</Label>
+              <Label className="text-[15px] font-medium whitespace-nowrap">Chantier :</Label>
             </div>
             <Select
               value={selectedChantier}
@@ -554,7 +554,7 @@ export function PhotosView() {
 
               {/* Filter row */}
               <div className="flex flex-wrap gap-2 items-center">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Filter className="w-3.5 h-3.5" />
                   Filtres :
                 </div>
@@ -563,7 +563,7 @@ export function PhotosView() {
                 <div className="flex flex-wrap gap-1.5">
                   <Badge
                     variant={categorieFilter === 'all' ? 'default' : 'outline'}
-                    className={`cursor-pointer text-xs transition-colors ${
+                    className={`cursor-pointer text-sm transition-colors ${
                       categorieFilter === 'all'
                         ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500'
                         : 'hover:bg-muted'
@@ -576,7 +576,7 @@ export function PhotosView() {
                     <Badge
                       key={cat.value}
                       variant={categorieFilter === cat.value ? 'default' : 'outline'}
-                      className={`cursor-pointer text-xs transition-colors ${
+                      className={`cursor-pointer text-sm transition-colors ${
                         categorieFilter === cat.value
                           ? cat.color
                           : 'hover:bg-muted'
@@ -597,7 +597,7 @@ export function PhotosView() {
                 {/* Phase filter */}
                 {phases.length > 0 && (
                   <Select value={phaseFilter} onValueChange={setPhaseFilter}>
-                    <SelectTrigger className="w-auto h-7 text-xs border-dashed">
+                    <SelectTrigger className="w-auto h-7 text-sm border-dashed">
                       <SelectValue placeholder="Phase" />
                     </SelectTrigger>
                     <SelectContent>
@@ -619,15 +619,15 @@ export function PhotosView() {
                     type="date"
                     value={dateDebut}
                     onChange={(e) => setDateDebut(e.target.value)}
-                    className="h-7 text-xs w-[130px]"
+                    className="h-7 text-sm w-[130px]"
                     placeholder="Début"
                   />
-                  <span className="text-xs text-muted-foreground">→</span>
+                  <span className="text-sm text-muted-foreground">→</span>
                   <Input
                     type="date"
                     value={dateFin}
                     onChange={(e) => setDateFin(e.target.value)}
-                    className="h-7 text-xs w-[130px]"
+                    className="h-7 text-sm w-[130px]"
                     placeholder="Fin"
                   />
                 </div>
@@ -637,7 +637,7 @@ export function PhotosView() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-xs text-muted-foreground"
+                    className="h-7 text-sm text-muted-foreground"
                     onClick={() => {
                       setCategorieFilter('all')
                       setPhaseFilter('all')
@@ -731,7 +731,7 @@ export function PhotosView() {
 
                       {/* Category badge overlay */}
                       <div className="absolute top-2 left-2">
-                        <Badge className={`${catConfig.color} text-[10px] px-1.5 py-0`}>
+                        <Badge className={`${catConfig.color} text-xs px-1.5 py-0`}>
                           {catConfig.label}
                         </Badge>
                       </div>
@@ -778,19 +778,19 @@ export function PhotosView() {
 
                     {/* Card info */}
                     <div className="p-3">
-                      <p className="text-sm font-medium text-foreground truncate">
+                      <p className="text-[15px] font-medium text-foreground truncate">
                         {photo.legende || 'Sans légende'}
                       </p>
                       <div className="flex items-center justify-between mt-1.5">
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">
                           {format(parseISO(photo.datePrise), 'dd MMM yyyy', { locale: fr })}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate ml-2">
+                        <p className="text-sm text-muted-foreground truncate ml-2">
                           {photo.prisePar.name}
                         </p>
                       </div>
                       {photo.phase && (
-                        <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                        <p className="text-sm text-muted-foreground truncate mt-0.5">
                           {photo.phase.nom}{photo.tache ? ` › ${photo.tache.nom}` : ''}
                         </p>
                       )}
@@ -808,7 +808,7 @@ export function PhotosView() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <Card>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-[15px]">
                 <thead>
                   <tr className="border-b bg-muted/50">
                     <th className="text-left p-3 font-medium text-muted-foreground">Aperçu</th>
@@ -863,19 +863,19 @@ export function PhotosView() {
                             </p>
                           </td>
                           <td className="p-3 hidden md:table-cell">
-                            <Badge className={`${catConfig.color} text-[10px]`}>
+                            <Badge className={`${catConfig.color} text-xs`}>
                               {catConfig.label}
                             </Badge>
                           </td>
-                          <td className="p-3 text-muted-foreground text-xs hidden sm:table-cell whitespace-nowrap">
+                          <td className="p-3 text-muted-foreground text-sm hidden sm:table-cell whitespace-nowrap">
                             {format(parseISO(photo.datePrise), 'dd MMM yyyy', { locale: fr })}
                           </td>
-                          <td className="p-3 text-muted-foreground text-xs hidden lg:table-cell max-w-[150px] truncate">
+                          <td className="p-3 text-muted-foreground text-sm hidden lg:table-cell max-w-[150px] truncate">
                             {photo.phase
                               ? `${photo.phase.nom}${photo.tache ? ` › ${photo.tache.nom}` : ''}`
                               : '—'}
                           </td>
-                          <td className="p-3 text-muted-foreground text-xs hidden lg:table-cell">
+                          <td className="p-3 text-muted-foreground text-sm hidden lg:table-cell">
                             {photo.prisePar.name}
                           </td>
                           <td className="p-3 text-right">
@@ -1028,7 +1028,7 @@ export function PhotosView() {
                 value={formUrl}
                 onChange={(e) => setFormUrl(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Si vide, un placeholder visuel sera utilisé.
               </p>
             </div>
@@ -1118,8 +1118,8 @@ export function PhotosView() {
                       <div className="flex items-start gap-2">
                         <Calendar className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                         <div>
-                          <p className="text-xs text-muted-foreground">Date de prise</p>
-                          <p className="text-sm font-medium">
+                          <p className="text-sm text-muted-foreground">Date de prise</p>
+                          <p className="text-[15px] font-medium">
                             {format(parseISO(selectedPhoto.datePrise), 'dd MMMM yyyy à HH:mm', { locale: fr })}
                           </p>
                         </div>
@@ -1127,16 +1127,16 @@ export function PhotosView() {
                       <div className="flex items-start gap-2">
                         <User className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                         <div>
-                          <p className="text-xs text-muted-foreground">Prise par</p>
-                          <p className="text-sm font-medium">{selectedPhoto.prisePar.name}</p>
+                          <p className="text-sm text-muted-foreground">Prise par</p>
+                          <p className="text-[15px] font-medium">{selectedPhoto.prisePar.name}</p>
                         </div>
                       </div>
                       {selectedPhoto.phase && (
                         <div className="flex items-start gap-2">
                           <FolderOpen className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                           <div>
-                            <p className="text-xs text-muted-foreground">Phase</p>
-                            <p className="text-sm font-medium">{selectedPhoto.phase.nom}</p>
+                            <p className="text-sm text-muted-foreground">Phase</p>
+                            <p className="text-[15px] font-medium">{selectedPhoto.phase.nom}</p>
                           </div>
                         </div>
                       )}
@@ -1144,8 +1144,8 @@ export function PhotosView() {
                         <div className="flex items-start gap-2">
                           <CheckCircle2 className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                           <div>
-                            <p className="text-xs text-muted-foreground">Tâche</p>
-                            <p className="text-sm font-medium">{selectedPhoto.tache.nom}</p>
+                            <p className="text-sm text-muted-foreground">Tâche</p>
+                            <p className="text-[15px] font-medium">{selectedPhoto.tache.nom}</p>
                           </div>
                         </div>
                       )}
@@ -1157,7 +1157,7 @@ export function PhotosView() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <p className="text-xs text-muted-foreground">Catégorie</p>
+                          <p className="text-sm text-muted-foreground">Catégorie</p>
                           <Badge className={`${getCategoryConfig(selectedPhoto.categorie).color} mt-0.5`}>
                             {getCategoryConfig(selectedPhoto.categorie).label}
                           </Badge>
@@ -1166,15 +1166,15 @@ export function PhotosView() {
                           size="sm"
                           variant="outline"
                           onClick={() => setIsEditing(true)}
-                          className="text-xs"
+                          className="text-sm"
                         >
                           <Pencil className="w-3 h-3 mr-1" />
                           Modifier
                         </Button>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Légende</p>
-                        <p className="text-sm">
+                        <p className="text-sm text-muted-foreground mb-0.5">Légende</p>
+                        <p className="text-[15px]">
                           {selectedPhoto.legende || <span className="italic text-muted-foreground">Aucune légende</span>}
                         </p>
                       </div>
@@ -1184,7 +1184,7 @@ export function PhotosView() {
                   <>
                     {/* Edit mode */}
                     <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
-                      <p className="text-xs font-medium text-amber-600 flex items-center gap-1">
+                      <p className="text-sm font-medium text-amber-600 flex items-center gap-1">
                         <Pencil className="w-3 h-3" />
                         Mode édition
                       </p>
@@ -1243,7 +1243,7 @@ export function PhotosView() {
                 <Separator />
 
                 {/* Created date */}
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Ajoutée le {format(parseISO(selectedPhoto.createdAt), 'dd MMM yyyy à HH:mm', { locale: fr })}
                 </p>
               </div>

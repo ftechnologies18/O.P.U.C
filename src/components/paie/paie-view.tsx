@@ -490,7 +490,7 @@ export function PaieView() {
           <Wallet className="w-6 h-6 text-amber-500" />
           Paie Hebdomadaire
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-[15px] text-muted-foreground mt-1">
           Gestion des paiements hebdomadaires des journaliers
         </p>
       </div>
@@ -501,7 +501,7 @@ export function PaieView() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Chantier selector */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Chantier</Label>
+              <Label className="text-[15px] font-medium">Chantier</Label>
               <Select value={chantierId} onValueChange={handleChantierChange}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Sélectionner un chantier" />
@@ -518,7 +518,7 @@ export function PaieView() {
 
             {/* Week picker */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Semaine</Label>
+              <Label className="text-[15px] font-medium">Semaine</Label>
               <div className="flex items-center gap-1">
                 <Button
                   variant="outline"
@@ -528,7 +528,7 @@ export function PaieView() {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <div className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md border bg-muted/50 text-sm font-medium min-w-0">
+                <div className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md border bg-muted/50 text-[15px] font-medium min-w-0">
                   <CalendarDays className="w-4 h-4 text-amber-500 shrink-0" />
                   <span className="truncate">{weekLabel}</span>
                 </div>
@@ -545,7 +545,7 @@ export function PaieView() {
 
             {/* Generate button */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Récapitulatif</Label>
+              <Label className="text-[15px] font-medium">Récapitulatif</Label>
               <Button
                 onClick={handleGenerate}
                 disabled={generating || !chantierId}
@@ -562,8 +562,8 @@ export function PaieView() {
 
             {/* Info box */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Informations</Label>
-              <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3 space-y-1.5">
+              <Label className="text-[15px] font-medium">Informations</Label>
+              <div className="text-[15px] text-muted-foreground bg-muted/50 rounded-lg p-3 space-y-1.5">
                 <div className="flex items-center gap-2">
                   <Users className="w-3.5 h-3.5" />
                   <span>{totals.totalJournaliers} journalier(s)</span>
@@ -605,7 +605,7 @@ export function PaieView() {
       {/* ── Payment Table ── */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Récapitulatif des paiements</CardTitle>
+          <CardTitle className="text-[17px]">Récapitulatif des paiements</CardTitle>
         </CardHeader>
         <CardContent>
           {loadingPaiements ? (
@@ -617,8 +617,8 @@ export function PaieView() {
           ) : filteredPaiements.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <AlertTriangle className="w-10 h-10 text-muted-foreground mb-3" />
-              <h3 className="text-sm font-medium">Aucun paiement trouvé</h3>
-              <p className="text-xs text-muted-foreground mt-1">
+              <h3 className="text-[15px] font-medium">Aucun paiement trouvé</h3>
+              <p className="text-sm text-muted-foreground mt-1">
                 {!chantierId
                   ? 'Veuillez sélectionner un chantier.'
                   : 'Cliquez sur "Générer le récapitulatif" pour créer les paiements de la semaine.'}
@@ -659,11 +659,11 @@ export function PaieView() {
                               {p.journalier.nom[0]}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-medium truncate">
+                              <p className="text-[15px] font-medium truncate">
                                 {p.journalier.prenom} {p.journalier.nom}
                               </p>
                               {p.journalier.specialite && (
-                                <p className="text-xs text-muted-foreground truncate">
+                                <p className="text-sm text-muted-foreground truncate">
                                   {p.journalier.specialite}
                                 </p>
                               )}
@@ -682,33 +682,33 @@ export function PaieView() {
                         </TableCell>
 
                         {/* Montant calculé */}
-                        <TableCell className="text-right font-medium text-sm">
+                        <TableCell className="text-right font-medium text-[15px]">
                           {fmtCurrency(p.montantCalcule)}
                         </TableCell>
 
                         {/* Montant versé */}
-                        <TableCell className="text-right font-medium text-sm">
+                        <TableCell className="text-right font-medium text-[15px]">
                           {p.montantVerse !== null
                             ? fmtCurrency(p.montantVerse)
                             : '—'}
                         </TableCell>
 
                         {/* Écart */}
-                        <TableCell className={`text-right font-medium text-sm ${ecartColor}`}>
+                        <TableCell className={`text-right font-medium text-[15px] ${ecartColor}`}>
                           {p.montantVerse !== null
                             ? `${ecart >= 0 ? '+' : ''}${new Intl.NumberFormat('fr-FR').format(ecart)}`
                             : '—'}
                         </TableCell>
 
                         {/* Mode paiement */}
-                        <TableCell className="text-sm">
+                        <TableCell className="text-[15px]">
                           {p.modePaiement
                             ? MODE_PAIEMENT_LABELS[p.modePaiement] || p.modePaiement
                             : '—'}
                         </TableCell>
 
                         {/* Date paiement */}
-                        <TableCell className="text-sm">
+                        <TableCell className="text-[15px]">
                           {p.datePaiement ? fmtDateShort(p.datePaiement) : '—'}
                         </TableCell>
 
@@ -774,7 +774,7 @@ export function PaieView() {
                       {totals.totalVerse > 0 ? fmtCurrency(totals.totalVerse) : '—'}
                     </TableCell>
                     <TableCell
-                      className={`text-right font-bold text-sm ${
+                      className={`text-right font-bold text-[15px] ${
                         totals.totalEcart === 0
                           ? 'text-muted-foreground'
                           : totals.totalEcart > 0
@@ -819,7 +819,7 @@ export function PaieView() {
           <div className="space-y-4 py-2">
             {/* Montant versé */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Montant versé (FCFA)</Label>
+              <Label className="text-[15px] font-medium">Montant versé (FCFA)</Label>
               <div className="relative">
                 <Input
                   type="number"
@@ -830,12 +830,12 @@ export function PaieView() {
                   placeholder={String(editingPaiement?.montantCalcule || 0)}
                   className="pr-14"
                 />
-                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none">
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
                   FCFA
                 </span>
               </div>
               {formMontant && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Écart :{' '}
                   <span
                     className={
@@ -854,7 +854,7 @@ export function PaieView() {
 
             {/* Mode de paiement */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Mode de paiement</Label>
+              <Label className="text-[15px] font-medium">Mode de paiement</Label>
               <Select value={formMode} onValueChange={setFormMode}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -869,7 +869,7 @@ export function PaieView() {
 
             {/* Date paiement */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Date de paiement</Label>
+              <Label className="text-[15px] font-medium">Date de paiement</Label>
               <Input
                 type="date"
                 value={formDate}
@@ -879,7 +879,7 @@ export function PaieView() {
 
             {/* Commentaire */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">
+              <Label className="text-[15px] font-medium">
                 Commentaire sur la différence{' '}
                 <span className="text-muted-foreground font-normal">(optionnel)</span>
               </Label>
@@ -942,12 +942,12 @@ export function PaieView() {
               {/* Status & amounts */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-muted/50 rounded-lg p-3 space-y-1">
-                  <p className="text-xs text-muted-foreground">Montant calculé</p>
-                  <p className="text-lg font-bold">{fmtCurrency(detailPaiement.montantCalcule)}</p>
+                  <p className="text-sm text-muted-foreground">Montant calculé</p>
+                  <p className="text-xl font-bold">{fmtCurrency(detailPaiement.montantCalcule)}</p>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3 space-y-1">
-                  <p className="text-xs text-muted-foreground">Montant versé</p>
-                  <p className="text-lg font-bold">
+                  <p className="text-sm text-muted-foreground">Montant versé</p>
+                  <p className="text-xl font-bold">
                     {detailPaiement.montantVerse !== null
                       ? fmtCurrency(detailPaiement.montantVerse)
                       : '—'}
@@ -957,7 +957,7 @@ export function PaieView() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Statut</p>
+                  <p className="text-sm text-muted-foreground">Statut</p>
                   <Badge
                     variant="outline"
                     className={`text-xs ${STATUT_CONFIG[detailPaiement.statut]?.className || ''}`}
@@ -966,16 +966,16 @@ export function PaieView() {
                   </Badge>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Mode paiement</p>
-                  <p className="text-sm font-medium">
+                  <p className="text-sm text-muted-foreground">Mode paiement</p>
+                  <p className="text-[15px] font-medium">
                     {detailPaiement.modePaiement
                       ? MODE_PAIEMENT_LABELS[detailPaiement.modePaiement]
                       : '—'}
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Date paiement</p>
-                  <p className="text-sm font-medium">
+                  <p className="text-sm text-muted-foreground">Date paiement</p>
+                  <p className="text-[15px] font-medium">
                     {detailPaiement.datePaiement
                       ? fmtDateShort(detailPaiement.datePaiement)
                       : '—'}
@@ -984,17 +984,17 @@ export function PaieView() {
               </div>
 
               {detailPaiement.validePar && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Validé par : {detailPaiement.validePar.name}
                 </p>
               )}
 
               {detailPaiement.differenceComment && (
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                  <p className="text-xs font-medium text-orange-700 mb-1">
+                  <p className="text-sm font-medium text-orange-700 mb-1">
                     Commentaire sur la différence
                   </p>
-                  <p className="text-sm text-orange-800">
+                  <p className="text-[15px] text-orange-800">
                     {detailPaiement.differenceComment}
                   </p>
                 </div>
@@ -1004,7 +1004,7 @@ export function PaieView() {
 
               {/* Pointages list */}
               <div>
-                <p className="text-sm font-medium mb-2">Pointages de la semaine</p>
+                <p className="text-[15px] font-medium mb-2">Pointages de la semaine</p>
                 {loadingDetail ? (
                   <div className="space-y-2">
                     {Array.from({ length: 3 }).map((_, i) => (
@@ -1012,7 +1012,7 @@ export function PaieView() {
                     ))}
                   </div>
                 ) : detailPointages.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Aucun pointage trouvé pour cette période.
                   </p>
                 ) : (
@@ -1020,26 +1020,26 @@ export function PaieView() {
                     {detailPointages.map((pt) => (
                       <div
                         key={pt.id}
-                        className="flex items-center justify-between text-sm bg-muted/30 rounded-md px-3 py-2"
+                        className="flex items-center justify-between text-[15px] bg-muted/30 rounded-md px-3 py-2"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground text-xs">
+                          <span className="text-muted-foreground text-sm">
                             {fmtDateShort(pt.dateTravail)}
                           </span>
                           {pt.valide ? (
                             <Badge
                               variant="outline"
-                              className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200"
+                              className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200"
                             >
                               Validé
                             </Badge>
                           ) : (
-                            <Badge variant="secondary" className="text-[10px]">
+                            <Badge variant="secondary" className="text-xs">
                               Attente
                             </Badge>
                           )}
                         </div>
-                        <span className="font-medium text-xs">
+                        <span className="font-medium text-sm">
                           {fmtCurrency(pt.tauxJournalier)}
                         </span>
                       </div>

@@ -578,7 +578,7 @@ export function ChantierDetailView() {
             </Badge>
           </div>
           {chantier.adresse && (
-            <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1.5 truncate">
+            <p className="text-[15px] text-muted-foreground mt-0.5 flex items-center gap-1.5 truncate">
               <MapPin className="w-3.5 h-3.5 shrink-0" />
               {chantier.adresse}
             </p>
@@ -611,10 +611,10 @@ export function ChantierDetailView() {
               <CardContent className="p-4 lg:p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs lg:text-sm text-muted-foreground font-medium">
+                    <p className="text-sm lg:text-[15px] text-muted-foreground font-medium">
                       {card.title}
                     </p>
-                    <p className="text-lg lg:text-2xl font-bold mt-1 text-foreground truncate">
+                    <p className="text-xl lg:text-2xl font-bold mt-1 text-foreground truncate">
                       {card.value}
                     </p>
                   </div>
@@ -651,10 +651,10 @@ export function ChantierDetailView() {
           {chantier.description ? (
             <Card className="border shadow-sm">
               <CardHeader className="pb-2 px-5 pt-5">
-                <CardTitle className="text-base font-semibold">Description</CardTitle>
+                <CardTitle className="text-[17px] font-semibold">Description</CardTitle>
               </CardHeader>
               <CardContent className="px-5 pb-5">
-                <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                <p className="text-[15px] text-muted-foreground whitespace-pre-line leading-relaxed">
                   {chantier.description}
                 </p>
               </CardContent>
@@ -662,7 +662,7 @@ export function ChantierDetailView() {
           ) : (
             <Card className="border shadow-sm">
               <CardContent className="px-5 py-6">
-                <p className="text-sm text-muted-foreground italic">
+                <p className="text-[15px] text-muted-foreground italic">
                   Aucune description fournie
                 </p>
               </CardContent>
@@ -672,7 +672,7 @@ export function ChantierDetailView() {
           {/* Info Grid */}
           <Card className="border shadow-sm">
             <CardHeader className="pb-2 px-5 pt-5">
-              <CardTitle className="text-base font-semibold">Informations</CardTitle>
+              <CardTitle className="text-[17px] font-semibold">Informations</CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -713,11 +713,11 @@ export function ChantierDetailView() {
           {/* Phases Timeline */}
           <Card className="border shadow-sm">
             <CardHeader className="pb-2 px-5 pt-5">
-              <CardTitle className="text-base font-semibold">Timeline des phases</CardTitle>
+              <CardTitle className="text-[17px] font-semibold">Timeline des phases</CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-5">
               {chantier.phases.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">
+                <p className="text-[15px] text-muted-foreground py-4 text-center">
                   Aucune phase définie
                 </p>
               ) : (
@@ -745,11 +745,11 @@ export function ChantierDetailView() {
                       {/* Phase content */}
                       <div className="flex-1 min-w-0 pb-4">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold text-foreground">
+                          <span className="text-[15px] font-semibold text-foreground">
                             {phase.nom}
                           </span>
                           {phase.dateDebut && (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-sm text-muted-foreground">
                               {fmtDate(phase.dateDebut)}
                               {phase.dateFin ? ` → ${fmtDate(phase.dateFin)}` : ''}
                             </span>
@@ -760,12 +760,12 @@ export function ChantierDetailView() {
                             value={phase.avancement}
                             className="h-2 flex-1"
                           />
-                          <span className="text-xs font-medium text-muted-foreground w-10 text-right">
+                          <span className="text-sm font-medium text-muted-foreground w-10 text-right">
                             {Math.round(phase.avancement)}%
                           </span>
                         </div>
                         {phase.description && (
-                          <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">
+                          <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">
                             {phase.description}
                           </p>
                         )}
@@ -786,10 +786,10 @@ export function ChantierDetailView() {
                 <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 mb-4">
                   <ClipboardList className="w-8 h-8 text-amber-500" />
                 </div>
-                <p className="text-sm font-medium text-foreground mb-1">
+                <p className="text-[15px] font-medium text-foreground mb-1">
                   Aucune phase définie
                 </p>
-                <p className="text-xs text-muted-foreground mb-4">
+                <p className="text-sm text-muted-foreground mb-4">
                   Commencez par ajouter des phases pour organiser votre chantier
                 </p>
                 <Button size="sm" onClick={() => setCreatePhaseDialogOpen(true)}>
@@ -828,14 +828,14 @@ export function ChantierDetailView() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge
                               variant="outline"
-                              className="text-[10px] font-mono bg-muted"
+                              className="text-xs font-mono bg-muted"
                             >
                               P{phase.ordre}
                             </Badge>
-                            <span className="text-sm font-semibold text-foreground truncate">
+                            <span className="text-[15px] font-semibold text-foreground truncate">
                               {phase.nom}
                             </span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-sm text-muted-foreground">
                               ({phase.taches.length} tâche{phase.taches.length !== 1 ? 's' : ''})
                             </span>
                           </div>
@@ -844,7 +844,7 @@ export function ChantierDetailView() {
                               value={phase.avancement}
                               className="h-1.5 flex-1 max-w-[200px]"
                             />
-                            <span className="text-[11px] font-medium text-muted-foreground">
+                            <span className="text-xs font-medium text-muted-foreground">
                               {Math.round(phase.avancement)}%
                             </span>
                           </div>
@@ -852,7 +852,7 @@ export function ChantierDetailView() {
 
                         <div className="flex items-center gap-1.5 shrink-0">
                           {phase.dateDebut && (
-                            <span className="text-[11px] text-muted-foreground hidden sm:inline">
+                            <span className="text-xs text-muted-foreground hidden sm:inline">
                               {fmtDate(phase.dateDebut)}
                               {phase.dateFin ? ` → ${fmtDate(phase.dateFin)}` : ''}
                             </span>
@@ -876,7 +876,7 @@ export function ChantierDetailView() {
                         <Separator />
                         <div className="px-4 lg:px-5 py-3 space-y-2">
                           {phase.taches.length === 0 ? (
-                            <p className="text-xs text-muted-foreground text-center py-3">
+                            <p className="text-sm text-muted-foreground text-center py-3">
                               Aucune tâche dans cette phase
                             </p>
                           ) : (
@@ -888,17 +888,17 @@ export function ChantierDetailView() {
                                 {/* Task statut */}
                                 <Badge
                                   variant="outline"
-                                  className={`text-[10px] shrink-0 ${tacheStatutColors[tache.statut] || ''}`}
+                                  className={`text-xs shrink-0 ${tacheStatutColors[tache.statut] || ''}`}
                                 >
                                   {tacheStatutLabels[tache.statut] || tache.statut}
                                 </Badge>
 
                                 {/* Task name */}
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-foreground truncate">
+                                  <p className="text-[15px] font-medium text-foreground truncate">
                                     {tache.nom}
                                   </p>
-                                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                     {tache.responsable && (
                                       <span className="flex items-center gap-1">
                                         <Users className="w-3 h-3" />
@@ -945,7 +945,7 @@ export function ChantierDetailView() {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-7 text-xs font-medium gap-1"
+                                      className="h-7 text-sm font-medium gap-1"
                                       onClick={() => startEditAvancement(tache)}
                                     >
                                       <TrendingUp className="w-3 h-3" />
@@ -974,7 +974,7 @@ export function ChantierDetailView() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full border-dashed text-xs"
+                            className="w-full border-dashed text-sm"
                             onClick={() => openCreateTaskDialog(phase.id)}
                           >
                             <Plus className="w-3.5 h-3.5 mr-1.5" />
@@ -1004,7 +1004,7 @@ export function ChantierDetailView() {
         <TabsContent value="equipe" className="mt-4">
           <Card className="border shadow-sm">
             <CardHeader className="pb-2 px-5 pt-5">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <CardTitle className="text-[17px] font-semibold flex items-center gap-2">
                 <Users className="w-4.5 h-4.5 text-amber-500" />
                 Journaliers affectés ({chantier.journaliers.length})
               </CardTitle>
@@ -1015,7 +1015,7 @@ export function ChantierDetailView() {
                   <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 mb-4">
                     <Users className="w-8 h-8 text-amber-500" />
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-[15px] text-muted-foreground">
                     Aucun journalier affecté à ce chantier
                   </p>
                 </div>
@@ -1035,10 +1035,10 @@ export function ChantierDetailView() {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
+                          <p className="text-[15px] font-medium text-foreground truncate">
                             {j.prenom} {j.nom}
                           </p>
-                          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             {j.specialite && (
                               <span className="flex items-center gap-1">
                                 <Wrench className="w-3 h-3" />
@@ -1054,7 +1054,7 @@ export function ChantierDetailView() {
                           </div>
                         </div>
 
-                        <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 shrink-0">
+                        <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 shrink-0">
                           Actif
                         </Badge>
                       </div>
@@ -1409,8 +1409,8 @@ function InfoItem({
         <Icon className="w-4 h-4 text-muted-foreground" />
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium text-foreground truncate">
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="text-[15px] font-medium text-foreground truncate">
           {value || '—'}
         </p>
       </div>

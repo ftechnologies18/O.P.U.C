@@ -531,7 +531,7 @@ export function PersonnelView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Personnel</h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-[15px] text-muted-foreground mt-1">
             Gérez les journaliers et leurs affectations
           </p>
         </div>
@@ -556,7 +556,7 @@ export function PersonnelView() {
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground font-medium">
+                    <p className="text-sm text-muted-foreground font-medium">
                       {card.label}
                     </p>
                     <p className="text-2xl font-bold mt-1 text-foreground">
@@ -658,10 +658,10 @@ export function PersonnelView() {
           <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
             <Users className="w-8 h-8 text-amber-600" />
           </div>
-          <h3 className="text-lg font-semibold text-foreground">
+          <h3 className="text-xl font-semibold text-foreground">
             Aucun journalier trouvé
           </h3>
-          <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+          <p className="text-[15px] text-muted-foreground mt-1 max-w-sm">
             {search || specialtyFilter !== 'TOUS' || chantierFilter !== 'TOUS'
               ? 'Aucun journalier ne correspond à vos critères de recherche.'
               : 'Commencez par ajouter votre premier journalier.'}
@@ -716,13 +716,13 @@ export function PersonnelView() {
                         {/* Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-semibold text-foreground text-sm truncate">
+                            <h3 className="font-semibold text-foreground text-[15px] truncate">
                               {getFullName(journalier)}
                             </h3>
                             <Badge
                               variant="outline"
                               className={cn(
-                                'text-[10px] shrink-0 gap-1',
+                                'text-xs shrink-0 gap-1',
                                 getSpecialtyBadgeClass(journalier.specialite)
                               )}
                             >
@@ -735,7 +735,7 @@ export function PersonnelView() {
 
                           {/* Phone */}
                           {journalier.telephone && (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
                               <Phone className="w-3.5 h-3.5 shrink-0 text-amber-500" />
                               <span>{journalier.telephone}</span>
                             </div>
@@ -747,7 +747,7 @@ export function PersonnelView() {
                               {activeAffectations.map((affectation) => (
                                 <div
                                   key={affectation.id}
-                                  className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-0.5 text-[11px] text-emerald-700 group/aff"
+                                  className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-0.5 text-xs text-emerald-700 group/aff"
                                 >
                                   <Building2 className="w-3 h-3" />
                                   <span className="font-medium truncate max-w-[140px]">
@@ -777,7 +777,7 @@ export function PersonnelView() {
                           )}
 
                           {activeAffectations.length === 0 && (
-                            <p className="text-[11px] text-muted-foreground/60 mt-1 italic">
+                            <p className="text-xs text-muted-foreground/60 mt-1 italic">
                               Non affecté
                             </p>
                           )}
@@ -1058,7 +1058,7 @@ export function PersonnelView() {
               </div>
             </div>
 
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               * La date de fin est optionnelle. L&apos;affectation restera active
               jusqu&apos;à sa suppression manuelle.
             </p>

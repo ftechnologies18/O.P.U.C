@@ -98,7 +98,7 @@ export function DocumentsView() {
             <h3 className="text-xl font-semibold text-foreground mb-2">
               Le module de gestion documentaire sera disponible prochainement.
             </h3>
-            <p className="text-muted-foreground text-sm leading-relaxed max-w-lg">
+            <p className="text-muted-foreground text-[15px] leading-relaxed max-w-lg">
               Ce module vous permettra de centraliser, organiser et partager tous les documents
               liés à vos chantiers : plans, permis, contrats, factures et bien plus encore.
               Restez connectés pour les mises à jour.
@@ -109,7 +109,7 @@ export function DocumentsView() {
 
       {/* Planned features */}
       <div>
-        <h3 className="text-lg font-semibold text-foreground mb-4">
+        <h3 className="text-xl font-semibold text-foreground mb-4">
           Fonctionnalités prévues
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -126,8 +126,8 @@ export function DocumentsView() {
                       <Icon className={`w-5 h-5 ${feature.color}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-sm text-foreground">{feature.title}</h4>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      <h4 className="font-semibold text-[15px] text-foreground">{feature.title}</h4>
+                      <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                         {feature.description}
                       </p>
                     </div>
@@ -142,7 +142,7 @@ export function DocumentsView() {
       {/* Footer note */}
       <Card className="border-dashed border-2 border-muted-foreground/20">
         <CardContent className="p-6 text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-[15px] text-muted-foreground">
             💡 <strong>Astuce :</strong> En attendant, vous pouvez utiliser le module{' '}
             <span className="font-medium text-foreground">Rapports</span> pour documenter
             l&apos;avancement quotidien de vos chantiers.

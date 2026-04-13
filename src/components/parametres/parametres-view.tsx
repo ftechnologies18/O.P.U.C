@@ -117,7 +117,7 @@ export function ParametresView() {
       {/* Profile section */}
       <Card className="border shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
+          <CardTitle className="text-[17px] font-semibold flex items-center gap-2">
             <User className="w-4.5 h-4.5 text-amber-500" />
             Mon profil
           </CardTitle>
@@ -166,8 +166,8 @@ export function ParametresView() {
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                   <Mail className="w-4.5 h-4.5 text-muted-foreground mt-0.5 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground font-medium">Email</p>
-                    <p className="text-sm text-foreground truncate">{userInfo.email}</p>
+                    <p className="text-sm text-muted-foreground font-medium">Email</p>
+                    <p className="text-[15px] text-foreground truncate">{userInfo.email}</p>
                   </div>
                 </div>
 
@@ -175,8 +175,8 @@ export function ParametresView() {
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                   <Phone className="w-4.5 h-4.5 text-muted-foreground mt-0.5 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground font-medium">Téléphone</p>
-                    <p className="text-sm text-foreground">
+                    <p className="text-sm text-muted-foreground font-medium">Téléphone</p>
+                    <p className="text-[15px] text-foreground">
                       {userInfo.telephone || <span className="italic text-muted-foreground">Non renseigné</span>}
                     </p>
                   </div>
@@ -186,8 +186,8 @@ export function ParametresView() {
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                   <Shield className="w-4.5 h-4.5 text-muted-foreground mt-0.5 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground font-medium">Rôle</p>
-                    <p className="text-sm text-foreground">{roleLabels[userInfo.role] || userInfo.role}</p>
+                    <p className="text-sm text-muted-foreground font-medium">Rôle</p>
+                    <p className="text-[15px] text-foreground">{roleLabels[userInfo.role] || userInfo.role}</p>
                   </div>
                 </div>
 
@@ -195,8 +195,8 @@ export function ParametresView() {
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                   <Calendar className="w-4.5 h-4.5 text-muted-foreground mt-0.5 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground font-medium">Inscrit le</p>
-                    <p className="text-sm text-foreground">
+                    <p className="text-sm text-muted-foreground font-medium">Inscrit le</p>
+                    <p className="text-[15px] text-foreground">
                       {format(new Date(userInfo.createdAt), 'd MMMM yyyy', { locale: fr })}
                     </p>
                   </div>
@@ -210,7 +210,7 @@ export function ParametresView() {
       {/* Entreprise section */}
       <Card className="border shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
+          <CardTitle className="text-[17px] font-semibold flex items-center gap-2">
             <Building2 className="w-4.5 h-4.5 text-amber-500" />
             Entreprise
           </CardTitle>
@@ -231,8 +231,8 @@ export function ParametresView() {
                   <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                     <Building2 className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground font-medium">Adresse</p>
-                      <p className="text-sm text-foreground">{userInfo.entreprise.adresse}</p>
+                      <p className="text-sm text-muted-foreground font-medium">Adresse</p>
+                      <p className="text-[15px] text-foreground">{userInfo.entreprise.adresse}</p>
                     </div>
                   </div>
                 )}
@@ -240,8 +240,8 @@ export function ParametresView() {
                   <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                     <Phone className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground font-medium">Téléphone</p>
-                      <p className="text-sm text-foreground">{userInfo.entreprise.telephone}</p>
+                      <p className="text-sm text-muted-foreground font-medium">Téléphone</p>
+                      <p className="text-[15px] text-foreground">{userInfo.entreprise.telephone}</p>
                     </div>
                   </div>
                 )}
@@ -249,8 +249,8 @@ export function ParametresView() {
                   <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                     <Mail className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground font-medium">Email</p>
-                      <p className="text-sm text-foreground">{userInfo.entreprise.email}</p>
+                      <p className="text-sm text-muted-foreground font-medium">Email</p>
+                      <p className="text-[15px] text-foreground">{userInfo.entreprise.email}</p>
                     </div>
                   </div>
                 )}
@@ -269,7 +269,7 @@ export function ParametresView() {
       {/* Theme section */}
       <Card className="border shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
+          <CardTitle className="text-[17px] font-semibold flex items-center gap-2">
             <Palette className="w-4.5 h-4.5 text-amber-500" />
             Apparence
           </CardTitle>
@@ -278,7 +278,7 @@ export function ParametresView() {
           <div className="space-y-4">
             {/* Light / Dark / System options */}
             <div>
-              <p className="text-sm font-medium text-foreground mb-3">Thème</p>
+              <p className="text-[15px] font-medium text-foreground mb-3">Thème</p>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={() => setTheme('light')}
@@ -289,7 +289,7 @@ export function ParametresView() {
                   }`}
                 >
                   <Sun className={`w-6 h-6 ${theme === 'light' ? 'text-amber-600' : 'text-muted-foreground'}`} />
-                  <span className={`text-xs font-medium ${theme === 'light' ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
+                  <span className={`text-sm font-medium ${theme === 'light' ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
                     Clair
                   </span>
                 </button>
@@ -302,7 +302,7 @@ export function ParametresView() {
                   }`}
                 >
                   <Moon className={`w-6 h-6 ${theme === 'dark' ? 'text-amber-600' : 'text-muted-foreground'}`} />
-                  <span className={`text-xs font-medium ${theme === 'dark' ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
+                  <span className={`text-sm font-medium ${theme === 'dark' ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
                     Sombre
                   </span>
                 </button>
@@ -315,7 +315,7 @@ export function ParametresView() {
                   }`}
                 >
                   <Monitor className={`w-6 h-6 ${theme === 'system' ? 'text-amber-600' : 'text-muted-foreground'}`} />
-                  <span className={`text-xs font-medium ${theme === 'system' ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
+                  <span className={`text-sm font-medium ${theme === 'system' ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
                     Système
                   </span>
                 </button>
@@ -345,26 +345,26 @@ export function ParametresView() {
       {/* Info section */}
       <Card className="border shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
+          <CardTitle className="text-[17px] font-semibold flex items-center gap-2">
             <Info className="w-4.5 h-4.5 text-amber-500" />
             Informations
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between py-2">
-            <span className="text-sm text-muted-foreground">Application</span>
-            <span className="text-sm font-medium text-foreground">O.P.U.C.</span>
+            <span className="text-[15px] text-muted-foreground">Application</span>
+            <span className="text-[15px] font-medium text-foreground">O.P.U.C.</span>
           </div>
           <div className="flex items-center justify-between py-2">
-            <span className="text-sm text-muted-foreground">Version</span>
+            <span className="text-[15px] text-muted-foreground">Version</span>
             <Badge variant="outline" className="font-mono text-xs">v1.0.0</Badge>
           </div>
           <div className="flex items-center justify-between py-2">
-            <span className="text-sm text-muted-foreground">Module</span>
-            <span className="text-sm text-foreground">Pilotage de Chantier</span>
+            <span className="text-[15px] text-muted-foreground">Module</span>
+            <span className="text-[15px] text-foreground">Pilotage de Chantier</span>
           </div>
           <Separator />
-          <p className="text-xs text-muted-foreground text-center pt-1">
+          <p className="text-sm text-muted-foreground text-center pt-1">
             © {new Date().getFullYear()} O.P.U.C. — Outil de Pilotage Unifié de Chantier. Tous droits réservés.
           </p>
         </CardContent>

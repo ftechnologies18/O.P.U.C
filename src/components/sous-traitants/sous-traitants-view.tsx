@@ -588,7 +588,7 @@ export function SousTraitantsView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Sous-traitants</h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-[15px] text-muted-foreground mt-1">
             Gérez les sous-traitants et leurs contrats
           </p>
         </div>
@@ -616,7 +616,7 @@ export function SousTraitantsView() {
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground font-medium">
+                      <p className="text-sm text-muted-foreground font-medium">
                         {card.label}
                       </p>
                       <p className="text-xl sm:text-2xl font-bold mt-1 text-foreground">
@@ -689,10 +689,10 @@ export function SousTraitantsView() {
           <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
             <Briefcase className="w-8 h-8 text-amber-600" />
           </div>
-          <h3 className="text-lg font-semibold text-foreground">
+          <h3 className="text-xl font-semibold text-foreground">
             Aucun sous-traitant trouvé
           </h3>
-          <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+          <p className="text-[15px] text-muted-foreground mt-1 max-w-sm">
             {search
               ? 'Aucun sous-traitant ne correspond à votre recherche.'
               : 'Commencez par ajouter votre premier sous-traitant.'}
@@ -732,7 +732,7 @@ export function SousTraitantsView() {
                         <div className="w-9 h-9 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
                           <Building2 className="w-4 h-4 text-violet-600" />
                         </div>
-                        <h3 className="font-semibold text-foreground text-sm truncate">
+                        <h3 className="font-semibold text-foreground text-[15px] truncate">
                           {st.raisonSociale}
                         </h3>
                       </div>
@@ -768,7 +768,7 @@ export function SousTraitantsView() {
                     </div>
 
                     {/* Info details */}
-                    <div className="space-y-1.5 text-xs">
+                    <div className="space-y-1.5 text-sm">
                       {st.rccm && (
                         <div className="flex items-center gap-1.5 text-muted-foreground">
                           <ScrollText className="w-3.5 h-3.5 shrink-0 text-amber-500" />
@@ -788,7 +788,7 @@ export function SousTraitantsView() {
                       {st.specialite && (
                         <Badge
                           variant="outline"
-                          className="text-[10px] bg-violet-50 text-violet-700 border-violet-200"
+                          className="text-xs bg-violet-50 text-violet-700 border-violet-200"
                         >
                           {st.specialite}
                         </Badge>
@@ -796,7 +796,7 @@ export function SousTraitantsView() {
                       <Badge
                         variant="outline"
                         className={cn(
-                          'text-[10px]',
+                          'text-xs',
                           st._count.contrats > 0
                             ? 'bg-amber-50 text-amber-700 border-amber-200'
                             : 'bg-gray-50 text-gray-500 border-gray-200'
@@ -1051,7 +1051,7 @@ export function SousTraitantsView() {
 
               {/* Contrats section */}
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <h3 className="text-[15px] font-semibold text-foreground flex items-center gap-2">
                   <FileText className="w-4 h-4 text-amber-500" />
                   Contrats ({detailSt.contrats.length})
                 </h3>
@@ -1068,7 +1068,7 @@ export function SousTraitantsView() {
               {detailSt.contrats.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">Aucun contrat pour ce sous-traitant</p>
+                  <p className="text-[15px]">Aucun contrat pour ce sous-traitant</p>
                 </div>
               ) : (
                 <ScrollArea className="max-h-[360px]">
@@ -1086,7 +1086,7 @@ export function SousTraitantsView() {
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex items-center gap-2 min-w-0">
                                 <FileText className="w-4 h-4 text-amber-500 shrink-0" />
-                                <h4 className="font-medium text-sm text-foreground truncate">
+                                <h4 className="font-medium text-[15px] text-foreground truncate">
                                   {contrat.objetTravaux}
                                 </h4>
                               </div>

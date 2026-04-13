@@ -453,7 +453,7 @@ export function RapportsView() {
             <FileText className="w-6 h-6 text-amber-500" />
             Rapports Journaliers
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-[15px] text-muted-foreground mt-1">
             Suivi quotidien des activités de chantier
           </p>
         </div>
@@ -480,7 +480,7 @@ export function RapportsView() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{totalRapports}</p>
-                <p className="text-xs text-muted-foreground">Total rapports</p>
+                <p className="text-sm text-muted-foreground">Total rapports</p>
               </div>
             </CardContent>
           </Card>
@@ -498,7 +498,7 @@ export function RapportsView() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{rapportsToday}</p>
-                <p className="text-xs text-muted-foreground">Aujourd&apos;hui</p>
+                <p className="text-sm text-muted-foreground">Aujourd&apos;hui</p>
               </div>
             </CardContent>
           </Card>
@@ -518,7 +518,7 @@ export function RapportsView() {
                 <p className="text-2xl font-bold">
                   {rapports.reduce((s, r) => s + r.photoCount, 0)}
                 </p>
-                <p className="text-xs text-muted-foreground">Photos associées</p>
+                <p className="text-sm text-muted-foreground">Photos associées</p>
               </div>
             </CardContent>
           </Card>
@@ -531,7 +531,7 @@ export function RapportsView() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Chantier Filter */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Chantier</Label>
+              <Label className="text-sm font-medium text-muted-foreground">Chantier</Label>
               <Select value={filterChantierId} onValueChange={setFilterChantierId}>
                 <SelectTrigger className="w-full h-9">
                   <SelectValue placeholder="Tous les chantiers" />
@@ -549,7 +549,7 @@ export function RapportsView() {
 
             {/* Month Navigation */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Mois</Label>
+              <Label className="text-sm font-medium text-muted-foreground">Mois</Label>
               <div className="flex items-center gap-1">
                 <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={prevMonth}>
                   <ChevronLeft className="w-4 h-4" />
@@ -583,7 +583,7 @@ export function RapportsView() {
 
             {/* Search */}
             <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
-              <Label className="text-xs font-medium text-muted-foreground">Recherche</Label>
+              <Label className="text-sm font-medium text-muted-foreground">Recherche</Label>
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -624,8 +624,8 @@ export function RapportsView() {
             <div className="w-20 h-20 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center mb-4">
               <CloudSun className="w-10 h-10" />
             </div>
-            <h3 className="text-lg font-semibold mb-1">Aucun rapport trouvé</h3>
-            <p className="text-sm text-muted-foreground max-w-sm mb-6">
+            <h3 className="text-xl font-semibold mb-1">Aucun rapport trouvé</h3>
+            <p className="text-[15px] text-muted-foreground max-w-sm mb-6">
               {searchQuery.trim()
                 ? 'Aucun rapport ne correspond à votre recherche.'
                 : filterChantierId !== 'all'
@@ -663,7 +663,7 @@ export function RapportsView() {
                             <span className="text-lg font-bold text-amber-700 leading-tight">
                               {format(parseISO(rapport.dateRapport), 'dd')}
                             </span>
-                            <span className="text-[10px] font-medium text-amber-600 uppercase leading-tight">
+                            <span className="text-xs font-medium text-amber-600 uppercase leading-tight">
                               {format(parseISO(rapport.dateRapport), 'MMM yy', { locale: fr })}
                             </span>
                           </div>
@@ -696,7 +696,7 @@ export function RapportsView() {
                             </div>
 
                             {/* Chantier name */}
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-sm text-muted-foreground">
                               📍 {rapport.chantier.nom}
                             </p>
                           </div>
@@ -736,7 +736,7 @@ export function RapportsView() {
 
                       {/* Travaux réalisés */}
                       <div className="pl-0 sm:pl-[68px]">
-                        <p className="text-sm text-muted-foreground leading-relaxed">
+                        <p className="text-[15px] text-muted-foreground leading-relaxed">
                           <span className="font-medium text-foreground">Travaux :</span>{' '}
                           {rapport.travauxRealises.length > 180
                             ? rapport.travauxRealises.slice(0, 180) + '...'
@@ -746,7 +746,7 @@ export function RapportsView() {
 
                       {/* Footer: incidents + auteur */}
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 pl-0 sm:pl-[68px]">
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
                           {rapport.incidents && (
                             <span className="text-red-600 font-medium flex items-center gap-1">
                               <AlertCircle className="w-3 h-3" />
@@ -754,7 +754,7 @@ export function RapportsView() {
                             </span>
                           )}
                         </div>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-sm text-muted-foreground">
                           Par {rapport.auteur.name}
                         </span>
                       </div>
@@ -783,7 +783,7 @@ export function RapportsView() {
           <div className="space-y-4 py-2">
             {/* Chantier */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Chantier *</Label>
+              <Label className="text-[15px] font-medium">Chantier *</Label>
               <Select
                 value={formData.chantierId}
                 onValueChange={(v) => setFormData((f) => ({ ...f, chantierId: v }))}
@@ -803,7 +803,7 @@ export function RapportsView() {
 
             {/* Date */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Date du rapport *</Label>
+              <Label className="text-[15px] font-medium">Date du rapport *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start text-left font-normal">
@@ -826,7 +826,7 @@ export function RapportsView() {
 
             {/* Météo */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Conditions météorologiques</Label>
+              <Label className="text-[15px] font-medium">Conditions météorologiques</Label>
               <RadioGroup
                 value={formData.meteo}
                 onValueChange={(v) => setFormData((f) => ({ ...f, meteo: v }))}
@@ -843,7 +843,7 @@ export function RapportsView() {
                     >
                       <RadioGroupItem value={w.value} className="sr-only" />
                       <Icon className="w-4 h-4 shrink-0" />
-                      <span className="text-xs font-medium">{w.emoji} {w.label}</span>
+                      <span className="text-sm font-medium">{w.emoji} {w.label}</span>
                     </label>
                   )
                 })}
@@ -852,7 +852,7 @@ export function RapportsView() {
 
             {/* Effectif */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Effectif présent</Label>
+              <Label className="text-[15px] font-medium">Effectif présent</Label>
               <Input
                 type="number"
                 min="0"
@@ -866,7 +866,7 @@ export function RapportsView() {
 
             {/* Travaux réalisés */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Travaux réalisés *</Label>
+              <Label className="text-[15px] font-medium">Travaux réalisés *</Label>
               <Textarea
                 placeholder="Décrivez les travaux effectués..."
                 rows={4}
@@ -877,7 +877,7 @@ export function RapportsView() {
 
             {/* Incidents */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Incidents</Label>
+              <Label className="text-[15px] font-medium">Incidents</Label>
               <Textarea
                 placeholder="Incidents ou accidents survenus (le cas échéant)..."
                 rows={2}
@@ -888,7 +888,7 @@ export function RapportsView() {
 
             {/* Observations */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Observations</Label>
+              <Label className="text-[15px] font-medium">Observations</Label>
               <Textarea
                 placeholder="Remarques supplémentaires..."
                 rows={2}
@@ -934,7 +934,7 @@ export function RapportsView() {
           <div className="space-y-4 py-2">
             {/* Date */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Date du rapport</Label>
+              <Label className="text-[15px] font-medium">Date du rapport</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start text-left font-normal">
@@ -957,7 +957,7 @@ export function RapportsView() {
 
             {/* Météo */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Conditions météorologiques</Label>
+              <Label className="text-[15px] font-medium">Conditions météorologiques</Label>
               <RadioGroup
                 value={formData.meteo}
                 onValueChange={(v) => setFormData((f) => ({ ...f, meteo: v }))}
@@ -974,7 +974,7 @@ export function RapportsView() {
                     >
                       <RadioGroupItem value={w.value} className="sr-only" />
                       <Icon className="w-4 h-4 shrink-0" />
-                      <span className="text-xs font-medium">{w.emoji} {w.label}</span>
+                      <span className="text-sm font-medium">{w.emoji} {w.label}</span>
                     </label>
                   )
                 })}
@@ -983,7 +983,7 @@ export function RapportsView() {
 
             {/* Effectif */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Effectif présent</Label>
+              <Label className="text-[15px] font-medium">Effectif présent</Label>
               <Input
                 type="number"
                 min="0"
@@ -997,7 +997,7 @@ export function RapportsView() {
 
             {/* Travaux réalisés */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Travaux réalisés *</Label>
+              <Label className="text-[15px] font-medium">Travaux réalisés *</Label>
               <Textarea
                 placeholder="Décrivez les travaux effectués..."
                 rows={4}
@@ -1008,7 +1008,7 @@ export function RapportsView() {
 
             {/* Incidents */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Incidents</Label>
+              <Label className="text-[15px] font-medium">Incidents</Label>
               <Textarea
                 placeholder="Incidents ou accidents survenus..."
                 rows={2}
@@ -1019,7 +1019,7 @@ export function RapportsView() {
 
             {/* Observations */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Observations</Label>
+              <Label className="text-[15px] font-medium">Observations</Label>
               <Textarea
                 placeholder="Remarques supplémentaires..."
                 rows={2}
@@ -1079,10 +1079,10 @@ export function RapportsView() {
                       {viewRapport.chantier.nom}
                     </h2>
                     {viewRapport.chantier.adresse && (
-                      <p className="text-sm text-muted-foreground">{viewRapport.chantier.adresse}</p>
+                      <p className="text-[15px] text-muted-foreground">{viewRapport.chantier.adresse}</p>
                     )}
                   </div>
-                  <div className="text-right text-sm text-muted-foreground">
+                  <div className="text-right text-[15px] text-muted-foreground">
                     <p className="font-medium text-foreground">{fmtDate(viewRapport.dateRapport)}</p>
                     <p>Par {viewRapport.auteur.name}</p>
                   </div>
@@ -1102,7 +1102,7 @@ export function RapportsView() {
                   <Card className={getWeatherBadge(viewRapport.meteo)?.cardBg || 'bg-muted'}>
                     <CardContent className="p-3 text-center">
                       <p className="text-2xl mb-1">{getWeatherBadge(viewRapport.meteo)?.emoji || '—'}</p>
-                      <p className="text-xs font-medium">
+                      <p className="text-sm font-medium">
                         {getWeatherBadge(viewRapport.meteo)?.label || 'Non défini'}
                       </p>
                     </CardContent>
@@ -1114,7 +1114,7 @@ export function RapportsView() {
                       <p className="text-2xl font-bold text-blue-700">
                         {viewRapport.effectifPresent ?? '—'}
                       </p>
-                      <p className="text-xs text-blue-600 font-medium">Effectif présent</p>
+                      <p className="text-sm text-blue-600 font-medium">Effectif présent</p>
                     </CardContent>
                   </Card>
 
@@ -1124,18 +1124,18 @@ export function RapportsView() {
                       <p className="text-2xl font-bold text-purple-700">
                         {viewRapport.photos.length}
                       </p>
-                      <p className="text-xs text-purple-600 font-medium">Photo(s)</p>
+                      <p className="text-sm text-purple-600 font-medium">Photo(s)</p>
                     </CardContent>
                   </Card>
                 </div>
 
                 {/* Travaux réalisés */}
                 <div>
-                  <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                  <h3 className="text-[15px] font-semibold mb-2 flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                     Travaux réalisés
                   </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap bg-muted/30 rounded-lg p-3">
+                  <p className="text-[15px] text-muted-foreground leading-relaxed whitespace-pre-wrap bg-muted/30 rounded-lg p-3">
                     {viewRapport.travauxRealises}
                   </p>
                 </div>
@@ -1143,11 +1143,11 @@ export function RapportsView() {
                 {/* Incidents */}
                 {viewRapport.incidents && (
                   <div>
-                    <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <h3 className="text-[15px] font-semibold mb-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
                       Incidents
                     </h3>
-                    <div className="text-sm text-red-700 leading-relaxed whitespace-pre-wrap bg-red-50 rounded-lg p-3 border border-red-100">
+                    <div className="text-[15px] text-red-700 leading-relaxed whitespace-pre-wrap bg-red-50 rounded-lg p-3 border border-red-100">
                       {viewRapport.incidents}
                     </div>
                   </div>
@@ -1156,11 +1156,11 @@ export function RapportsView() {
                 {/* Observations */}
                 {viewRapport.observations && (
                   <div>
-                    <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <h3 className="text-[15px] font-semibold mb-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                       Observations
                     </h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap bg-muted/30 rounded-lg p-3">
+                    <p className="text-[15px] text-muted-foreground leading-relaxed whitespace-pre-wrap bg-muted/30 rounded-lg p-3">
                       {viewRapport.observations}
                     </p>
                   </div>
@@ -1170,7 +1170,7 @@ export function RapportsView() {
                 {viewRapport.photos.length > 0 && (
                   <div>
                     <Separator className="my-4" />
-                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <h3 className="text-[15px] font-semibold mb-3 flex items-center gap-2">
                       <Camera className="w-4 h-4 text-amber-500" />
                       Photos ({viewRapport.photos.length})
                     </h3>
@@ -1181,7 +1181,7 @@ export function RapportsView() {
                           className="aspect-square rounded-lg bg-muted border flex flex-col items-center justify-center gap-1.5 text-muted-foreground"
                         >
                           <ImageOff className="w-6 h-6" />
-                          <p className="text-[10px] text-center px-2 truncate w-full">
+                          <p className="text-xs text-center px-2 truncate w-full">
                             {photo.legende || 'Sans légende'}
                           </p>
                           <Badge variant="outline" className="text-[9px]">
@@ -1197,7 +1197,7 @@ export function RapportsView() {
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <AlertCircle className="w-10 h-10 text-muted-foreground mb-3" />
-              <p className="text-sm text-muted-foreground">
+              <p className="text-[15px] text-muted-foreground">
                 Erreur lors du chargement du rapport.
               </p>
             </div>

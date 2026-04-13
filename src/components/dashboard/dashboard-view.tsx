@@ -239,7 +239,7 @@ export function DashboardView() {
               <CardContent className="p-4 lg:p-5">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs lg:text-sm text-muted-foreground font-medium">{card.title}</p>
+                    <p className="text-sm lg:text-[15px] text-muted-foreground font-medium">{card.title}</p>
                     <p className="text-2xl lg:text-3xl font-bold mt-1 text-foreground">{card.value}</p>
                   </div>
                   <div className={`p-2 lg:p-2.5 rounded-lg ${card.bg} ${card.borderColor} border`}>
@@ -259,7 +259,7 @@ export function DashboardView() {
           {data.stockAlerts.length > 0 && (
             <Card className="border border-red-200 dark:border-red-500/30 bg-red-50/50 dark:bg-red-500/5 shadow-sm">
               <CardHeader className="pb-2 px-4 pt-4">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-red-700 dark:text-red-400">
+                <CardTitle className="text-[15px] font-semibold flex items-center gap-2 text-red-700 dark:text-red-400">
                   <AlertTriangle className="w-4 h-4" />
                   Alertes de stock ({data.stockAlerts.length})
                 </CardTitle>
@@ -267,7 +267,7 @@ export function DashboardView() {
               <CardContent className="px-4 pb-4">
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {data.stockAlerts.map((alert) => (
-                    <div key={alert.id} className="flex items-center justify-between text-xs bg-white dark:bg-background rounded-lg px-3 py-2">
+                    <div key={alert.id} className="flex items-center justify-between text-sm bg-white dark:bg-background rounded-lg px-3 py-2">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-foreground truncate">{alert.designation}</p>
                         <p className="text-muted-foreground">{alert.chantier.nom} · {alert.reference}</p>
@@ -281,7 +281,7 @@ export function DashboardView() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="mt-3 w-full h-8 text-xs border-red-200 hover:bg-red-100 dark:border-red-500/30 dark:hover:bg-red-500/10"
+                  className="mt-3 w-full h-8 text-sm border-red-200 hover:bg-red-100 dark:border-red-500/30 dark:hover:bg-red-500/10"
                   onClick={() => setCurrentView('stocks')}
                 >
                   Voir le stock <ArrowRight className="w-3 h-3 ml-1" />
@@ -294,7 +294,7 @@ export function DashboardView() {
           {data.tachesEnRetard > 0 && (
             <Card className="border border-orange-200 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-500/5 shadow-sm">
               <CardHeader className="pb-2 px-4 pt-4">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-orange-700 dark:text-orange-400">
+                <CardTitle className="text-[15px] font-semibold flex items-center gap-2 text-orange-700 dark:text-orange-400">
                   <AlertTriangle className="w-4 h-4" />
                   Tâches en retard ({data.tachesEnRetard})
                 </CardTitle>
@@ -302,7 +302,7 @@ export function DashboardView() {
               <CardContent className="px-4 pb-4">
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {data.tachesEnRetardDetails.map((tache) => (
-                    <div key={tache.id} className="flex items-center justify-between text-xs bg-white dark:bg-background rounded-lg px-3 py-2">
+                    <div key={tache.id} className="flex items-center justify-between text-sm bg-white dark:bg-background rounded-lg px-3 py-2">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-foreground truncate">{tache.nom}</p>
                         <p className="text-muted-foreground">{tache.phase.chantier.nom} · {tache.phase.nom}</p>
@@ -319,7 +319,7 @@ export function DashboardView() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="mt-3 w-full h-8 text-xs border-orange-200 hover:bg-orange-100 dark:border-orange-500/30 dark:hover:bg-orange-500/10"
+                  className="mt-3 w-full h-8 text-sm border-orange-200 hover:bg-orange-100 dark:border-orange-500/30 dark:hover:bg-orange-500/10"
                   onClick={() => setCurrentView('planning')}
                 >
                   Voir le planning <ArrowRight className="w-3 h-3 ml-1" />
@@ -335,7 +335,7 @@ export function DashboardView() {
         {/* Budget chart */}
         <Card className="lg:col-span-2 border shadow-sm">
           <CardHeader className="pb-2 px-5 pt-5">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <CardTitle className="text-[17px] font-semibold flex items-center gap-2">
               <TrendingUp className="w-4.5 h-4.5 text-amber-500" />
               Budget (millions FCFA)
             </CardTitle>
@@ -376,11 +376,11 @@ export function DashboardView() {
                 <div className="flex items-center justify-center gap-6 mt-3">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-amber-500" />
-                    <span className="text-xs text-muted-foreground">Prévisionnel</span>
+                    <span className="text-sm text-muted-foreground">Prévisionnel</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-amber-400" />
-                    <span className="text-xs text-muted-foreground">Réel (dépenses)</span>
+                    <span className="text-sm text-muted-foreground">Réel (dépenses)</span>
                   </div>
                 </div>
               </>
@@ -395,7 +395,7 @@ export function DashboardView() {
         {/* Chantier status pie */}
         <Card className="border shadow-sm">
           <CardHeader className="pb-2 px-5 pt-5">
-            <CardTitle className="text-base font-semibold">Statut des chantiers</CardTitle>
+            <CardTitle className="text-[17px] font-semibold">Statut des chantiers</CardTitle>
           </CardHeader>
           <CardContent className="px-5 pb-5">
             {pieData.length > 0 ? (
@@ -430,7 +430,7 @@ export function DashboardView() {
                   {data.chantiers.map((c) => (
                     <button
                       key={c.id}
-                      className="flex items-center justify-between text-sm w-full text-left hover:bg-muted/50 rounded-md px-2 py-1 -mx-2 transition-colors"
+                      className="flex items-center justify-between text-[15px] w-full text-left hover:bg-muted/50 rounded-md px-2 py-1 -mx-2 transition-colors"
                       onClick={() => {
                         useAppStore.getState().setSelectedChantierId(c.id)
                         setCurrentView('chantier-detail')
@@ -458,9 +458,9 @@ export function DashboardView() {
         {/* Phase progress */}
         <Card className="border shadow-sm">
           <CardHeader className="pb-2 px-5 pt-5">
-            <CardTitle className="text-base font-semibold">Avancement des phases</CardTitle>
+            <CardTitle className="text-[17px] font-semibold">Avancement des phases</CardTitle>
             {data.activeChantierNom && (
-              <p className="text-xs text-muted-foreground">{data.activeChantierNom}</p>
+              <p className="text-sm text-muted-foreground">{data.activeChantierNom}</p>
             )}
           </CardHeader>
           <CardContent className="px-5 pb-5">
@@ -468,7 +468,7 @@ export function DashboardView() {
               <div className="space-y-4">
                 {data.phasesProgress.map((phase) => (
                   <div key={phase.ordre} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-[15px]">
                       <span className="font-medium text-foreground">{phase.nom}</span>
                       <div className="flex items-center gap-1.5">
                         <span className={`text-xs font-medium ${
@@ -509,7 +509,7 @@ export function DashboardView() {
           {/* Quick actions */}
           <Card className="border shadow-sm">
             <CardHeader className="pb-3 px-5 pt-5">
-              <CardTitle className="text-base font-semibold">Actions rapides</CardTitle>
+              <CardTitle className="text-[17px] font-semibold">Actions rapides</CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-5">
               <div className="grid grid-cols-3 gap-3">
@@ -523,7 +523,7 @@ export function DashboardView() {
                       onClick={() => setCurrentView(action.view)}
                     >
                       <Icon className="w-5 h-5" />
-                      <span className="text-xs font-medium text-center leading-tight">{action.label}</span>
+                      <span className="text-sm font-medium text-center leading-tight">{action.label}</span>
                     </Button>
                   )
                 })}
@@ -534,7 +534,7 @@ export function DashboardView() {
           {/* Recent notifications */}
           <Card className="border shadow-sm">
             <CardHeader className="pb-3 px-5 pt-5">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <CardTitle className="text-[17px] font-semibold flex items-center gap-2">
                 <Bell className="w-4.5 h-4.5 text-amber-500" />
                 Notifications récentes
               </CardTitle>
@@ -555,8 +555,8 @@ export function DashboardView() {
                         {notificationTypeIcons[notif.type] || '📌'}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground text-xs">{notif.titre}</p>
-                        <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
+                        <p className="font-medium text-foreground text-sm">{notif.titre}</p>
+                        <p className="text-sm text-muted-foreground truncate">{notif.message}</p>
                       </div>
                       {!notif.lu && <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />}
                     </div>
@@ -577,21 +577,21 @@ export function DashboardView() {
       {data.budgetData.length > 0 && (
         <Card className="border shadow-sm">
           <CardHeader className="pb-2 px-5 pt-5">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <CardTitle className="text-[17px] font-semibold flex items-center gap-2">
               <BarChart3 className="w-4.5 h-4.5 text-amber-500" />
               Résumé budgétaire
             </CardTitle>
           </CardHeader>
           <CardContent className="px-5 pb-5">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-[15px]">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left py-2 pr-4 font-medium text-muted-foreground text-xs">Chantier</th>
-                    <th className="text-right py-2 px-4 font-medium text-muted-foreground text-xs">Prévisionnel</th>
-                    <th className="text-right py-2 px-4 font-medium text-muted-foreground text-xs">Réel</th>
-                    <th className="text-right py-2 px-4 font-medium text-muted-foreground text-xs">Consommé</th>
-                    <th className="text-right py-2 pl-4 font-medium text-muted-foreground text-xs">Statut</th>
+                    <th className="text-left py-2 pr-4 font-medium text-muted-foreground text-sm">Chantier</th>
+                    <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm">Prévisionnel</th>
+                    <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm">Réel</th>
+                    <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm">Consommé</th>
+                    <th className="text-right py-2 pl-4 font-medium text-muted-foreground text-sm">Statut</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -603,14 +603,14 @@ export function DashboardView() {
                     const statusLabel = pct >= 100 ? 'Critique' : pct >= 80 ? 'Attention' : 'OK'
                     return (
                       <tr key={b.chantierId} className="border-b border-border/50 last:border-0">
-                        <td className="py-2.5 pr-4 font-medium text-foreground text-xs">{b.nom}</td>
-                        <td className="text-right py-2.5 px-4 text-xs text-muted-foreground">
-                          {formatFCFA(b.budgetPrevisionnel)} <span className="text-[10px]">FCFA</span>
+                        <td className="py-2.5 pr-4 font-medium text-foreground text-sm">{b.nom}</td>
+                        <td className="text-right py-2.5 px-4 text-sm text-muted-foreground">
+                          {formatFCFA(b.budgetPrevisionnel)} <span className="text-xs">FCFA</span>
                         </td>
-                        <td className="text-right py-2.5 px-4 text-xs font-medium text-foreground">
-                          {formatFCFA(b.budgetReel)} <span className="text-[10px] text-muted-foreground">FCFA</span>
+                        <td className="text-right py-2.5 px-4 text-sm font-medium text-foreground">
+                          {formatFCFA(b.budgetReel)} <span className="text-xs text-muted-foreground">FCFA</span>
                         </td>
-                        <td className="text-right py-2.5 px-4 text-xs">
+                        <td className="text-right py-2.5 px-4 text-sm">
                           <span className={`font-medium ${statusColor}`}>{pct}%</span>
                         </td>
                         <td className="text-right py-2.5 pl-4">

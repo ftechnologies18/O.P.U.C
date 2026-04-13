@@ -375,7 +375,7 @@ export function ChantiersView() {
               <CardContent className="p-4 lg:p-5">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs lg:text-sm text-muted-foreground font-medium">
+                    <p className="text-sm lg:text-[15px] text-muted-foreground font-medium">
                       {card.label}
                     </p>
                     <p className="text-2xl lg:text-3xl font-bold mt-1 text-foreground">
@@ -415,7 +415,7 @@ export function ChantiersView() {
               key={tab.value}
               onClick={() => setActiveTab(tab.value)}
               className={cn(
-                'px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors',
+                'px-3 py-1.5 text-[15px] font-medium rounded-md whitespace-nowrap transition-colors',
                 activeTab === tab.value
                   ? 'bg-amber-600 text-white shadow-sm'
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -498,13 +498,13 @@ export function ChantiersView() {
                   <CardContent className="p-5 flex flex-col flex-1 gap-3">
                     {/* Name + Status */}
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-bold text-foreground text-sm leading-tight line-clamp-2 flex-1">
+                      <h3 className="font-bold text-foreground text-[15px] leading-tight line-clamp-2 flex-1">
                         {chantier.nom}
                       </h3>
                       <Badge
                         variant="outline"
                         className={cn(
-                          'text-[10px] shrink-0',
+                          'text-xs shrink-0',
                           STATUS_COLORS[chantier.statut]
                         )}
                       >
@@ -514,7 +514,7 @@ export function ChantiersView() {
 
                     {/* Address */}
                     {chantier.adresse && (
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <MapPin className="w-3.5 h-3.5 shrink-0 text-amber-500" />
                         <span className="truncate">{chantier.adresse}</span>
                       </div>
@@ -522,20 +522,20 @@ export function ChantiersView() {
 
                     {/* Maître d'ouvrage */}
                     {chantier.maitreOuvrage && (
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <User className="w-3.5 h-3.5 shrink-0 text-amber-500" />
                         <span className="truncate">{chantier.maitreOuvrage}</span>
                       </div>
                     )}
 
                     {/* Budget */}
-                    <div className="text-sm font-semibold text-foreground">
+                    <div className="text-[15px] font-semibold text-foreground">
                       {formatFCFA(chantier.budgetPrevisionnel)}
                     </div>
 
                     {/* Progress */}
                     <div className="space-y-1">
-                      <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Avancement global</span>
                         <span className="font-medium text-foreground">
                           {chantier.avancementGlobal}%
@@ -548,7 +548,7 @@ export function ChantiersView() {
                     </div>
 
                     {/* Counts */}
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Layers className="w-3.5 h-3.5 text-amber-500" />
                         <span>
@@ -566,7 +566,7 @@ export function ChantiersView() {
                     </div>
 
                     {/* Dates */}
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground pt-1">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {formatDate(chantier.dateDebut)}

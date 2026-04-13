@@ -340,7 +340,7 @@ export function BudgetView() {
             <PieChartIcon className="w-6 h-6 text-amber-500" />
             Suivi Budgétaire
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-[15px] text-muted-foreground mt-1">
             Analyse des coûts et suivi du budget par chantier
           </p>
         </div>
@@ -361,7 +361,7 @@ export function BudgetView() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <Label className="text-sm font-medium whitespace-nowrap">
+            <Label className="text-[15px] font-medium whitespace-nowrap">
               <Warehouse className="w-4 h-4 inline mr-1.5 text-amber-500" />
               Chantier :
             </Label>
@@ -391,7 +391,7 @@ export function BudgetView() {
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
             <PieChartIcon className="w-12 h-12 text-muted-foreground/40" />
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-[15px]">
               Sélectionnez un chantier pour voir le suivi budgétaire
             </p>
           </CardContent>
@@ -420,7 +420,7 @@ export function BudgetView() {
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">
+                    <p className="text-[15px] text-muted-foreground mb-1">
                       Budget Prévisionnel
                     </p>
                     <p className="text-3xl sm:text-4xl font-bold tracking-tight">
@@ -433,10 +433,10 @@ export function BudgetView() {
                 {/* Budget réel progress */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium">
+                    <p className="text-[15px] font-medium">
                       Budget Réel (dépenses)
                     </p>
-                    <p className="text-sm font-semibold">
+                    <p className="text-[15px] font-semibold">
                       {fmtMoney(budget.coutTotal)}
                     </p>
                   </div>
@@ -444,7 +444,7 @@ export function BudgetView() {
                     value={budget.ecartPourcentage}
                     colorClass={getBarColor(budget.ecartPourcentage)}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     {fmtPercent(budget.ecartPourcentage)} du budget consommé
                   </p>
                 </div>
@@ -459,11 +459,11 @@ export function BudgetView() {
                     ) : (
                       <TrendingDown className="w-4 h-4 text-red-600" />
                     )}
-                    <span className="text-sm font-medium">Écart restant</span>
+                    <span className="text-[15px] font-medium">Écart restant</span>
                   </div>
                   <div className="text-right">
                     <span
-                      className={`text-lg font-bold ${
+                      className={`text-xl font-bold ${
                         budget.ecart >= 0
                           ? 'text-emerald-600'
                           : 'text-red-600'
@@ -473,7 +473,7 @@ export function BudgetView() {
                       {fmtMoney(budget.ecart)}
                     </span>
                     <span
-                      className={`text-xs ml-2 ${
+                      className={`text-sm ml-2 ${
                         budget.ecart >= 0
                           ? 'text-emerald-600'
                           : 'text-red-600'
@@ -502,13 +502,13 @@ export function BudgetView() {
                       <div className={`p-2 rounded-lg ${card.bgColor}`}>
                         <card.icon className={`w-5 h-5 ${card.color}`} />
                       </div>
-                      <p className="text-sm font-medium text-muted-foreground">
+                      <p className="text-[15px] font-medium text-muted-foreground">
                         {card.label}
                       </p>
                     </div>
                     <p className="text-xl font-bold">{fmtMoney(card.value)}</p>
                     <div className="mt-2">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                      <div className="flex items-center justify-between text-sm text-muted-foreground mb-1">
                         <span>Part du total</span>
                         <span>{fmtPercent(card.percentage)}</span>
                       </div>
@@ -534,7 +534,7 @@ export function BudgetView() {
             >
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-semibold">
+                  <CardTitle className="text-[17px] font-semibold">
                     Prévisionnel vs Réel
                   </CardTitle>
                 </CardHeader>
@@ -589,14 +589,14 @@ export function BudgetView() {
             >
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-semibold">
+                  <CardTitle className="text-[17px] font-semibold">
                     Dépenses cumulées par mois
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {historicalData.length === 0 ? (
                     <div className="h-72 flex items-center justify-center">
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-[15px] text-muted-foreground">
                         Aucune donnée historique
                       </p>
                     </div>
@@ -685,7 +685,7 @@ export function BudgetView() {
           >
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">
+                <CardTitle className="text-[17px] font-semibold">
                   Tableau récapitulatif
                 </CardTitle>
               </CardHeader>
@@ -694,17 +694,17 @@ export function BudgetView() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-xs">Catégorie</TableHead>
-                        <TableHead className="text-xs text-right">
+                        <TableHead className="text-sm">Catégorie</TableHead>
+                        <TableHead className="text-sm text-right">
                           Budget Prévu
                         </TableHead>
-                        <TableHead className="text-xs text-right">
+                        <TableHead className="text-sm text-right">
                           Dépensé (Réel)
                         </TableHead>
-                        <TableHead className="text-xs text-right">
+                        <TableHead className="text-sm text-right">
                           Écart
                         </TableHead>
-                        <TableHead className="text-xs text-right">
+                        <TableHead className="text-sm text-right">
                           % Consommé
                         </TableHead>
                       </TableRow>
@@ -719,7 +719,7 @@ export function BudgetView() {
                             : 0
                         return (
                           <TableRow key={row.categorie}>
-                            <TableCell className="text-sm font-medium">
+                            <TableCell className="text-[15px] font-medium">
                               {row.categorie === 'Personnel' && (
                                 <Users className="w-4 h-4 inline mr-2 text-blue-600" />
                               )}
@@ -731,13 +731,13 @@ export function BudgetView() {
                               )}
                               {row.categorie}
                             </TableCell>
-                            <TableCell className="text-sm text-right text-muted-foreground">
+                            <TableCell className="text-[15px] text-right text-muted-foreground">
                               —
                             </TableCell>
-                            <TableCell className="text-sm text-right font-semibold">
+                            <TableCell className="text-[15px] text-right font-semibold">
                               {fmtMoney(row.reel)}
                             </TableCell>
-                            <TableCell className="text-sm text-right">
+                            <TableCell className="text-[15px] text-right">
                               <span
                                 className={
                                   ecartVal >= 0
@@ -749,7 +749,7 @@ export function BudgetView() {
                                 {fmtMoney(ecartVal)}
                               </span>
                             </TableCell>
-                            <TableCell className="text-sm text-right">
+                            <TableCell className="text-[15px] text-right">
                               <span
                                 className={
                                   pctConso >= 80
@@ -767,15 +767,15 @@ export function BudgetView() {
                       })}
                       {/* Total row */}
                       <TableRow className="bg-muted/50 font-semibold">
-                        <TableCell className="text-sm">Total</TableCell>
-                        <TableCell className="text-sm text-right">
+                        <TableCell className="text-[15px]">Total</TableCell>
+                        <TableCell className="text-[15px] text-right">
                           {fmtMoney(budget.budgetPrevisionnel)}
                         </TableCell>
-                        <TableCell className="text-sm text-right">
+                        <TableCell className="text-[15px] text-right">
                           {fmtMoney(budget.coutTotal)}
                         </TableCell>
                         <TableCell
-                          className={`text-sm text-right ${
+                          className={`text-[15px] text-right ${
                             budget.ecart >= 0
                               ? 'text-emerald-600'
                               : 'text-red-600'
@@ -785,7 +785,7 @@ export function BudgetView() {
                           {fmtMoney(budget.ecart)}
                         </TableCell>
                         <TableCell
-                          className={`text-sm text-right ${
+                          className={`text-[15px] text-right ${
                             budget.ecartPourcentage >= 80
                               ? 'text-red-600'
                               : budget.ecartPourcentage >= 60
@@ -807,7 +807,7 @@ export function BudgetView() {
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
             <PieChartIcon className="w-12 h-12 text-muted-foreground/40" />
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-[15px]">
               Aucune donnée budgétaire disponible
             </p>
           </CardContent>

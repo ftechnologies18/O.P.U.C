@@ -70,10 +70,10 @@ export function PlaceholderView({ viewId }: PlaceholderViewProps) {
             <Icon className="w-12 h-12 text-amber-500" />
           </div>
           <h3 className="text-xl font-semibold text-foreground mb-2">Bientôt disponible</h3>
-          <p className="text-muted-foreground text-sm text-center max-w-md">
+          <p className="text-muted-foreground text-[15px] text-center max-w-md">
             Le module &quot;{label}&quot; est en cours de développement et sera disponible dans une prochaine mise à jour.
           </p>
-          <div className="mt-6 px-4 py-2 rounded-lg bg-muted text-xs text-muted-foreground font-mono">
+          <div className="mt-6 px-4 py-2 rounded-lg bg-muted text-sm text-muted-foreground font-mono">
             Phase 0 — Fondation • Module : {viewId}
           </div>
         </CardContent>

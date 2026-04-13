@@ -427,7 +427,7 @@ export function PointageView() {
           <ClipboardList className="w-6 h-6 text-amber-500" />
           Pointage Journalier
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-[15px] text-muted-foreground mt-1">
           Enregistrer la présence quotidienne des journaliers
         </p>
       </div>
@@ -435,7 +435,7 @@ export function PointageView() {
       {/* Selection Card */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="text-[17px] flex items-center gap-2">
             <CalendarDays className="w-4 h-4 text-amber-500" />
             Sélection
           </CardTitle>
@@ -444,7 +444,7 @@ export function PointageView() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Chantier */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Chantier</Label>
+              <Label className="text-[15px] font-medium">Chantier</Label>
               <Select value={chantierId} onValueChange={handleChantierChange}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Sélectionner un chantier" />
@@ -461,7 +461,7 @@ export function PointageView() {
 
             {/* Date Picker */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Date de travail</Label>
+              <Label className="text-[15px] font-medium">Date de travail</Label>
               <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -485,7 +485,7 @@ export function PointageView() {
 
             {/* Quick Date Buttons */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Accès rapide</Label>
+              <Label className="text-[15px] font-medium">Accès rapide</Label>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -508,8 +508,8 @@ export function PointageView() {
 
             {/* Info Box */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Informations</Label>
-              <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3 space-y-1.5">
+              <Label className="text-[15px] font-medium">Informations</Label>
+              <div className="text-[15px] text-muted-foreground bg-muted/50 rounded-lg p-3 space-y-1.5">
                 <div className="flex items-center gap-2">
                   <Users className="w-3.5 h-3.5" />
                   <span>{affectations.length} journalier(s) affecté(s)</span>
@@ -550,7 +550,7 @@ export function PointageView() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <CardTitle className="text-base">
+                <CardTitle className="text-[17px]">
                   Pointage du {fmtDateLong(selectedDate)}
                 </CardTitle>
                 {pointageRows.length > 0 && (
@@ -579,8 +579,8 @@ export function PointageView() {
               ) : pointageRows.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <AlertCircle className="w-10 h-10 text-muted-foreground mb-3" />
-                  <h3 className="text-sm font-medium">Aucun journalier affecté</h3>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <h3 className="text-[15px] font-medium">Aucun journalier affecté</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
                     {chantierId
                       ? "Aucun journalier n'est affecté à ce chantier."
                       : 'Veuillez sélectionner un chantier.'}
@@ -589,7 +589,7 @@ export function PointageView() {
               ) : (
                 <div className="space-y-3">
                   {/* Desktop Header */}
-                  <div className="hidden md:grid md:grid-cols-[44px_1fr_160px_1fr] gap-3 px-3 pb-2 text-xs font-medium text-muted-foreground border-b">
+                  <div className="hidden md:grid md:grid-cols-[44px_1fr_160px_1fr] gap-3 px-3 pb-2 text-sm font-medium text-muted-foreground border-b">
                     <span>Présent</span>
                     <span>Journalier</span>
                     <span>Taux journalier</span>
@@ -626,7 +626,7 @@ export function PointageView() {
                               {row.journalier.prenom} {row.journalier.nom}
                             </p>
                             {row.journalier.specialite && (
-                              <p className="text-xs text-muted-foreground truncate">
+                              <p className="text-sm text-muted-foreground truncate">
                                 {row.journalier.specialite}
                               </p>
                             )}
@@ -645,7 +645,7 @@ export function PointageView() {
                             {row.journalier.prenom} {row.journalier.nom}
                           </p>
                           {row.journalier.specialite && (
-                            <p className="text-xs text-muted-foreground truncate">
+                            <p className="text-sm text-muted-foreground truncate">
                               {row.journalier.specialite}
                             </p>
                           )}
@@ -654,7 +654,7 @@ export function PointageView() {
 
                       {/* Taux */}
                       <div className="relative">
-                        <Label className="md:hidden text-xs text-muted-foreground mb-1 block">
+                        <Label className="md:hidden text-sm text-muted-foreground mb-1 block">
                           Taux (FCFA)
                         </Label>
                         <Input
@@ -675,14 +675,14 @@ export function PointageView() {
                             !row.present ? 'opacity-50 cursor-not-allowed' : ''
                           }`}
                         />
-                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none">
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
                           FCFA
                         </span>
                       </div>
 
                       {/* Observation */}
                       <div>
-                        <Label className="md:hidden text-xs text-muted-foreground mb-1 block">
+                        <Label className="md:hidden text-sm text-muted-foreground mb-1 block">
                           Observation
                         </Label>
                         <Input
@@ -703,7 +703,7 @@ export function PointageView() {
 
                   {/* Footer with totals */}
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4 mt-2 border-t">
-                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                    <div className="flex flex-wrap items-center gap-3 text-[15px]">
                       <span className="text-muted-foreground">
                         {presentCount} présent(s) / {pointageRows.length}
                       </span>
@@ -737,7 +737,7 @@ export function PointageView() {
         <TabsContent value="historique" className="mt-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="text-[17px] flex items-center gap-2">
                 <History className="w-4 h-4 text-amber-500" />
                 Historique des 7 derniers jours
               </CardTitle>
@@ -771,13 +771,13 @@ export function PointageView() {
                     <TableBody>
                       {historyData.map((p) => (
                         <TableRow key={p.id}>
-                          <TableCell className="text-sm">
+                          <TableCell className="text-[15px]">
                             {fmtDateShort(p.dateTravail)}
                           </TableCell>
-                          <TableCell className="text-sm font-medium">
+                          <TableCell className="text-[15px] font-medium">
                             {p.journalier?.prenom} {p.journalier?.nom}
                             {p.journalier?.specialite && (
-                              <span className="text-xs text-muted-foreground ml-1">
+                              <span className="text-sm text-muted-foreground ml-1">
                                 ({p.journalier.specialite})
                               </span>
                             )}
@@ -801,10 +801,10 @@ export function PointageView() {
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-right text-sm">
+                          <TableCell className="text-right text-[15px]">
                             {fmtCurrency(p.tauxJournalier)}
                           </TableCell>
-                          <TableCell className="text-right text-sm font-medium">
+                          <TableCell className="text-right text-[15px] font-medium">
                             {p.present ? fmtCurrency(p.tauxJournalier) : '—'}
                           </TableCell>
                           <TableCell className="text-center">
@@ -833,7 +833,7 @@ export function PointageView() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="text-[17px] flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-amber-500" />
                   Résumé Hebdomadaire
                 </CardTitle>
@@ -846,7 +846,7 @@ export function PointageView() {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
-                  <span className="text-sm font-medium min-w-[180px] text-center">
+                  <span className="text-[15px] font-medium min-w-[180px] text-center">
                     {summaryWeekLabel || 'Chargement...'}
                   </span>
                   <Button
@@ -897,7 +897,7 @@ export function PointageView() {
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
+                          <TableCell className="text-[15px] text-muted-foreground">
                             {entry.journalier.specialite || '—'}
                           </TableCell>
                           <TableCell className="text-center">
@@ -946,7 +946,7 @@ function EmptyState({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <AlertCircle className="w-10 h-10 text-muted-foreground mb-3" />
-      <p className="text-sm text-muted-foreground">{message}</p>
+      <p className="text-[15px] text-muted-foreground">{message}</p>
     </div>
   )
 }

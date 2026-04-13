@@ -623,7 +623,7 @@ export function StocksView() {
             <Package className="w-6 h-6 text-amber-500" />
             Stocks
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-[15px] text-muted-foreground mt-1">
             Gestion des matériaux et du stock
           </p>
         </div>
@@ -641,7 +641,7 @@ export function StocksView() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <Label className="text-sm font-medium whitespace-nowrap">
+            <Label className="text-[15px] font-medium whitespace-nowrap">
               <Warehouse className="w-4 h-4 inline mr-1.5 text-amber-500" />
               Chantier :
             </Label>
@@ -673,7 +673,7 @@ export function StocksView() {
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
             <Package className="w-12 h-12 text-muted-foreground/40" />
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-[15px]">
               Sélectionnez un chantier pour voir le stock
             </p>
           </CardContent>
@@ -702,7 +702,7 @@ export function StocksView() {
                     <Package className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       Total matériaux
                     </p>
                     <p className="text-2xl font-bold">{kpi.totalMateriaux}</p>
@@ -722,7 +722,7 @@ export function StocksView() {
                     <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       Valeur totale du stock
                     </p>
                     <p className="text-2xl font-bold">
@@ -762,7 +762,7 @@ export function StocksView() {
                     />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       Articles en alerte
                     </p>
                     <p
@@ -790,7 +790,7 @@ export function StocksView() {
               >
                 <Card className="border-red-200 dark:border-red-800/40 bg-red-50/50 dark:bg-red-900/10">
                   <CardHeader className="pb-3 pt-4 px-4">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2 text-red-700 dark:text-red-400">
+                    <CardTitle className="text-[15px] font-medium flex items-center gap-2 text-red-700 dark:text-red-400">
                       <AlertTriangle className="w-4 h-4" />
                       Alertes de stock ({alertStocks.length})
                     </CardTitle>
@@ -821,15 +821,15 @@ export function StocksView() {
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="inventaire" className="text-xs sm:text-sm">
+              <TabsTrigger value="inventaire" className="text-sm sm:text-[15px]">
                 <Package className="w-3.5 h-3.5 mr-1.5 hidden sm:inline" />
                 Inventaire
               </TabsTrigger>
-              <TabsTrigger value="entrees" className="text-xs sm:text-sm">
+              <TabsTrigger value="entrees" className="text-sm sm:text-[15px]">
                 <ArrowDownToLine className="w-3.5 h-3.5 mr-1.5 hidden sm:inline" />
                 Entrées
               </TabsTrigger>
-              <TabsTrigger value="sorties" className="text-xs sm:text-sm">
+              <TabsTrigger value="sorties" className="text-sm sm:text-[15px]">
                 <ArrowUpFromLine className="w-3.5 h-3.5 mr-1.5 hidden sm:inline" />
                 Sorties
               </TabsTrigger>
@@ -869,7 +869,7 @@ export function StocksView() {
                 <Card className="border-dashed">
                   <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
                     <Package className="w-10 h-10 text-muted-foreground/40" />
-                    <p className="text-muted-foreground text-sm text-center">
+                    <p className="text-muted-foreground text-[15px] text-center">
                       {searchQuery || categorieFilter !== 'TOUS'
                         ? 'Aucun matériau trouvé pour ces filtres'
                         : 'Aucun matériau enregistré sur ce chantier'}
@@ -892,27 +892,27 @@ export function StocksView() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="text-xs">Réf.</TableHead>
-                          <TableHead className="text-xs">Désignation</TableHead>
-                          <TableHead className="text-xs hidden md:table-cell">
+                          <TableHead className="text-sm">Réf.</TableHead>
+                          <TableHead className="text-sm">Désignation</TableHead>
+                          <TableHead className="text-sm hidden md:table-cell">
                             Catégorie
                           </TableHead>
-                          <TableHead className="text-xs hidden sm:table-cell">
+                          <TableHead className="text-sm hidden sm:table-cell">
                             Unité
                           </TableHead>
-                          <TableHead className="text-xs text-right">
+                          <TableHead className="text-sm text-right">
                             Stock dispo.
                           </TableHead>
-                          <TableHead className="text-xs text-right hidden lg:table-cell">
+                          <TableHead className="text-sm text-right hidden lg:table-cell">
                             Seuil
                           </TableHead>
-                          <TableHead className="text-xs text-right hidden xl:table-cell">
+                          <TableHead className="text-sm text-right hidden xl:table-cell">
                             Valeur
                           </TableHead>
-                          <TableHead className="text-xs text-center">
+                          <TableHead className="text-sm text-center">
                             Statut
                           </TableHead>
-                          <TableHead className="text-xs text-right">
+                          <TableHead className="text-sm text-right">
                             Actions
                           </TableHead>
                         </TableRow>
@@ -926,27 +926,27 @@ export function StocksView() {
                             transition={{ delay: idx * 0.03 }}
                             className="group border-b transition-colors hover:bg-muted/50"
                           >
-                            <TableCell className="text-xs font-mono text-muted-foreground">
+                            <TableCell className="text-sm font-mono text-muted-foreground">
                               {item.reference || '—'}
                             </TableCell>
-                            <TableCell className="text-sm font-medium">
+                            <TableCell className="text-[15px] font-medium">
                               {item.designation}
                             </TableCell>
-                            <TableCell className="text-xs hidden md:table-cell">
+                            <TableCell className="text-sm hidden md:table-cell">
                               {item.categorie
                                 ? CATEGORIE_LABELS[item.categorie] || item.categorie
                                 : '—'}
                             </TableCell>
-                            <TableCell className="text-xs hidden sm:table-cell">
+                            <TableCell className="text-sm hidden sm:table-cell">
                               {item.unite}
                             </TableCell>
-                            <TableCell className="text-sm font-semibold text-right">
+                            <TableCell className="text-[15px] font-semibold text-right">
                               {fmtN(item.quantiteDisponible)}
                             </TableCell>
-                            <TableCell className="text-xs text-muted-foreground text-right hidden lg:table-cell">
+                            <TableCell className="text-sm text-muted-foreground text-right hidden lg:table-cell">
                               {fmtN(item.seuilAlerte)}
                             </TableCell>
-                            <TableCell className="text-xs text-right hidden xl:table-cell">
+                            <TableCell className="text-sm text-right hidden xl:table-cell">
                               {fmtMoney(item.valeurStock)}
                             </TableCell>
                             <TableCell className="text-center">
@@ -1004,14 +1004,14 @@ export function StocksView() {
                 {/* Entry Form */}
                 <Card className="lg:col-span-1">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <CardTitle className="text-[15px] font-medium flex items-center gap-2">
                       <ArrowDownToLine className="w-4 h-4 text-emerald-600" />
                       Nouvelle entrée (livraison)
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div>
-                      <Label className="text-xs">Matériau *</Label>
+                      <Label className="text-sm">Matériau *</Label>
                       <Select
                         value={entreeForm.stockId}
                         onValueChange={(v) =>
@@ -1036,7 +1036,7 @@ export function StocksView() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-xs">Quantité *</Label>
+                        <Label className="text-sm">Quantité *</Label>
                         <Input
                           type="number"
                           min="0"
@@ -1053,7 +1053,7 @@ export function StocksView() {
                         />
                       </div>
                       <div>
-                        <Label className="text-xs">Prix unitaire (FCFA)</Label>
+                        <Label className="text-sm">Prix unitaire (FCFA)</Label>
                         <Input
                           type="number"
                           min="0"
@@ -1072,7 +1072,7 @@ export function StocksView() {
                     </div>
 
                     <div>
-                      <Label className="text-xs">Fournisseur</Label>
+                      <Label className="text-sm">Fournisseur</Label>
                       <Input
                         placeholder="Nom du fournisseur"
                         className="mt-1"
@@ -1087,7 +1087,7 @@ export function StocksView() {
                     </div>
 
                     <div>
-                      <Label className="text-xs">N° Bon de livraison</Label>
+                      <Label className="text-sm">N° Bon de livraison</Label>
                       <Input
                         placeholder="Numéro BL"
                         className="mt-1"
@@ -1102,7 +1102,7 @@ export function StocksView() {
                     </div>
 
                     <div>
-                      <Label className="text-xs">Date</Label>
+                      <Label className="text-sm">Date</Label>
                       <Input
                         type="date"
                         className="mt-1"
@@ -1131,7 +1131,7 @@ export function StocksView() {
                 <Card className="lg:col-span-2">
                   <CardHeader className="pb-3">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <CardTitle className="text-sm font-medium">
+                      <CardTitle className="text-[15px] font-medium">
                         Historique des entrées
                       </CardTitle>
                       <Select
@@ -1156,7 +1156,7 @@ export function StocksView() {
                     {entrees.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 gap-2">
                         <ArrowDownToLine className="w-8 h-8 text-muted-foreground/40" />
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-[15px] text-muted-foreground">
                           Aucune entrée enregistrée
                         </p>
                       </div>
@@ -1165,21 +1165,21 @@ export function StocksView() {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="text-xs">Date</TableHead>
-                              <TableHead className="text-xs">Matériau</TableHead>
-                              <TableHead className="text-xs text-right">
+                              <TableHead className="text-sm">Date</TableHead>
+                              <TableHead className="text-sm">Matériau</TableHead>
+                              <TableHead className="text-sm text-right">
                                 Qté
                               </TableHead>
-                              <TableHead className="text-xs text-right hidden sm:table-cell">
+                              <TableHead className="text-sm text-right hidden sm:table-cell">
                                 Prix U.
                               </TableHead>
-                              <TableHead className="text-xs hidden md:table-cell">
+                              <TableHead className="text-sm hidden md:table-cell">
                                 Fournisseur
                               </TableHead>
-                              <TableHead className="text-xs hidden lg:table-cell">
+                              <TableHead className="text-sm hidden lg:table-cell">
                                 N° BL
                               </TableHead>
-                              <TableHead className="text-xs text-right">
+                              <TableHead className="text-sm text-right">
                                 <X className="w-3 h-3" />
                               </TableHead>
                             </TableRow>
@@ -1187,22 +1187,22 @@ export function StocksView() {
                           <TableBody>
                             {entrees.map((e) => (
                               <TableRow key={e.id}>
-                                <TableCell className="text-xs whitespace-nowrap">
+                                <TableCell className="text-sm whitespace-nowrap">
                                   {fmtDate(e.dateEntree)}
                                 </TableCell>
-                                <TableCell className="text-xs font-medium">
+                                <TableCell className="text-sm font-medium">
                                   {e.stock.designation}
                                 </TableCell>
-                                <TableCell className="text-xs text-right font-semibold">
+                                <TableCell className="text-sm text-right font-semibold">
                                   {fmtN(e.quantite)} {e.stock.unite}
                                 </TableCell>
-                                <TableCell className="text-xs text-right hidden sm:table-cell">
+                                <TableCell className="text-sm text-right hidden sm:table-cell">
                                   {fmtMoney(e.prixUnitaire * e.quantite)}
                                 </TableCell>
-                                <TableCell className="text-xs hidden md:table-cell">
+                                <TableCell className="text-sm hidden md:table-cell">
                                   {e.fournisseur || '—'}
                                 </TableCell>
-                                <TableCell className="text-xs font-mono hidden lg:table-cell">
+                                <TableCell className="text-sm font-mono hidden lg:table-cell">
                                   {e.numeroBL || '—'}
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -1232,14 +1232,14 @@ export function StocksView() {
                 {/* Sortie Form */}
                 <Card className="lg:col-span-1">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <CardTitle className="text-[15px] font-medium flex items-center gap-2">
                       <ArrowUpFromLine className="w-4 h-4 text-orange-600" />
                       Nouvelle sortie (consommation)
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div>
-                      <Label className="text-xs">Matériau *</Label>
+                      <Label className="text-sm">Matériau *</Label>
                       <Select
                         value={sortieForm.stockId}
                         onValueChange={(v) =>
@@ -1280,7 +1280,7 @@ export function StocksView() {
                         }
                       />
                       {sortieForm.stockId && (
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                           Stock disponible :{' '}
                           <span className="font-medium">
                             {fmtN(
@@ -1297,7 +1297,7 @@ export function StocksView() {
                     </div>
 
                     <div>
-                      <Label className="text-xs">Tâche (optionnel)</Label>
+                      <Label className="text-sm">Tâche (optionnel)</Label>
                       <Select
                         value={sortieForm.tacheId}
                         onValueChange={(v) =>
@@ -1319,7 +1319,7 @@ export function StocksView() {
                     </div>
 
                     <div>
-                      <Label className="text-xs">Opérateur</Label>
+                      <Label className="text-sm">Opérateur</Label>
                       <Input
                         placeholder="Nom de l'opérateur"
                         className="mt-1"
@@ -1334,7 +1334,7 @@ export function StocksView() {
                     </div>
 
                     <div>
-                      <Label className="text-xs">Motif</Label>
+                      <Label className="text-sm">Motif</Label>
                       <Textarea
                         placeholder="Raison de la sortie..."
                         className="mt-1 resize-none"
@@ -1350,7 +1350,7 @@ export function StocksView() {
                     </div>
 
                     <div>
-                      <Label className="text-xs">Date</Label>
+                      <Label className="text-sm">Date</Label>
                       <Input
                         type="date"
                         className="mt-1"
@@ -1379,7 +1379,7 @@ export function StocksView() {
                 <Card className="lg:col-span-2">
                   <CardHeader className="pb-3">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <CardTitle className="text-sm font-medium">
+                      <CardTitle className="text-[15px] font-medium">
                         Historique des sorties
                       </CardTitle>
                       <Select
@@ -1404,7 +1404,7 @@ export function StocksView() {
                     {sorties.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 gap-2">
                         <ArrowUpFromLine className="w-8 h-8 text-muted-foreground/40" />
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-[15px] text-muted-foreground">
                           Aucune sortie enregistrée
                         </p>
                       </div>
@@ -1413,21 +1413,21 @@ export function StocksView() {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="text-xs">Date</TableHead>
-                              <TableHead className="text-xs">Matériau</TableHead>
-                              <TableHead className="text-xs text-right">
+                              <TableHead className="text-sm">Date</TableHead>
+                              <TableHead className="text-sm">Matériau</TableHead>
+                              <TableHead className="text-sm text-right">
                                 Qté
                               </TableHead>
-                              <TableHead className="text-xs hidden md:table-cell">
+                              <TableHead className="text-sm hidden md:table-cell">
                                 Opérateur
                               </TableHead>
-                              <TableHead className="text-xs hidden lg:table-cell">
+                              <TableHead className="text-sm hidden lg:table-cell">
                                 Motif
                               </TableHead>
-                              <TableHead className="text-xs hidden xl:table-cell">
+                              <TableHead className="text-sm hidden xl:table-cell">
                                 Tâche
                               </TableHead>
-                              <TableHead className="text-xs text-right">
+                              <TableHead className="text-sm text-right">
                                 <X className="w-3 h-3" />
                               </TableHead>
                             </TableRow>
@@ -1435,22 +1435,22 @@ export function StocksView() {
                           <TableBody>
                             {sorties.map((s) => (
                               <TableRow key={s.id}>
-                                <TableCell className="text-xs whitespace-nowrap">
+                                <TableCell className="text-sm whitespace-nowrap">
                                   {fmtDate(s.dateSortie)}
                                 </TableCell>
-                                <TableCell className="text-xs font-medium">
+                                <TableCell className="text-sm font-medium">
                                   {s.stock.designation}
                                 </TableCell>
-                                <TableCell className="text-xs text-right font-semibold">
+                                <TableCell className="text-sm text-right font-semibold">
                                   {fmtN(s.quantite)} {s.stock.unite}
                                 </TableCell>
-                                <TableCell className="text-xs hidden md:table-cell">
+                                <TableCell className="text-sm hidden md:table-cell">
                                   {s.operateur || '—'}
                                 </TableCell>
-                                <TableCell className="text-xs hidden lg:table-cell max-w-32 truncate">
+                                <TableCell className="text-sm hidden lg:table-cell max-w-32 truncate">
                                   {s.motif || '—'}
                                 </TableCell>
-                                <TableCell className="text-xs hidden xl:table-cell">
+                                <TableCell className="text-sm hidden xl:table-cell">
                                   {s.tache ? (
                                     <Badge variant="secondary" className="text-xs">
                                       {s.tache.nom}
@@ -1503,7 +1503,7 @@ export function StocksView() {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div>
-              <Label className="text-xs">Référence</Label>
+              <Label className="text-sm">Référence</Label>
               <Input
                 placeholder="Ex: CEM-001"
                 className="mt-1"
@@ -1514,7 +1514,7 @@ export function StocksView() {
               />
             </div>
             <div>
-              <Label className="text-xs">Désignation *</Label>
+              <Label className="text-sm">Désignation *</Label>
               <Input
                 placeholder="Ex: Ciment Portland CPJ 42.5"
                 className="mt-1"
@@ -1529,7 +1529,7 @@ export function StocksView() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Catégorie</Label>
+                <Label className="text-sm">Catégorie</Label>
                 <Select
                   value={form.categorie}
                   onValueChange={(v) =>
@@ -1549,7 +1549,7 @@ export function StocksView() {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs">Unité *</Label>
+                <Label className="text-sm">Unité *</Label>
                 <Select
                   value={form.unite}
                   onValueChange={(v) =>
@@ -1570,7 +1570,7 @@ export function StocksView() {
               </div>
             </div>
             <div>
-              <Label className="text-xs">Seuil d&apos;alerte</Label>
+              <Label className="text-sm">Seuil d&apos;alerte</Label>
               <Input
                 type="number"
                 min="0"
@@ -1582,7 +1582,7 @@ export function StocksView() {
                   setForm((prev) => ({ ...prev, seuilAlerte: e.target.value }))
                 }
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Alerte déclenchée quand le stock disponible est &le; au seuil
               </p>
             </div>

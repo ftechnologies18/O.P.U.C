@@ -72,8 +72,8 @@ function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
           <HardHat className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-lg font-bold text-sidebar-foreground tracking-tight">O.P.U.C.</h1>
-          <p className="text-xs text-sidebar-foreground/60 leading-tight">Pilotage de Chantier</p>
+          <h1 className="text-xl font-bold text-sidebar-foreground tracking-tight">O.P.U.C.</h1>
+          <p className="text-sm text-sidebar-foreground/60 leading-tight">Pilotage de Chantier</p>
         </div>
       </div>
 
@@ -88,10 +88,10 @@ function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">
+            <p className="text-[15px] font-medium text-sidebar-foreground truncate">
               {session?.user?.name || 'Utilisateur'}
             </p>
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-amber-500/20 text-amber-300 border-amber-500/30">
+            <Badge variant="secondary" className="text-xs px-1.5 py-0 bg-amber-500/20 text-amber-300 border-amber-500/30">
               {(session?.user as { role: string })?.role?.replace('_', ' ') || 'Rôle'}
             </Badge>
           </div>
@@ -114,7 +114,7 @@ function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
                   onNavigate()
                 }}
                 className={cn(
-                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200',
+                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] transition-all duration-200',
                   isActive
                     ? 'bg-amber-500/20 text-amber-300 font-medium shadow-sm'
                     : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent'
@@ -139,7 +139,7 @@ function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
           className="w-full justify-start gap-3 text-sidebar-foreground/70 hover:text-red-400 hover:bg-red-500/10"
         >
           <LogOut className="w-4 h-4" />
-          <span className="text-sm">Déconnexion</span>
+          <span className="text-[15px]">Déconnexion</span>
         </Button>
       </div>
     </div>
@@ -202,7 +202,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               <div className="flex items-center justify-center w-7 h-7 rounded-md bg-amber-500 text-white">
                 <HardHat className="w-4 h-4" />
               </div>
-              <span className="font-bold text-sm text-foreground">O.P.U.C.</span>
+              <span className="font-bold text-[15px] text-foreground">O.P.U.C.</span>
             </div>
           </div>
 

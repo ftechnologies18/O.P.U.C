@@ -56,7 +56,7 @@ export function LoginForm() {
             <HardHat className="w-9 h-9" />
           </div>
           <h1 className="text-3xl font-bold text-foreground tracking-tight">O.P.U.C.</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="text-sm text-muted-foreground mt-1">
             Outil de Pilotage Unifié de Chantier
           </p>
         </div>
@@ -133,17 +133,17 @@ export function LoginForm() {
 
             {/* Demo credentials */}
             <div className="mt-6 p-3 rounded-lg bg-amber-50/50 border border-amber-200/50">
-              <p className="text-xs font-medium text-amber-800 mb-2">
+              <p className="text-sm font-medium text-amber-800 mb-2">
                 Comptes de démonstration :
               </p>
-              <div className="space-y-1.5 text-xs text-amber-700">
+              <div className="space-y-1.5 text-sm text-amber-700">
                 <div className="flex justify-between">
                   <span className="font-medium">Admin</span>
                   <span className="font-mono">admin@opuc.demo</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium">Chef d&apos;entreprise</span>
-                  <span className="font-mono text-[11px]">chef-entreprise@opuc.demo</span>
+                  <span className="font-mono text-xs">chef-entreprise@opuc.demo</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium">Conducteur</span>
@@ -151,7 +151,7 @@ export function LoginForm() {
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium">Chef de chantier</span>
-                  <span className="font-mono text-[11px]">chef-chantier@opuc.demo</span>
+                  <span className="font-mono text-xs">chef-chantier@opuc.demo</span>
                 </div>
                 <p className="text-center pt-1 border-t border-amber-200/50 text-amber-600">
                   Mot de passe : <code className="font-mono bg-amber-100 px-1 rounded">demo123</code>
@@ -161,7 +161,7 @@ export function LoginForm() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
+        <p className="text-center text-sm text-muted-foreground mt-6">
           OPUC v1.0 — Gestion intelligente de chantiers
         </p>
       </div>
