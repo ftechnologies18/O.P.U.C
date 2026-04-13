@@ -40,6 +40,7 @@ model User {
   photos        Photo[]
   rapports      RapportJournalier[]
   taches        Tache[]
+  documents     DocumentChantier[]
   paiementsValides PaiementHebdo[] @relation("PaiementValidateur")
 
   // Accounts and sessions for NextAuth
@@ -106,6 +107,7 @@ model Chantier {
   rapports            RapportJournalier[]
   equipements         EquipementAffectation[]
   contratsST          ContratST[]
+  documents           DocumentChantier[]
 }
 
 // Workers (Journaliers)
@@ -190,6 +192,7 @@ model Phase {
   chantier     Chantier @relation(fields: [chantierId], references: [id])
   taches       Tache[]
   photos       Photo[]
+  documents    DocumentChantier[]
 }
 
 // Tasks within a phase
@@ -386,4 +389,30 @@ model Notification {
   lien          String?  // optional link to related resource
   createdAt     DateTime @default(now())
   user          User     @relation(fields: [userId], references: [id])
+}
+
+// Project Documents
+model DocumentChantier {
+  id              String    @id @default(cuid())
+  titre           String
+  type            String    @default("autre") // plan, permis, contrat, pv_reception, facture, technique, rapport, autre
+  categorie       String?
+  numeroReference String?
+  fichierNom      String    // original file name
+  fichierUrl      String    // storage path or URL
+  fichierTaille   Int       @default(0) // bytes
+  fichierType     String?   // MIME type
+  version         Int       @default(1)
+  description     String?
+  statut          String    @default("brouillon") // brouillon, valide, archive
+  tags            String?   // comma-separated tags
+  chantierId      String
+  phaseId         String?
+  auteurId        String
+  dateDocument    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  chantier        Chantier  @relation(fields: [chantierId], references: [id])
+  phase           Phase?    @relation(fields: [phaseId], references: [id])
+  auteur          User      @relation(fields: [auteurId], references: [id])
 }
