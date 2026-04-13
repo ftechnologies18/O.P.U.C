@@ -1,6 +1,6 @@
 'use client'
 
-import { useAppStore } from '@/store/app-store'
+import { useAppStore, type SidebarMode } from '@/store/app-store'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -24,6 +24,11 @@ import {
   X,
   ChevronRight,
   HardHat,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Sidebar,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react'
 import { SearchCommand } from './search-command'
 import { UserMenu } from './user-menu'
@@ -49,32 +54,50 @@ interface AppLayoutProps {
   children: React.ReactNode
 }
 
-function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
+/* ═══════════════════════════════════════════════
+   Sidebar Content — adapts to expanded / compact
+   ═══════════════════════════════════════════════ */
+function SidebarContent({
+  mode,
+  onNavigate,
+}: {
+  mode: 'expanded' | 'compact'
+  onNavigate: () => void
+}) {
   const { currentView, setCurrentView } = useAppStore()
+  const compact = mode === 'compact'
 
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="p-4 flex items-center gap-3">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg shadow-amber-500/25">
-          <HardHat className="w-6 h-6" />
+      <div className={cn(
+        'flex items-center gap-3 shrink-0',
+        compact ? 'p-3 justify-center' : 'p-4'
+      )}>
+        <div className={cn(
+          'flex items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg shadow-amber-500/25 shrink-0',
+          compact ? 'w-9 h-9' : 'w-10 h-10'
+        )}>
+          <HardHat className={compact ? 'w-5 h-5' : 'w-6 h-6'} />
         </div>
-        <div>
-          <h1 className="text-xl font-extrabold text-sidebar-foreground tracking-tight">O.P.U.C.</h1>
-          <p className="text-xs text-sidebar-foreground/50 leading-tight font-medium">Pilotage de Chantier</p>
-        </div>
+        {!compact && (
+          <div className="min-w-0">
+            <h1 className="text-xl font-extrabold text-sidebar-foreground tracking-tight">O.P.U.C.</h1>
+            <p className="text-xs text-sidebar-foreground/50 leading-tight font-medium">Pilotage de Chantier</p>
+          </div>
+        )}
       </div>
 
       <Separator className="bg-sidebar-border" />
 
       {/* Navigation */}
-      <ScrollArea className="flex-1 px-3 py-2">
+      <ScrollArea className="flex-1 px-2 py-2">
         <nav className="space-y-0.5">
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = currentView === item.id
             return (
-              <Tooltip key={item.id}>
+              <Tooltip key={item.id} delayDuration={0}>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => {
@@ -82,46 +105,153 @@ function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
                       onNavigate()
                     }}
                     className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] transition-all duration-200',
+                      'w-full flex items-center rounded-lg transition-all duration-200',
+                      compact
+                        ? 'justify-center px-0 py-2.5 mx-auto w-11 h-11'
+                        : 'gap-3 px-3 py-2.5 text-[15px]',
                       isActive
                         ? 'bg-gradient-to-r from-amber-500/20 to-amber-500/5 text-amber-300 font-medium shadow-sm border border-amber-500/10'
                         : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent'
                     )}
                   >
                     <div className={cn(
-                      'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors',
-                      isActive ? 'bg-amber-500/20' : 'bg-transparent'
+                      'flex items-center justify-center shrink-0 transition-colors',
+                      compact ? 'w-9 h-9' : 'w-8 h-8 rounded-lg',
+                      isActive ? (compact ? 'bg-amber-500/20' : 'bg-amber-500/20') : 'bg-transparent'
                     )}>
-                      <Icon className={cn('w-4.5 h-4.5', isActive ? 'text-amber-400' : 'text-sidebar-foreground/50')} />
+                      <Icon className={cn(
+                        compact ? 'w-5 h-5' : 'w-4.5 h-4.5',
+                        isActive ? 'text-amber-400' : 'text-sidebar-foreground/50'
+                      )} />
                     </div>
-                    <span className="truncate">{item.label}</span>
-                    {isActive && <ChevronRight className="w-4 h-4 ml-auto text-amber-400/50" />}
+                    {!compact && (
+                      <>
+                        <span className="truncate">{item.label}</span>
+                        {isActive && <ChevronRight className="w-4 h-4 ml-auto text-amber-400/50" />}
+                      </>
+                    )}
                   </button>
                 </TooltipTrigger>
+                {compact && (
+                  <TooltipContent side="right" sideOffset={8} className="font-medium text-[15px]">
+                    {item.label}
+                  </TooltipContent>
+                )}
               </Tooltip>
             )
           })}
         </nav>
       </ScrollArea>
 
+      <Separator className="bg-sidebar-border" />
+
+      {/* Sidebar mode toggle at bottom */}
+      <div className={cn('shrink-0 p-2', compact ? 'flex justify-center' : 'px-1')}>
+        <SidebarModeToggle />
+      </div>
     </div>
   )
 }
 
+/* ═══════════════════════════════════════════════
+   Sidebar Mode Toggle — 3 options
+   ═══════════════════════════════════════════════ */
+const modeOptions: { mode: SidebarMode; label: string; description: string; icon: React.ElementType }[] = [
+  { mode: 'expanded', label: 'Étendue', description: 'Icônes + textes', icon: ChevronsLeft },
+  { mode: 'compact', label: 'Compacte', description: 'Icônes uniquement', icon: Sidebar },
+  { mode: 'hidden', label: 'Masquée', description: 'Barre latérale fermée', icon: PanelLeftOpen },
+]
+
+function SidebarModeToggle() {
+  const { sidebarMode, setSidebarMode } = useAppStore()
+
+  return (
+    <div className="flex items-center gap-0.5 p-1 rounded-lg bg-sidebar-accent/50">
+      {modeOptions.map((opt) => {
+        const Icon = opt.icon
+        const active = sidebarMode === opt.mode
+        return (
+          <Tooltip key={opt.mode} delayDuration={0}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setSidebarMode(opt.mode)}
+                className={cn(
+                  'flex items-center justify-center rounded-md transition-all duration-200 cursor-pointer',
+                  active
+                    ? 'bg-amber-500/20 text-amber-300 shadow-sm'
+                    : 'text-sidebar-foreground/40 hover:text-sidebar-foreground/80 hover:bg-sidebar-accent'
+                )}
+                title={opt.label}
+              >
+                <Icon className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              <div className="text-center">
+                <p className="font-semibold text-[15px]">{opt.label}</p>
+                <p className="text-xs text-muted-foreground">{opt.description}</p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════
+   Hidden Sidebar — floating toggle button
+   ═══════════════════════════════════════════════ */
+function SidebarToggleFloat() {
+  const { setSidebarMode } = useAppStore()
+
+  return (
+    <Tooltip delayDuration={0}>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setSidebarMode('expanded')}
+          className="h-9 w-9 rounded-lg shadow-sm border-border/60 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600 dark:hover:bg-amber-500/10 dark:hover:border-amber-500/30 dark:hover:text-amber-400"
+        >
+          <PanelLeftOpen className="w-4 h-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="right" sideOffset={8}>
+        <p className="font-medium">Afficher la barre latérale</p>
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+/* ═══════════════════════════════════════════════
+   Main App Layout
+   ═══════════════════════════════════════════════ */
 export function AppLayout({ children }: AppLayoutProps) {
-  const { sidebarOpen, setSidebarOpen, toggleSidebar, currentView } = useAppStore()
+  const { sidebarOpen, setSidebarOpen, toggleSidebar, currentView, sidebarMode, setSidebarMode } = useAppStore()
 
   // Current page label
   const currentPage = navItems.find((item) => item.id === currentView)
   const pageLabel = currentPage?.label || 'Tableau de bord'
   const PageIcon = currentPage?.icon || LayoutDashboard
 
+  const isHidden = sidebarMode === 'hidden'
+  const isCompact = sidebarMode === 'compact'
+  const sidebarW = isCompact ? 68 : 260
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-[260px] lg:fixed lg:inset-y-0 bg-sidebar border-r border-sidebar-border z-30">
-        <SidebarContent onNavigate={() => {}} />
-      </aside>
+      {!isHidden && (
+        <aside
+          className={cn(
+            'hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 bg-sidebar border-r border-sidebar-border z-30 transition-all duration-300 ease-in-out',
+          )}
+          style={{ width: sidebarW }}
+        >
+          <SidebarContent mode={isCompact ? 'compact' : 'expanded'} onNavigate={() => {}} />
+        </aside>
+      )}
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -148,16 +278,23 @@ export function AppLayout({ children }: AppLayoutProps) {
             <X className="w-4 h-4" />
           </Button>
         </div>
-        <SidebarContent onNavigate={() => setSidebarOpen(false)} />
+        <SidebarContent mode="expanded" onNavigate={() => setSidebarOpen(false)} />
       </aside>
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col lg:pl-[260px]">
+      <div
+        className={cn(
+          'flex-1 flex flex-col transition-all duration-300 ease-in-out',
+          !isHidden && 'lg:pl-[260px]',
+          isCompact && !isHidden && 'lg:pl-[68px]'
+        )}
+      >
         {/* ══════════ TOP HEADER ══════════ */}
         <header className="sticky top-0 z-20 h-16 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 border-b border-border">
           <div className="flex items-center justify-between h-full px-4 lg:px-6">
-            {/* Left: hamburger + mobile logo + breadcrumb */}
-            <div className="flex items-center gap-3">
+            {/* Left: hamburger + mobile logo + sidebar toggle + breadcrumb */}
+            <div className="flex items-center gap-2 lg:gap-3">
+              {/* Mobile hamburger */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -166,6 +303,29 @@ export function AppLayout({ children }: AppLayoutProps) {
               >
                 <Menu className="w-5 h-5" />
               </Button>
+
+              {/* Desktop: sidebar toggle (when sidebar exists) or re-open button (when hidden) */}
+              <div className="hidden lg:block">
+                {isHidden ? (
+                  <SidebarToggleFloat />
+                ) : (
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSidebarMode(isCompact ? 'expanded' : 'hidden')}
+                        className="h-9 w-9 hover:bg-muted/70 text-muted-foreground"
+                      >
+                        {isCompact ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={8}>
+                      <p className="font-medium">{isCompact ? 'Développer la barre latérale' : 'Masquer la barre latérale'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
 
               {/* Mobile logo */}
               <div className="lg:hidden flex items-center gap-2">
@@ -198,7 +358,6 @@ export function AppLayout({ children }: AppLayoutProps) {
                 variant="ghost"
                 size="icon"
                 onClick={() => {
-                  // Trigger Cmd+K search on mobile
                   const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true })
                   document.dispatchEvent(event)
                 }}
