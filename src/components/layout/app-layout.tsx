@@ -23,7 +23,6 @@ import {
   Menu,
   X,
   ChevronRight,
-  HardHat,
   PanelLeftClose,
   PanelLeftOpen,
   Sidebar,
@@ -33,6 +32,7 @@ import {
 import { SearchCommand } from './search-command'
 import { UserMenu } from './user-menu'
 import { NotificationBell } from './notification-bell'
+import { OpucLogo } from './opuc-logo'
 
 const navItems = [
   { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
@@ -74,12 +74,7 @@ function SidebarContent({
         'flex items-center gap-3 shrink-0',
         compact ? 'p-3 justify-center' : 'p-4'
       )}>
-        <div className={cn(
-          'flex items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg shadow-amber-500/25 shrink-0',
-          compact ? 'w-9 h-9' : 'w-10 h-10'
-        )}>
-          <HardHat className={compact ? 'w-5 h-5' : 'w-6 h-6'} />
-        </div>
+        <OpucLogo size={compact ? 36 : 42} className="shrink-0" />
         {!compact && (
           <div className="min-w-0">
             <h1 className="text-xl font-extrabold text-sidebar-foreground tracking-tight">O.P.U.C.</h1>
@@ -329,9 +324,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
               {/* Mobile logo */}
               <div className="lg:hidden flex items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 text-white">
-                  <HardHat className="w-4 h-4" />
-                </div>
+                <OpucLogo size={32} className="shrink-0" />
                 <span className="font-bold text-[15px] text-foreground">O.P.U.C.</span>
               </div>
 

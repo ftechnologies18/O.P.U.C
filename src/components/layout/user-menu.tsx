@@ -18,7 +18,6 @@ import {
   LogOut,
   ChevronDown,
   Shield,
-  HardHat,
   Building2,
 } from 'lucide-react'
 

@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { HardHat, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { OpucLogo } from '@/components/layout/opuc-logo'
 
 export function LoginForm() {
   const [email, setEmail] = useState('')
@@ -52,9 +53,7 @@ export function LoginForm() {
       <div className="w-full max-w-md relative">
         {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/25 mb-4">
-            <HardHat className="w-9 h-9" />
-          </div>
+          <OpucLogo size={64} className="mb-4" />
           <h1 className="text-3xl font-bold text-foreground tracking-tight">O.P.U.C.</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Outil de Pilotage Unifié de Chantier
