@@ -8,6 +8,7 @@ async function main() {
 
   // Clean up existing data
   console.log('🗑️  Cleaning existing data...')
+  await prisma.sousTraitant.deleteMany()
   await prisma.notification.deleteMany()
   await prisma.photo.deleteMany()
   await prisma.sortieStock.deleteMany()
@@ -378,6 +379,97 @@ async function main() {
         message: 'Le chantier Résidence Les Palmiers a consommé 42% du budget prévisionnel.',
         type: 'BUDGET_ALERT',
         lu: true,
+      },
+    ],
+  })
+
+  // 12. Create demo sous-traitants (entreprises + particuliers)
+  console.log('🤝 Creating Sous-traitants...')
+  const stEntreprise1 = await prisma.sousTraitant.create({
+    data: {
+      type: 'ENTREPRISE',
+      raisonSociale: 'BatiConseil SARL',
+      rccm: 'SN/DKR/RCCM/22-B-04567',
+      nif: 'NIF-1234567890A',
+      contact: '+221 33 860 0001',
+      email: 'contact@baticonseil.sn',
+      adresse: '12 Rue Carnot, Dakar',
+      specialite: 'Électricité générale',
+      rib: '0001 0002 0003 0004567',
+      entrepriseId: entreprise.id,
+    },
+  })
+  const stEntreprise2 = await prisma.sousTraitant.create({
+    data: {
+      type: 'ENTREPRISE',
+      raisonSociale: 'HydroTech Sénégal',
+      rccm: 'SN/DKR/RCCM/21-A-02345',
+      nif: 'NIF-0987654321B',
+      contact: '+221 76 450 0002',
+      email: 'info@hydrotech.sn',
+      adresse: '45 Bd de la République, Dakar',
+      specialite: 'Plomberie & Assainissement',
+      rib: '0002 0003 0004 0005678',
+      entrepriseId: entreprise.id,
+    },
+  })
+  const stParticulier1 = await prisma.sousTraitant.create({
+    data: {
+      type: 'PARTICULIER',
+      nom: 'Diallo',
+      prenom: 'Moussa',
+      typePieceIdentite: 'CNI',
+      numeroPieceIdentite: 'SN-12345678',
+      contact: '+221 78 650 0003',
+      email: 'diallo.moussa@gmail.com',
+      adresse: 'Pikine, Dakar',
+      specialite: 'Peinture & Revêtements',
+      rib: '0003 0004 0005 0006789',
+    },
+  })
+  const stParticulier2 = await prisma.sousTraitant.create({
+    data: {
+      type: 'PARTICULIER',
+      nom: 'Sy',
+      prenom: 'Aminata',
+      typePieceIdentite: 'Passeport',
+      numeroPieceIdentite: 'SN-PA-98765432',
+      contact: '+221 77 550 0004',
+      specialite: 'Menuiserie métallique & Aluminium',
+    },
+  })
+
+  // 13. Create demo contrats sous-traitance
+  console.log('📄 Creating Contrats ST...')
+  await prisma.contratST.createMany({
+    data: [
+      {
+        sousTraitantId: stEntreprise1.id,
+        chantierId: chantier1.id,
+        objetTravaux: 'Installation électrique complète - Résidence Les Palmiers',
+        montantHT: 25000000,
+        dateDebut: new Date('2026-05-01'),
+        dateFin: new Date('2026-09-30'),
+        conditions: 'Paiement trimestriel sur avancement. Retenue de garantie 5%.',
+        statut: 'EN_COURS',
+      },
+      {
+        sousTraitantId: stEntreprise2.id,
+        chantierId: chantier1.id,
+        objetTravaux: 'Réseau plomberie et assainissement',
+        montantHT: 18000000,
+        dateDebut: new Date('2026-05-15'),
+        dateFin: new Date('2026-08-31'),
+        statut: 'EN_COURS',
+      },
+      {
+        sousTraitantId: stParticulier1.id,
+        chantierId: chantier1.id,
+        objetTravaux: 'Peinture intérieure et extérieure des appartements',
+        montantHT: 8500000,
+        dateDebut: new Date('2026-09-01'),
+        dateFin: new Date('2026-11-15'),
+        statut: 'EN_COURS',
       },
     ],
   })

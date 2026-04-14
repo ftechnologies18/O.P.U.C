@@ -307,19 +307,27 @@ model LocationEngin {
   equipement      Equipement @relation(fields: [equipementId], references: [id])
 }
 
-// Subcontractors
+// Subcontractors (Entreprise or Particulier)
 model SousTraitant {
-  id            String   @id @default(cuid())
-  raisonSociale String
-  rccm          String?
-  contact       String?
-  specialite    String?
-  rib           String?
-  entrepriseId  String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  entreprise    Entreprise? @relation(fields: [entrepriseId], references: [id])
-  contrats      ContratST[]
+  id                    String   @id @default(cuid())
+  type                  String   @default("ENTREPRISE") // ENTREPRISE, PARTICULIER
+  raisonSociale         String?
+  nom                   String?  // Pour les particuliers
+  prenom                String?  // Pour les particuliers
+  rccm                  String?  // Registre du Commerce (entreprises)
+  nif                   String?  // Numéro d'Identification Fiscale (entreprises)
+  typePieceIdentite     String?  // CNI, Passeport, Attestation... (particuliers)
+  numeroPieceIdentite   String?  // Numéro de la pièce d'identité (particuliers)
+  contact               String?
+  email                 String?
+  adresse               String?
+  specialite            String?
+  rib                   String?
+  entrepriseId          String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  entreprise            Entreprise? @relation(fields: [entrepriseId], references: [id])
+  contrats              ContratST[]
 }
 
 model ContratST {

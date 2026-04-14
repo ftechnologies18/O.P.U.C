@@ -23,11 +23,14 @@ import {
   CalendarDays,
   AlertTriangle,
   Ban,
-  ChevronLeft,
   ScrollText,
   Loader2,
+  User,
+  Mail,
+  MapPin,
+  IdCard,
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -65,6 +68,9 @@ import { cn } from '@/lib/utils'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+type SousTraitantType = 'ENTREPRISE' | 'PARTICULIER'
+type TypeFilterValue = 'TOUS' | 'ENTREPRISE' | 'PARTICULIER'
+
 interface ChantierInfo {
   id: string
   nom: string
@@ -87,9 +93,17 @@ interface Contrat {
 
 interface SousTraitantList {
   id: string
-  raisonSociale: string
+  type: SousTraitantType
+  raisonSociale: string | null
+  nom: string | null
+  prenom: string | null
   rccm: string | null
+  nif: string | null
+  typePieceIdentite: string | null
+  numeroPieceIdentite: string | null
   contact: string | null
+  email: string | null
+  adresse: string | null
   specialite: string | null
   rib: string | null
   entrepriseId: string | null
@@ -101,9 +115,17 @@ interface SousTraitantList {
 
 interface SousTraitantDetail {
   id: string
-  raisonSociale: string
+  type: SousTraitantType
+  raisonSociale: string | null
+  nom: string | null
+  prenom: string | null
   rccm: string | null
+  nif: string | null
+  typePieceIdentite: string | null
+  numeroPieceIdentite: string | null
   contact: string | null
+  email: string | null
+  adresse: string | null
   specialite: string | null
   rib: string | null
   entrepriseId: string | null
@@ -118,14 +140,24 @@ interface ChantierOption {
 
 interface KpiData {
   totalSousTraitants: number
+  entreprises: number
+  particuliers: number
   contratsEnCours: number
   montantTotalEngage: number
 }
 
 interface SousTraitantFormData {
+  type: SousTraitantType
   raisonSociale: string
   rccm: string
+  nif: string
+  nom: string
+  prenom: string
+  typePieceIdentite: string
+  numeroPieceIdentite: string
   contact: string
+  email: string
+  adresse: string
   specialite: string
   rib: string
 }
@@ -160,10 +192,25 @@ const STATUT_CONFIG: Record<string, { label: string; className: string }> = {
   },
 }
 
+const PIECE_IDENTITE_OPTIONS = [
+  { value: 'CNI', label: 'CNI' },
+  { value: 'Passeport', label: 'Passeport' },
+  { value: 'Attestation', label: 'Attestation' },
+  { value: 'Autre', label: 'Autre' },
+]
+
 const EMPTY_ST_FORM: SousTraitantFormData = {
+  type: 'ENTREPRISE',
   raisonSociale: '',
   rccm: '',
+  nif: '',
+  nom: '',
+  prenom: '',
+  typePieceIdentite: '',
+  numeroPieceIdentite: '',
   contact: '',
+  email: '',
+  adresse: '',
   specialite: '',
   rib: '',
 }
@@ -208,6 +255,17 @@ function getStatutBadge(statut: string): { label: string; className: string } {
   }
 }
 
+function getDisplayName(st: { type: string; raisonSociale?: string | null; nom?: string | null; prenom?: string | null }): string {
+  if (st.type === 'PARTICULIER') {
+    return `${st.nom || ''} ${st.prenom || ''}`.trim()
+  }
+  return st.raisonSociale || ''
+}
+
+function getDisplayLabel(st: SousTraitantDetail): string {
+  return getDisplayName(st) || 'Détails du sous-traitant'
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function SousTraitantsView() {
@@ -217,6 +275,7 @@ export function SousTraitantsView() {
   const [chantiers, setChantiers] = useState<ChantierOption[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState<TypeFilterValue>('TOUS')
 
   // Sous-traitant form dialog
   const [stFormOpen, setStFormOpen] = useState(false)
@@ -257,6 +316,7 @@ export function SousTraitantsView() {
     try {
       const params = new URLSearchParams()
       if (search.trim()) params.set('search', search.trim())
+      if (typeFilter !== 'TOUS') params.set('type', typeFilter)
 
       const res = await fetch(`/api/sous-traitants?${params.toString()}`)
       if (res.ok) {
@@ -271,7 +331,7 @@ export function SousTraitantsView() {
     } finally {
       setLoading(false)
     }
-  }, [search])
+  }, [search, typeFilter])
 
   const fetchChantiers = useCallback(async () => {
     try {
@@ -302,16 +362,24 @@ export function SousTraitantsView() {
 
   const openCreateSt = () => {
     setEditingStId(null)
-    setStForm(EMPTY_ST_FORM)
+    setStForm({ ...EMPTY_ST_FORM })
     setStFormOpen(true)
   }
 
   const openEditSt = (st: SousTraitantList) => {
     setEditingStId(st.id)
     setStForm({
-      raisonSociale: st.raisonSociale,
+      type: st.type || 'ENTREPRISE',
+      raisonSociale: st.raisonSociale || '',
       rccm: st.rccm || '',
+      nif: st.nif || '',
+      nom: st.nom || '',
+      prenom: st.prenom || '',
+      typePieceIdentite: st.typePieceIdentite || '',
+      numeroPieceIdentite: st.numeroPieceIdentite || '',
       contact: st.contact || '',
+      email: st.email || '',
+      adresse: st.adresse || '',
       specialite: st.specialite || '',
       rib: st.rib || '',
     })
@@ -319,17 +387,29 @@ export function SousTraitantsView() {
   }
 
   const handleSubmitSt = async () => {
-    if (!stForm.raisonSociale.trim()) {
-      toast.error('La raison sociale est requise')
+    if (stForm.type === 'ENTREPRISE' && !stForm.raisonSociale.trim()) {
+      toast.error('La raison sociale est requise pour une entreprise')
+      return
+    }
+    if (stForm.type === 'PARTICULIER' && !stForm.nom.trim()) {
+      toast.error('Le nom est requis pour un particulier')
       return
     }
 
     setStSubmitting(true)
     try {
       const body = {
-        raisonSociale: stForm.raisonSociale.trim(),
-        rccm: stForm.rccm.trim() || null,
+        type: stForm.type,
+        raisonSociale: stForm.type === 'ENTREPRISE' ? stForm.raisonSociale.trim() || null : null,
+        rccm: stForm.type === 'ENTREPRISE' ? stForm.rccm.trim() || null : null,
+        nif: stForm.type === 'ENTREPRISE' ? stForm.nif.trim() || null : null,
+        nom: stForm.type === 'PARTICULIER' ? stForm.nom.trim() || null : null,
+        prenom: stForm.type === 'PARTICULIER' ? stForm.prenom.trim() || null : null,
+        typePieceIdentite: stForm.type === 'PARTICULIER' ? stForm.typePieceIdentite || null : null,
+        numeroPieceIdentite: stForm.type === 'PARTICULIER' ? stForm.numeroPieceIdentite.trim() || null : null,
         contact: stForm.contact.trim() || null,
+        email: stForm.email.trim() || null,
+        adresse: stForm.adresse.trim() || null,
         specialite: stForm.specialite.trim() || null,
         rib: stForm.rib.trim() || null,
       }
@@ -370,7 +450,7 @@ export function SousTraitantsView() {
 
   const confirmDeleteSt = (st: SousTraitantList) => {
     setDeletingStId(st.id)
-    setDeletingStName(st.raisonSociale)
+    setDeletingStName(getDisplayName(st))
     setDeleteStOpen(true)
   }
 
@@ -640,25 +720,53 @@ export function SousTraitantsView() {
         })}
       </div>
 
-      {/* Search */}
+      {/* Search + Type Filter */}
       <Card className="border shadow-sm">
         <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher par raison sociale ou spécialité..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search input */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher par nom, raison sociale, spécialité..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            {/* Type filter toggles */}
+            <div className="flex items-center gap-1 bg-muted/60 rounded-lg p-1">
+              {([
+                { value: 'TOUS' as TypeFilterValue, label: 'Tous', icon: Users },
+                { value: 'ENTREPRISE' as TypeFilterValue, label: 'Entreprises', icon: Building2 },
+                { value: 'PARTICULIER' as TypeFilterValue, label: 'Particuliers', icon: User },
+              ]).map((filter) => {
+                const FilterIcon = filter.icon
+                return (
+                  <button
+                    key={filter.value}
+                    onClick={() => setTypeFilter(filter.value)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                      typeFilter === filter.value
+                        ? 'bg-white text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <FilterIcon className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{filter.label}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Sous-traitant List */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
             <Card key={i} className="border shadow-sm">
               <CardContent className="p-4">
                 <div className="space-y-3">
@@ -693,11 +801,11 @@ export function SousTraitantsView() {
             Aucun sous-traitant trouvé
           </h3>
           <p className="text-[15px] text-muted-foreground mt-1 max-w-sm">
-            {search
-              ? 'Aucun sous-traitant ne correspond à votre recherche.'
+            {search || typeFilter !== 'TOUS'
+              ? 'Aucun sous-traitant ne correspond à vos critères.'
               : 'Commencez par ajouter votre premier sous-traitant.'}
           </p>
-          {!search && (
+          {!search && typeFilter === 'TOUS' && (
             <Button
               onClick={openCreateSt}
               className="mt-4 bg-amber-600 hover:bg-amber-700 text-white gap-2"
@@ -710,114 +818,170 @@ export function SousTraitantsView() {
       ) : (
         <AnimatePresence mode="wait">
           <motion.div
-            key={search}
+            key={`${search}-${typeFilter}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
           >
-            {sousTraitants.map((st, index) => (
-              <motion.div
-                key={st.id}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.03 }}
-              >
-                <Card className="border shadow-sm hover:shadow-md transition-shadow group h-full">
-                  <CardContent className="p-4 flex flex-col gap-3">
-                    {/* Raison sociale + actions */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-9 h-9 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
-                          <Building2 className="w-4 h-4 text-violet-600" />
-                        </div>
-                        <h3 className="font-semibold text-foreground text-[15px] truncate">
-                          {st.raisonSociale}
-                        </h3>
-                      </div>
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-muted-foreground hover:text-amber-600"
-                          onClick={() => openDetail(st)}
-                          title="Voir les détails"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-muted-foreground hover:text-amber-600"
-                          onClick={() => openEditSt(st)}
-                          title="Modifier"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
-                          onClick={() => confirmDeleteSt(st)}
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </div>
+            {sousTraitants.map((st, index) => {
+              const isEntreprise = st.type === 'ENTREPRISE'
+              const displayName = getDisplayName(st)
 
-                    {/* Info details */}
-                    <div className="space-y-1.5 text-sm">
-                      {st.rccm && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <ScrollText className="w-3.5 h-3.5 shrink-0 text-amber-500" />
-                          <span className="truncate">RCCM: {st.rccm}</span>
+              return (
+                <motion.div
+                  key={st.id}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.03 }}
+                >
+                  <Card className="border shadow-sm hover:shadow-md transition-shadow group h-full">
+                    <CardContent className="p-4 flex flex-col gap-3">
+                      {/* Header: icon + name + actions */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className={cn(
+                              'w-9 h-9 rounded-lg flex items-center justify-center shrink-0',
+                              isEntreprise
+                                ? 'bg-violet-100'
+                                : 'bg-emerald-100'
+                            )}
+                          >
+                            {isEntreprise ? (
+                              <Building2 className="w-4 h-4 text-violet-600" />
+                            ) : (
+                              <User className="w-4 h-4 text-emerald-600" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-foreground text-[15px] truncate">
+                              {displayName}
+                            </h3>
+                          </div>
                         </div>
-                      )}
-                      {st.contact && (
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Phone className="w-3.5 h-3.5 shrink-0 text-amber-500" />
-                          <span className="truncate">{st.contact}</span>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-amber-600"
+                            onClick={() => openDetail(st)}
+                            title="Voir les détails"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-amber-600"
+                            onClick={() => openEditSt(st)}
+                            title="Modifier"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
+                            onClick={() => confirmDeleteSt(st)}
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
                         </div>
-                      )}
-                    </div>
+                      </div>
 
-                    {/* Badges row */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {st.specialite && (
+                      {/* Info details */}
+                      <div className="space-y-1.5 text-sm">
+                        {/* Enterprise-specific fields */}
+                        {isEntreprise && st.rccm && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <ScrollText className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                            <span className="truncate">RCCM: {st.rccm}</span>
+                          </div>
+                        )}
+                        {isEntreprise && st.nif && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <FileText className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                            <span className="truncate">NIF: {st.nif}</span>
+                          </div>
+                        )}
+                        {/* Particulier-specific fields */}
+                        {!isEntreprise && st.numeroPieceIdentite && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <IdCard className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                            <span className="truncate">{st.numeroPieceIdentite}</span>
+                          </div>
+                        )}
+                        {/* Common fields */}
+                        {st.contact && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Phone className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                            <span className="truncate">{st.contact}</span>
+                          </div>
+                        )}
+                        {st.email && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Mail className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                            <span className="truncate">{st.email}</span>
+                          </div>
+                        )}
+                        {st.adresse && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <MapPin className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                            <span className="truncate">{st.adresse}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Badges row */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <Badge
                           variant="outline"
-                          className="text-xs bg-violet-50 text-violet-700 border-violet-200"
+                          className={cn(
+                            'text-xs',
+                            isEntreprise
+                              ? 'bg-violet-50 text-violet-700 border-violet-200'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          )}
                         >
-                          {st.specialite}
+                          {isEntreprise ? 'Entreprise' : 'Particulier'}
                         </Badge>
-                      )}
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-xs',
-                          st._count.contrats > 0
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : 'bg-gray-50 text-gray-500 border-gray-200'
+                        {st.specialite && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs bg-violet-50 text-violet-700 border-violet-200"
+                          >
+                            {st.specialite}
+                          </Badge>
                         )}
-                      >
-                        <FileText className="w-3 h-3 mr-0.5" />
-                        {st._count.contrats} contrat{st._count.contrats > 1 ? 's' : ''}
-                      </Badge>
-                    </div>
-
-                    {/* RIB masked */}
-                    {st.rib && (
-                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70">
-                        <CreditCard className="w-3 h-3 shrink-0" />
-                        <span className="font-mono">{maskRIB(st.rib)}</span>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-xs',
+                            st._count.contrats > 0
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-gray-50 text-gray-500 border-gray-200'
+                          )}
+                        >
+                          <FileText className="w-3 h-3 mr-0.5" />
+                          {st._count.contrats} contrat{st._count.contrats > 1 ? 's' : ''}
+                        </Badge>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+
+                      {/* RIB masked */}
+                      {st.rib && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70">
+                          <CreditCard className="w-3 h-3 shrink-0" />
+                          <span className="font-mono">{maskRIB(st.rib)}</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )
+            })}
           </motion.div>
         </AnimatePresence>
       )}
@@ -842,43 +1006,211 @@ export function SousTraitantsView() {
           </DialogHeader>
 
           <div className="grid gap-4 py-2">
-            {/* Raison sociale */}
+            {/* Type toggle */}
             <div className="grid gap-2">
-              <Label htmlFor="raisonSociale">
-                Raison sociale <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="raisonSociale"
-                placeholder="Ex: BatiConseil SARL"
-                value={stForm.raisonSociale}
-                onChange={(e) =>
-                  setStForm({ ...stForm, raisonSociale: e.target.value })
-                }
-              />
+              <Label>Type de sous-traitant</Label>
+              <div className="flex items-center gap-1 bg-muted/60 rounded-lg p-1">
+                {([
+                  { value: 'ENTREPRISE' as SousTraitantType, label: 'Entreprise', icon: Building2 },
+                  { value: 'PARTICULIER' as SousTraitantType, label: 'Particulier', icon: User },
+                ]).map((opt) => {
+                  const OptIcon = opt.icon
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() =>
+                        setStForm({
+                          ...stForm,
+                          type: opt.value,
+                          // Clear type-specific fields when switching
+                          raisonSociale: opt.value === 'ENTREPRISE' ? stForm.raisonSociale : '',
+                          nom: opt.value === 'PARTICULIER' ? stForm.nom : '',
+                          prenom: opt.value === 'PARTICULIER' ? stForm.prenom : '',
+                        })
+                      }
+                      className={cn(
+                        'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                        stForm.type === opt.value
+                          ? opt.value === 'ENTREPRISE'
+                            ? 'bg-violet-100 text-violet-700 shadow-sm'
+                            : 'bg-emerald-100 text-emerald-700 shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <OptIcon className="w-4 h-4" />
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
-            {/* RCCM */}
-            <div className="grid gap-2">
-              <Label htmlFor="rccm">N° RCCM</Label>
-              <Input
-                id="rccm"
-                placeholder="Ex: CD/KIN/RCCM/23-A-12345"
-                value={stForm.rccm}
-                onChange={(e) =>
-                  setStForm({ ...stForm, rccm: e.target.value })
-                }
-              />
-            </div>
+            <Separator />
 
+            {/* Conditional fields based on type */}
+            {stForm.type === 'ENTREPRISE' ? (
+              <>
+                {/* Raison sociale */}
+                <div className="grid gap-2">
+                  <Label htmlFor="raisonSociale">
+                    Raison sociale <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="raisonSociale"
+                    placeholder="Ex: BatiConseil SARL"
+                    value={stForm.raisonSociale}
+                    onChange={(e) =>
+                      setStForm({ ...stForm, raisonSociale: e.target.value })
+                    }
+                  />
+                </div>
+
+                {/* RCCM */}
+                <div className="grid gap-2">
+                  <Label htmlFor="rccm">N° RCCM</Label>
+                  <Input
+                    id="rccm"
+                    placeholder="Ex: CD/KIN/RCCM/23-A-12345"
+                    value={stForm.rccm}
+                    onChange={(e) =>
+                      setStForm({ ...stForm, rccm: e.target.value })
+                    }
+                  />
+                </div>
+
+                {/* NIF */}
+                <div className="grid gap-2">
+                  <Label htmlFor="nif">NIF (Numéro d&apos;Identification Fiscale)</Label>
+                  <Input
+                    id="nif"
+                    placeholder="Ex: 123456789"
+                    value={stForm.nif}
+                    onChange={(e) =>
+                      setStForm({ ...stForm, nif: e.target.value })
+                    }
+                  />
+                </div>
+
+                {/* Adresse */}
+                <div className="grid gap-2">
+                  <Label htmlFor="adresseEntreprise">Adresse</Label>
+                  <Input
+                    id="adresseEntreprise"
+                    placeholder="Ex: 123 Av. de la Paix, Kinshasa"
+                    value={stForm.adresse}
+                    onChange={(e) =>
+                      setStForm({ ...stForm, adresse: e.target.value })
+                    }
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Nom */}
+                <div className="grid gap-2">
+                  <Label htmlFor="nom">
+                    Nom <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="nom"
+                    placeholder="Ex: Mbala"
+                    value={stForm.nom}
+                    onChange={(e) =>
+                      setStForm({ ...stForm, nom: e.target.value })
+                    }
+                  />
+                </div>
+
+                {/* Prénom */}
+                <div className="grid gap-2">
+                  <Label htmlFor="prenom">Prénom</Label>
+                  <Input
+                    id="prenom"
+                    placeholder="Ex: Jean-Pierre"
+                    value={stForm.prenom}
+                    onChange={(e) =>
+                      setStForm({ ...stForm, prenom: e.target.value })
+                    }
+                  />
+                </div>
+
+                {/* Type pièce d'identité */}
+                <div className="grid gap-2">
+                  <Label>Type de pièce d&apos;identité</Label>
+                  <Select
+                    value={stForm.typePieceIdentite}
+                    onValueChange={(value) =>
+                      setStForm({ ...stForm, typePieceIdentite: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner le type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PIECE_IDENTITE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* N° pièce d'identité */}
+                <div className="grid gap-2">
+                  <Label htmlFor="numeroPieceIdentite">N° pièce d&apos;identité</Label>
+                  <Input
+                    id="numeroPieceIdentite"
+                    placeholder="Ex: CD12345678"
+                    value={stForm.numeroPieceIdentite}
+                    onChange={(e) =>
+                      setStForm({ ...stForm, numeroPieceIdentite: e.target.value })
+                    }
+                  />
+                </div>
+
+                {/* Adresse */}
+                <div className="grid gap-2">
+                  <Label htmlFor="adresseParticulier">Adresse</Label>
+                  <Input
+                    id="adresseParticulier"
+                    placeholder="Ex: 45 Rue Matsiona, Kinshasa"
+                    value={stForm.adresse}
+                    onChange={(e) =>
+                      setStForm({ ...stForm, adresse: e.target.value })
+                    }
+                  />
+                </div>
+              </>
+            )}
+
+            <Separator />
+
+            {/* Common fields */}
             {/* Contact */}
             <div className="grid gap-2">
-              <Label htmlFor="contact">Contact</Label>
+              <Label htmlFor="contact">Contact (téléphone)</Label>
               <Input
                 id="contact"
                 placeholder="Ex: +243 812 345 678"
                 value={stForm.contact}
                 onChange={(e) =>
                   setStForm({ ...stForm, contact: e.target.value })
+                }
+              />
+            </div>
+
+            {/* Email */}
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Ex: contact@baticonseil.cd"
+                value={stForm.email}
+                onChange={(e) =>
+                  setStForm({ ...stForm, email: e.target.value })
                 }
               />
             </div>
@@ -992,8 +1324,12 @@ export function SousTraitantsView() {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-violet-600" />
-              {detailSt?.raisonSociale || 'Détails du sous-traitant'}
+              {detailSt?.type === 'PARTICULIER' ? (
+                <User className="w-5 h-5 text-emerald-600" />
+              ) : (
+                <Building2 className="w-5 h-5 text-violet-600" />
+              )}
+              {detailSt ? getDisplayLabel(detailSt) : 'Détails du sous-traitant'}
             </DialogTitle>
             <DialogDescription>
               Informations détaillées et contrats associés
@@ -1006,21 +1342,97 @@ export function SousTraitantsView() {
             </div>
           ) : detailSt ? (
             <div className="flex-1 overflow-y-auto">
+              {/* Type badge */}
+              <div className="mb-4">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'text-xs',
+                    detailSt.type === 'ENTREPRISE'
+                      ? 'bg-violet-50 text-violet-700 border-violet-200'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  )}
+                >
+                  {detailSt.type === 'ENTREPRISE' ? 'Entreprise' : 'Particulier'}
+                </Badge>
+              </div>
+
               {/* Sous-traitant info */}
               <div className="space-y-4 mb-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {detailSt.rccm && (
+                  {/* Enterprise fields */}
+                  {detailSt.type === 'ENTREPRISE' && detailSt.raisonSociale && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Building2 className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span className="text-muted-foreground">Raison sociale:</span>
+                      <span className="font-medium">{detailSt.raisonSociale}</span>
+                    </div>
+                  )}
+                  {detailSt.type === 'ENTREPRISE' && detailSt.rccm && (
                     <div className="flex items-center gap-2 text-sm">
                       <ScrollText className="w-4 h-4 text-amber-500 shrink-0" />
                       <span className="text-muted-foreground">RCCM:</span>
                       <span className="font-medium">{detailSt.rccm}</span>
                     </div>
                   )}
+                  {detailSt.type === 'ENTREPRISE' && detailSt.nif && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <FileText className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span className="text-muted-foreground">NIF:</span>
+                      <span className="font-medium">{detailSt.nif}</span>
+                    </div>
+                  )}
+
+                  {/* Particulier fields */}
+                  {detailSt.type === 'PARTICULIER' && detailSt.nom && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <User className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span className="text-muted-foreground">Nom:</span>
+                      <span className="font-medium">{detailSt.nom}</span>
+                    </div>
+                  )}
+                  {detailSt.type === 'PARTICULIER' && detailSt.prenom && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <User className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span className="text-muted-foreground">Prénom:</span>
+                      <span className="font-medium">{detailSt.prenom}</span>
+                    </div>
+                  )}
+                  {detailSt.type === 'PARTICULIER' && detailSt.typePieceIdentite && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <IdCard className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span className="text-muted-foreground">Pièce d&apos;identité:</span>
+                      <span className="font-medium">{detailSt.typePieceIdentite}</span>
+                    </div>
+                  )}
+                  {detailSt.type === 'PARTICULIER' && detailSt.numeroPieceIdentite && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <IdCard className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span className="text-muted-foreground">N° pièce:</span>
+                      <span className="font-medium">{detailSt.numeroPieceIdentite}</span>
+                    </div>
+                  )}
+
+                  {/* Common fields */}
                   {detailSt.contact && (
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="w-4 h-4 text-amber-500 shrink-0" />
                       <span className="text-muted-foreground">Contact:</span>
                       <span className="font-medium">{detailSt.contact}</span>
+                    </div>
+                  )}
+                  {detailSt.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span className="text-muted-foreground">Email:</span>
+                      <span className="font-medium">{detailSt.email}</span>
+                    </div>
+                  )}
+                  {detailSt.adresse && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span className="text-muted-foreground">Adresse:</span>
+                      <span className="font-medium">{detailSt.adresse}</span>
                     </div>
                   )}
                   {detailSt.specialite && (
@@ -1243,7 +1655,7 @@ export function SousTraitantsView() {
             <DialogDescription>
               Créez un contrat pour{' '}
               <span className="font-semibold text-foreground">
-                {detailSt?.raisonSociale}
+                {detailSt ? getDisplayLabel(detailSt) : ''}
               </span>
             </DialogDescription>
           </DialogHeader>

@@ -50,11 +50,33 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { raisonSociale, rccm, contact, specialite, rib } = body
+    const {
+      type,
+      raisonSociale,
+      nom,
+      prenom,
+      rccm,
+      nif,
+      typePieceIdentite,
+      numeroPieceIdentite,
+      contact,
+      email,
+      adresse,
+      specialite,
+      rib,
+    } = body
 
-    if (!raisonSociale || raisonSociale.trim() === '') {
+    // Validate based on type
+    if (type === 'ENTREPRISE' && (!raisonSociale || raisonSociale.trim() === '')) {
       return NextResponse.json(
-        { error: 'La raison sociale est requise' },
+        { error: 'La raison sociale est requise pour une entreprise' },
+        { status: 400 }
+      )
+    }
+
+    if (type === 'PARTICULIER' && (!nom || nom.trim() === '')) {
+      return NextResponse.json(
+        { error: 'Le nom est requis pour un particulier' },
         { status: 400 }
       )
     }
@@ -70,11 +92,19 @@ export async function PUT(
     const sousTraitant = await db.sousTraitant.update({
       where: { id },
       data: {
-        raisonSociale: raisonSociale.trim(),
-        rccm: rccm?.trim() || null,
-        contact: contact?.trim() || null,
-        specialite: specialite?.trim() || null,
-        rib: rib?.trim() || null,
+        type: type || existing.type,
+        raisonSociale: raisonSociale !== undefined ? (raisonSociale?.trim() || null) : existing.raisonSociale,
+        nom: nom !== undefined ? (nom?.trim() || null) : existing.nom,
+        prenom: prenom !== undefined ? (prenom?.trim() || null) : existing.prenom,
+        rccm: rccm !== undefined ? (rccm?.trim() || null) : existing.rccm,
+        nif: nif !== undefined ? (nif?.trim() || null) : existing.nif,
+        typePieceIdentite: typePieceIdentite !== undefined ? (typePieceIdentite?.trim() || null) : existing.typePieceIdentite,
+        numeroPieceIdentite: numeroPieceIdentite !== undefined ? (numeroPieceIdentite?.trim() || null) : existing.numeroPieceIdentite,
+        contact: contact !== undefined ? (contact?.trim() || null) : existing.contact,
+        email: email !== undefined ? (email?.trim() || null) : existing.email,
+        adresse: adresse !== undefined ? (adresse?.trim() || null) : existing.adresse,
+        specialite: specialite !== undefined ? (specialite?.trim() || null) : existing.specialite,
+        rib: rib !== undefined ? (rib?.trim() || null) : existing.rib,
       },
     })
 
