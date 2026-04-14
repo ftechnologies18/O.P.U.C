@@ -77,3 +77,58 @@ Stage Summary:
 - Cards display with type-specific icons and colors
 - Filter by type available in search area
 - Seed data includes 4 sous-traitants (2 entreprises + 2 particuliers) with 3 contracts
+
+---
+Task ID: 2
+Agent: API Agent
+Task: Create equipment and location management API routes
+
+Work Log:
+- Created /api/engins/route.ts: GET with search, typeLocation, etat filters; KPI (totalEngins, enginsPropres, enginsLoues, enBonneEtat, enReparation); POST with validation
+- Created /api/engins/[id]/route.ts: GET with _count.locations and locations relation; PUT updates all fields; DELETE checks for active locations (EN_COURS) before allowing deletion
+- Created /api/locations/route.ts: GET with search, statut, chantierId filters; includes equipement, chantier, fournisseur relations; KPI (totalLocations, locationsEnCours, coutTotalEnCours, coutJournalierMoyen); POST creates location and updates linked equipment typeLocation to "LOUE"
+- Created /api/locations/[id]/route.ts: GET includes all relations (equipement, chantier, fournisseur); PUT updates all fields; DELETE removes location
+- All routes follow sous-traitants pattern: NextRequest/NextResponse, Promise<{id}> params with await, error objects with status codes, console.error logging
+- Ran bun run lint: no errors
+- Dev server compiled successfully
+
+Stage Summary:
+- 4 API route files created for equipment (engins) and rental contract (locations) management
+- Full CRUD operations with filtering, search, KPI aggregation
+- Location creation automatically sets equipment typeLocation to LOUE
+- Equipment deletion blocked when active locations exist
+- All routes return consistent error responses with French error messages
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Create engins-view.tsx component — full-featured equipment and rental management view
+
+Work Log:
+- Read worklog.md for context and sous-traitants-view.tsx as reference component
+- Read Prisma schema to understand Equipement and LocationEngin models
+- Created /api/engins/route.ts: GET with search/typeLocation/etat filters, KPI stats (totalEngins, enginsPropres, enginsLoues); POST with designation validation
+- Created /api/engins/[id]/route.ts: GET with locations relation, PUT, DELETE (cascades to locations)
+- Created /api/locations/route.ts: GET with search/statut/chantierId filters, KPI (locationsEnCours, coutTotalEnCours, coutJournalierMoyen, locationsCeMois); POST with full validation
+- Created /api/locations/[id]/route.ts: GET with all relations, PUT (supports statut-only update), DELETE
+- Created /src/components/engins/engins-view.tsx (~1500 lines) following exact sous-traitants-view patterns:
+  - Tabs-based layout with "Parc Engins" and "Locations" tabs using shadcn/ui Tabs
+  - Tab 1: 3 KPI cards, search bar, filter toggles (Tous/Propres/Loués), 3-column responsive equipment grid
+  - Tab 2: 4 KPI cards, search bar, statut filters (Tous/En cours/Terminées/Annulées), chantier dropdown filter, responsive location grid
+  - Equipment cards: type-based icons (Truck/Cog/HardHat), designation, marque/modele, immatriculation, etat badge, typeLocation badge, location count, edit/delete actions
+  - Location cards: equipment info, fournisseur name, N° contrat, période, coûts, chantier, statut badge, caution badge, statut change inline UI
+  - Create/Edit dialogs with all required fields, select dropdowns for typeEquipement, etat, typeLocation, equipement, fournisseur, chantier, statut
+  - Auto-calculated montantEstime with visual display in location form
+  - Delete confirmation dialogs using AlertDialog
+  - All helper functions: formatFCFA, formatDate, getEtatBadge, getStatutBadge, getEnginIcon, calcLocationTotal, getFournisseurDisplayName
+  - Framer Motion animations (AnimatePresence, motion.div) matching reference component patterns
+  - Amber theme, consistent card/badge/dialog styling
+- Fixed chantier filter Select value handling for "__all__" reset
+- Ran bun run lint: no errors
+- Dev server compiled successfully
+
+Stage Summary:
+- Complete engins-view.tsx component with 2-tab layout for equipment catalog and rental management
+- 4 API route files supporting full CRUD for engins and locations
+- KPI cards, search/filter, create/edit/delete dialogs, statut change functionality
+- Follows exact coding patterns from sous-traitants-view.tsx reference

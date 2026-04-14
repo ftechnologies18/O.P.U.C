@@ -28,6 +28,7 @@ import {
   Sidebar,
   ChevronsLeft,
   ChevronsRight,
+  Truck,
 } from 'lucide-react'
 import { SearchCommand } from './search-command'
 import { UserMenu } from './user-menu'
@@ -65,6 +66,7 @@ const navSections = [
     items: [
       { id: 'budget', label: 'Budget', icon: PieChart },
       { id: 'stocks', label: 'Stocks', icon: Package },
+      { id: 'engins', label: 'Parc Engins', icon: Truck },
     ],
   },
   {

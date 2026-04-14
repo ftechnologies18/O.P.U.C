@@ -107,6 +107,7 @@ model Chantier {
   rapports            RapportJournalier[]
   equipements         EquipementAffectation[]
   contratsST          ContratST[]
+  locationsEngins     LocationEngin[]
   documents           DocumentChantier[]
 }
 
@@ -272,6 +273,9 @@ model SortieStock {
 model Equipement {
   id              String   @id @default(cuid())
   designation     String
+  typeEquipement  String?  // pelleteuse, grue, bulldozer, betonniere, camion, compresseur...
+  marque          String?  // Caterpillar, Komatsu, Volvo...
+  modele          String?  // 320D, PC200...
   immatriculation String?
   etat            String   @default("BON") // BON, EN_REPARATION, HORS_SERVICE
   typeLocation    String?  // PROPRE, LOUE
@@ -289,6 +293,7 @@ model EquipementAffectation {
   chantierId    String
   dateDebut     DateTime
   dateRetour    DateTime?
+  observations   String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   equipement    Equipement @relation(fields: [equipementId], references: [id])
@@ -296,21 +301,32 @@ model EquipementAffectation {
 }
 
 model LocationEngin {
-  id              String   @id @default(cuid())
-  equipementId    String
-  prestataire     String
-  coutJournalier  Float
-  dateDebut       DateTime
-  dateFin         DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  equipement      Equipement @relation(fields: [equipementId], references: [id])
+  id                String   @id @default(cuid())
+  equipementId      String
+  fournisseurId     String?  // Lien vers un sous-traitant de type FOURNISSEUR
+  fournisseurNom    String?  // Nom du fournisseur (si pas lié)
+  fournisseurTel    String?  // Téléphone du fournisseur
+  numeroContrat     String?  // N° du contrat de location
+  chantierId        String?  // Chantier qui utilise l'engin
+  coutJournalier    Float
+  coutTransport     Float    @default(0)  // Frais de transport
+  coutOperateur     Float    @default(0)  // Coût opérateur/jour
+  caution           Float    @default(0)  // Montant de la caution
+  dateDebut         DateTime
+  dateFin           DateTime?
+  statut            String   @default("EN_COURS") // EN_COURS, TERMINE, ANNULE
+  conditions        String?  // Observations, assurances...
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  equipement        Equipement    @relation(fields: [equipementId], references: [id])
+  fournisseur       SousTraitant? @relation("LocationFournisseur", fields: [fournisseurId], references: [id])
+  chantier          Chantier?    @relation(fields: [chantierId], references: [id])
 }
 
 // Subcontractors (Entreprise or Particulier)
 model SousTraitant {
   id                    String   @id @default(cuid())
-  type                  String   @default("ENTREPRISE") // ENTREPRISE, PARTICULIER
+  type                  String   @default("ENTREPRISE") // ENTREPRISE, PARTICULIER, FOURNISSEUR
   raisonSociale         String?
   nom                   String?  // Pour les particuliers
   prenom                String?  // Pour les particuliers
@@ -328,6 +344,7 @@ model SousTraitant {
   updatedAt             DateTime @updatedAt
   entreprise            Entreprise? @relation(fields: [entrepriseId], references: [id])
   contrats              ContratST[]
+  locationsEngins       LocationEngin[] @relation("LocationFournisseur")
 }
 
 model ContratST {

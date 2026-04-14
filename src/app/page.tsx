@@ -17,6 +17,7 @@ import { BudgetView } from '@/components/budget/budget-view'
 import { RapportsView } from '@/components/rapports/rapports-view'
 import { PlanningView } from '@/components/planning/planning-view'
 import { SousTraitantsView } from '@/components/sous-traitants/sous-traitants-view'
+import { EnginsView } from '@/components/engins/engins-view'
 import { DocumentsView } from '@/components/documents/documents-view'
 import { ParametresView } from '@/components/parametres/parametres-view'
 import { PhotosView } from '@/components/photos/photos-view'
@@ -66,6 +67,8 @@ function AppContent() {
         return <PlanningView />
       case 'sous-traitants':
         return <SousTraitantsView />
+      case 'engins':
+        return <EnginsView />
       case 'photos':
         return <PhotosView />
       case 'documents':

@@ -91,8 +91,40 @@ export async function GET(
     const coutSousTraitants =
       contrats.reduce((acc, c) => acc + c.montantHT, 0)
 
+    // ─── 4. Equipment rental cost (LocationEngin) ───────────────
+    const locations = await db.locationEngin.findMany({
+      where: { chantierId, statut: { not: 'ANNULE' } },
+      select: {
+        dateDebut: true,
+        dateFin: true,
+        coutJournalier: true,
+        coutTransport: true,
+        coutOperateur: true,
+        createdAt: true,
+      },
+    })
+
+    let coutLocations = 0
+    const locationsCostsByDate: { date: Date; montant: number }[] = []
+
+    for (const loc of locations) {
+      const end = loc.dateFin || new Date()
+      const days = Math.max(
+        1,
+        Math.ceil(
+          (end.getTime() - loc.dateDebut.getTime()) / (1000 * 60 * 60 * 24)
+        )
+      )
+      const total =
+        loc.coutJournalier * days +
+        loc.coutTransport +
+        loc.coutOperateur * days
+      coutLocations += total
+      locationsCostsByDate.push({ date: loc.createdAt, montant: total })
+    }
+
     // ─── Totals & ecart ──────────────────────────────────────────────
-    const coutTotal = coutPersonnel + coutMateriaux + coutSousTraitants
+    const coutTotal = coutPersonnel + coutMateriaux + coutSousTraitants + coutLocations
     const ecart = budgetPrevisionnel - coutTotal
     const ecartPourcentage =
       budgetPrevisionnel > 0 ? (coutTotal / budgetPrevisionnel) * 100 : 0
@@ -125,6 +157,9 @@ export async function GET(
     for (const c of contrats) {
       allCosts.push({ date: c.createdAt, montant: c.montantHT })
     }
+
+    // Equipment rental costs by date
+    allCosts.push(...locationsCostsByDate)
 
     // Sort all costs by date
     allCosts.sort((a, b) => a.date.getTime() - b.date.getTime())
@@ -168,6 +203,12 @@ export async function GET(
         pourcentage:
           coutTotal > 0 ? (coutSousTraitants / coutTotal) * 100 : 0,
       },
+      {
+        categorie: 'Locations',
+        reel: coutLocations,
+        pourcentage:
+          coutTotal > 0 ? (coutLocations / coutTotal) * 100 : 0,
+      },
     ]
 
     return NextResponse.json({
@@ -175,6 +216,7 @@ export async function GET(
       coutPersonnel,
       coutMateriaux,
       coutSousTraitants,
+      coutLocations,
       coutTotal,
       ecart,
       ecartPourcentage: Math.round(ecartPourcentage * 10) / 10,

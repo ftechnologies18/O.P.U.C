@@ -8,7 +8,6 @@ async function main() {
 
   // Clean up existing data
   console.log('🗑️  Cleaning existing data...')
-  await prisma.sousTraitant.deleteMany()
   await prisma.notification.deleteMany()
   await prisma.photo.deleteMany()
   await prisma.sortieStock.deleteMany()
@@ -23,6 +22,7 @@ async function main() {
   await prisma.pointage.deleteMany()
   await prisma.journalierAffectation.deleteMany()
   await prisma.journalier.deleteMany()
+  await prisma.sousTraitant.deleteMany()
   await prisma.tache.deleteMany()
   await prisma.phase.deleteMany()
   await prisma.chantier.deleteMany()
@@ -472,6 +472,184 @@ async function main() {
         statut: 'EN_COURS',
       },
     ],
+  })
+
+  // 14. Create demo equipments (propres)
+  console.log('🏗️  Creating Equipments...')
+  const engin1 = await prisma.equipement.create({
+    data: {
+      designation: 'Pelleteuse CAT 320D',
+      typeEquipement: 'pelleteuse',
+      marque: 'Caterpillar',
+      modele: '320D',
+      immatriculation: 'DK-1234-AB',
+      etat: 'BON',
+      typeLocation: 'PROPRE',
+      entrepriseId: entreprise.id,
+    },
+  })
+  const engin2 = await prisma.equipement.create({
+    data: {
+      designation: 'Bétonnière JZC350',
+      typeEquipement: 'betonniere',
+      marque: 'JZC',
+      modele: '350',
+      etat: 'BON',
+      typeLocation: 'PROPRE',
+      entrepriseId: entreprise.id,
+    },
+  })
+  const engin3 = await prisma.equipement.create({
+    data: {
+      designation: 'Grue mobile Liebherr LTM 1055',
+      typeEquipement: 'grue',
+      marque: 'Liebherr',
+      modele: 'LTM 1055',
+      immatriculation: 'DK-5678-CD',
+      etat: 'EN_REPARATION',
+      typeLocation: 'PROPRE',
+      entrepriseId: entreprise.id,
+    },
+  })
+  const engin4 = await prisma.equipement.create({
+    data: {
+      designation: 'Camion benne Mercedes Arocs',
+      typeEquipement: 'camion',
+      marque: 'Mercedes-Benz',
+      modele: 'Arocs 3345',
+      immatriculation: 'DK-9012-EF',
+      etat: 'BON',
+      typeLocation: 'PROPRE',
+      entrepriseId: entreprise.id,
+    },
+  })
+  // Engins loués (seront créés avec les locations)
+  const engin5 = await prisma.equipement.create({
+    data: {
+      designation: 'Bulldozer Komatsu D65EX',
+      typeEquipement: 'bulldozer',
+      marque: 'Komatsu',
+      modele: 'D65EX',
+      immatriculation: 'DK-3456-GH',
+      etat: 'BON',
+      typeLocation: 'LOUE',
+      entrepriseId: entreprise.id,
+    },
+  })
+  const engin6 = await prisma.equipement.create({
+    data: {
+      designation: 'Compresseur Atlas Copco XAS 750',
+      typeEquipement: 'compresseur',
+      marque: 'Atlas Copco',
+      modele: 'XAS 750',
+      etat: 'BON',
+      typeLocation: 'LOUE',
+      entrepriseId: entreprise.id,
+    },
+  })
+
+  // 15. Create demo fournisseur (sous-traitant de type FOURNISSEUR)
+  console.log('🏗️  Creating Fournisseur...')
+  const fournisseur1 = await prisma.sousTraitant.create({
+    data: {
+      type: 'FOURNISSEUR',
+      raisonSociale: 'SENLOU SARL',
+      rccm: 'SN/DKR/RCCM/20-A-07890',
+      nif: 'NIF-5678901234C',
+      contact: '+221 33 820 5555',
+      email: 'location@senlou.sn',
+      adresse: '78 Route des Frontières, Dakar',
+      specialite: 'Location engins de chantier',
+    },
+  })
+  const fournisseur2 = await prisma.sousTraitant.create({
+    data: {
+      type: 'FOURNISSEUR',
+      raisonSociale: 'AfricaRent Equipment',
+      rccm: 'SN/DKR/RCCM/19-B-03456',
+      nif: 'NIF-3456789012D',
+      contact: '+221 76 430 7777',
+      email: 'contact@africarent.sn',
+      adresse: 'Zone industrielle, Rufisque',
+      specialite: 'Location grues et compresseurs',
+    },
+  })
+
+  // 16. Create demo location contracts
+  console.log('📋 Creating Location Engins...')
+  await prisma.locationEngin.create({
+    data: {
+      equipementId: engin5.id,
+      fournisseurId: fournisseur1.id,
+      numeroContrat: 'LOC-2025-001',
+      chantierId: chantier1.id,
+      coutJournalier: 350000,
+      coutTransport: 500000,
+      coutOperateur: 25000,
+      caution: 2000000,
+      dateDebut: new Date('2025-09-15'),
+      dateFin: new Date('2026-03-31'),
+      statut: 'EN_COURS',
+      conditions: 'Location minimum 3 mois. Carburant à la charge du locataire. Maintenance incluse.',
+    },
+  })
+  await prisma.locationEngin.create({
+    data: {
+      equipementId: engin6.id,
+      fournisseurId: fournisseur2.id,
+      numeroContrat: 'LOC-2025-002',
+      chantierId: chantier1.id,
+      coutJournalier: 85000,
+      coutTransport: 200000,
+      coutOperateur: 0,
+      caution: 500000,
+      dateDebut: new Date('2025-10-01'),
+      dateFin: new Date('2026-02-28'),
+      statut: 'EN_COURS',
+      conditions: 'Location mensuelle renouvelable. Assurance responsabilité civile requise.',
+    },
+  })
+  await prisma.locationEngin.create({
+    data: {
+      equipementId: engin3.id,
+      fournisseurId: fournisseur2.id,
+      numeroContrat: 'LOC-2025-003',
+      chantierId: chantier2.id,
+      coutJournalier: 450000,
+      coutTransport: 750000,
+      coutOperateur: 35000,
+      caution: 3000000,
+      dateDebut: new Date('2026-03-15'),
+      statut: 'EN_COURS',
+      conditions: 'Contrat en attente de démarrage. La grue sera livrée au démarrage du chantier.',
+    },
+  })
+
+  // 17. Create demo equipment affectations
+  console.log('📋 Creating Equipement Affectations...')
+  await prisma.equipementAffectation.create({
+    data: {
+      equipementId: engin1.id,
+      chantierId: chantier1.id,
+      dateDebut: new Date('2025-09-01'),
+      observations: 'Affecté au terrassement et fondations',
+    },
+  })
+  await prisma.equipementAffectation.create({
+    data: {
+      equipementId: engin2.id,
+      chantierId: chantier1.id,
+      dateDebut: new Date('2025-09-01'),
+      observations: 'Bétonnière de chantier principale',
+    },
+  })
+  await prisma.equipementAffectation.create({
+    data: {
+      equipementId: engin4.id,
+      chantierId: chantier1.id,
+      dateDebut: new Date('2025-09-15'),
+      observations: 'Transport matériaux et évacuation déblais',
+    },
   })
 
   console.log('✅ Seeding completed successfully!')

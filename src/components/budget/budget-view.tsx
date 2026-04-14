@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Warehouse,
   RefreshCw,
+  Truck,
 } from 'lucide-react'
 import {
   BarChart,
@@ -65,6 +66,7 @@ interface BudgetData {
   coutPersonnel: number
   coutMateriaux: number
   coutSousTraitants: number
+  coutLocations: number
   coutTotal: number
   ecart: number
   ecartPourcentage: number
@@ -272,6 +274,11 @@ export function BudgetView() {
           Réel: budget.coutSousTraitants,
         },
         {
+          categorie: 'Locations',
+          Prévisionnel: budget.budgetPrevisionnel * 0.1,
+          Réel: budget.coutLocations || 0,
+        },
+        {
           categorie: 'Total',
           Prévisionnel: budget.budgetPrevisionnel,
           Réel: budget.coutTotal,
@@ -326,6 +333,18 @@ export function BudgetView() {
           color: 'text-violet-600 dark:text-violet-400',
           bgColor: 'bg-violet-100 dark:bg-violet-900/30',
           barColor: 'bg-violet-500',
+        },
+        {
+          label: 'Locations',
+          value: budget.coutLocations || 0,
+          percentage:
+            budget.coutTotal > 0
+              ? ((budget.coutLocations || 0) / budget.coutTotal) * 100
+              : 0,
+          icon: Truck,
+          color: 'text-orange-600 dark:text-orange-400',
+          bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+          barColor: 'bg-orange-500',
         },
       ]
     : []
@@ -728,6 +747,9 @@ export function BudgetView() {
                               )}
                               {row.categorie === 'Sous-traitants' && (
                                 <Handshake className="w-4 h-4 inline mr-2 text-violet-600" />
+                              )}
+                              {row.categorie === 'Locations' && (
+                                <Truck className="w-4 h-4 inline mr-2 text-orange-600" />
                               )}
                               {row.categorie}
                             </TableCell>
