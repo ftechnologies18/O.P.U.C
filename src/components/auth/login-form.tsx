@@ -30,6 +30,9 @@ export function LoginForm() {
 
       if (result?.error) {
         setError('Email ou mot de passe incorrect')
+      } else {
+        // Force full page reload to pick up the new session cookie
+        window.location.href = '/'
       }
     } catch {
       setError('Une erreur est survenue. Veuillez réessayer.')

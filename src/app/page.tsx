@@ -1,6 +1,6 @@
 'use client'
 
-import { useSession, SessionProvider } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import { AuthProvider } from '@/providers/auth-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { AppLayout } from '@/components/layout/app-layout'
@@ -88,9 +88,7 @@ export default function Home() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <SessionProvider>
-          <AppContent />
-        </SessionProvider>
+        <AppContent />
       </AuthProvider>
     </ThemeProvider>
   )
