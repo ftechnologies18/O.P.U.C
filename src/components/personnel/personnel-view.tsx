@@ -33,12 +33,15 @@ import {
   Ruler,
   Home,
   Shield,
+  ShieldCheck,
   Wind,
   Layers,
   ThermometerSun,
   Sofa,
   BrushCleaning,
   Sparkles,
+  GraduationCap,
+  FileText,
   type LucideIcon,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -100,6 +103,16 @@ interface Journalier {
   telephone: string | null
   specialite: string | null
   photo: string | null
+  typeContrat: 'JOURNALIER' | 'CDD' | 'CDI' | 'STAGIAIRE'
+  tauxJournalier: number | null
+  salaireMensuel: number | null
+  dateDebutContrat: string | null
+  dateFinContrat: string | null
+  statutContrat: 'ACTIF' | 'ESSAI' | 'TERMINE' | 'SUSPENDU'
+  numeroCNPS: string | null
+  nbCongesRestants: number
+  poste: string | null
+  departement: string | null
   affectations: Affectation[]
   createdAt: string
 }
@@ -115,6 +128,10 @@ interface KpiData {
   enveloppe: number
   secondOeuvre: number
   nonAffecte: number
+  journaliers: number
+  cdd: number
+  cdi: number
+  stagiaires: number
 }
 
 interface JournalierFormData {
@@ -122,6 +139,15 @@ interface JournalierFormData {
   prenom: string
   telephone: string
   specialite: string
+  typeContrat: 'JOURNALIER' | 'CDD' | 'CDI' | 'STAGIAIRE'
+  tauxJournalier: string
+  salaireMensuel: string
+  dateDebutContrat: string
+  dateFinContrat: string
+  statutContrat: 'ACTIF' | 'ESSAI' | 'TERMINE' | 'SUSPENDU'
+  numeroCNPS: string
+  poste: string
+  departement: string
 }
 
 interface AssignFormData {
@@ -212,6 +238,36 @@ const PHASE_FILTER_OPTIONS = [
   { value: 'SECOND_OEUVRE', label: '🛠️ Second Œuvre' },
 ]
 
+// Contract type filter options
+const CONTRAT_TYPES = [
+  { value: 'TOUS', label: 'Tous', icon: Users, color: 'text-gray-600' },
+  { value: 'JOURNALIER', label: 'Journaliers', icon: HardHat, color: 'text-orange-600' },
+  { value: 'CDD', label: 'CDD', icon: FileText, color: 'text-sky-600' },
+  { value: 'CDI', label: 'CDI', icon: ShieldCheck, color: 'text-emerald-600' },
+  { value: 'STAGIAIRE', label: 'Stagiaires', icon: GraduationCap, color: 'text-violet-600' },
+]
+
+const CONTRAT_BADGE: Record<string, { class: string }> = {
+  JOURNALIER: { class: 'bg-orange-100 text-orange-700 border-orange-200' },
+  CDD: { class: 'bg-sky-100 text-sky-700 border-sky-200' },
+  CDI: { class: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  STAGIAIRE: { class: 'bg-violet-100 text-violet-700 border-violet-200' },
+}
+
+const STATUT_CONTRAT_BADGE: Record<string, { class: string; label: string }> = {
+  ACTIF: { class: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: 'Actif' },
+  ESSAI: { class: 'bg-amber-50 text-amber-700 border-amber-200', label: 'Période essai' },
+  TERMINE: { class: 'bg-gray-100 text-gray-500 border-gray-200', label: 'Terminé' },
+  SUSPENDU: { class: 'bg-red-50 text-red-600 border-red-200', label: 'Suspendu' },
+}
+
+const CONTRAT_TYPE_LABELS: Record<string, string> = {
+  JOURNALIER: 'Journalier',
+  CDD: 'CDD',
+  CDI: 'CDI',
+  STAGIAIRE: 'Stagiaire',
+}
+
 // Get phase group for a given specialty
 function getPhaseGroupForSpecialty(specialty: string | null): PhaseGroup | null {
   if (!specialty) return null
@@ -288,6 +344,15 @@ const EMPTY_FORM: JournalierFormData = {
   prenom: '',
   telephone: '',
   specialite: '',
+  typeContrat: 'JOURNALIER',
+  tauxJournalier: '',
+  salaireMensuel: '',
+  dateDebutContrat: '',
+  dateFinContrat: '',
+  statutContrat: 'ACTIF',
+  numeroCNPS: '',
+  poste: '',
+  departement: '',
 }
 
 const EMPTY_ASSIGN: AssignFormData = {
@@ -327,6 +392,11 @@ function formatDate(date: string | null): string {
   }
 }
 
+function formatCurrency(amount: number | null | undefined): string {
+  if (amount == null) return ''
+  return new Intl.NumberFormat('fr-FR').format(amount) + ' FCFA'
+}
+
 function getActiveAffectations(affectations: Affectation[]): Affectation[] {
   return affectations.filter((a) => a.actif)
 }
@@ -343,6 +413,7 @@ export function PersonnelView() {
   const [specialtyFilter, setSpecialtyFilter] = useState('TOUS')
   const [phaseFilter, setPhaseFilter] = useState('TOUS')
   const [chantierFilter, setChantierFilter] = useState('TOUS')
+  const [contratFilter, setContratFilter] = useState('TOUS')
 
   // Form dialog state
   const [formOpen, setFormOpen] = useState(false)
@@ -396,6 +467,7 @@ export function PersonnelView() {
         }
       }
       if (chantierFilter !== 'TOUS') params.set('chantierId', chantierFilter)
+      if (contratFilter !== 'TOUS') params.set('typeContrat', contratFilter)
 
       const res = await fetch(`/api/personnel?${params.toString()}`)
       if (res.ok) {
@@ -410,7 +482,7 @@ export function PersonnelView() {
     } finally {
       setLoading(false)
     }
-  }, [search, specialtyFilter, phaseFilter, chantierFilter])
+  }, [search, specialtyFilter, phaseFilter, chantierFilter, contratFilter])
 
   const fetchChantiers = useCallback(async () => {
     try {
@@ -457,6 +529,15 @@ export function PersonnelView() {
       prenom: j.prenom,
       telephone: j.telephone || '',
       specialite: j.specialite || '',
+      typeContrat: j.typeContrat || 'JOURNALIER',
+      tauxJournalier: j.tauxJournalier != null ? String(j.tauxJournalier) : '',
+      salaireMensuel: j.salaireMensuel != null ? String(j.salaireMensuel) : '',
+      dateDebutContrat: j.dateDebutContrat ? j.dateDebutContrat.split('T')[0] : '',
+      dateFinContrat: j.dateFinContrat ? j.dateFinContrat.split('T')[0] : '',
+      statutContrat: j.statutContrat || 'ACTIF',
+      numeroCNPS: j.numeroCNPS || '',
+      poste: j.poste || '',
+      departement: j.departement || '',
     })
     setFormOpen(true)
   }
@@ -473,11 +554,33 @@ export function PersonnelView() {
 
     setSubmitting(true)
     try {
-      const body = {
+      const body: Record<string, unknown> = {
         nom: form.nom.trim(),
         prenom: form.prenom.trim(),
         telephone: form.telephone.trim() || null,
         specialite: form.specialite.trim() || null,
+        typeContrat: form.typeContrat,
+        statutContrat: form.statutContrat,
+      }
+
+      // Contract-type-specific fields
+      if (form.typeContrat === 'JOURNALIER') {
+        body.tauxJournalier = form.tauxJournalier ? parseFloat(form.tauxJournalier) : null
+        body.salaireMensuel = null
+      } else {
+        body.salaireMensuel = form.salaireMensuel ? parseFloat(form.salaireMensuel) : null
+        body.tauxJournalier = null
+        body.poste = form.poste.trim() || null
+        body.departement = form.departement.trim() || null
+        body.numeroCNPS = form.numeroCNPS.trim() || null
+        if (form.dateDebutContrat) body.dateDebutContrat = form.dateDebutContrat
+        if (form.typeContrat === 'CDD' && form.dateFinContrat) {
+          body.dateFinContrat = form.dateFinContrat
+        } else if (form.typeContrat !== 'CDD') {
+          body.dateFinContrat = null
+        } else {
+          body.dateFinContrat = form.dateFinContrat || null
+        }
       }
 
       let res: Response
@@ -498,8 +601,8 @@ export function PersonnelView() {
       if (res.ok) {
         toast.success(
           editingId
-            ? 'Journalier mis à jour avec succès'
-            : 'Journalier créé avec succès'
+            ? 'Personnel mis à jour avec succès'
+            : 'Personnel créé avec succès'
         )
         setFormOpen(false)
         fetchJournaliers()
@@ -531,7 +634,7 @@ export function PersonnelView() {
         method: 'DELETE',
       })
       if (res.ok) {
-        toast.success('Journalier supprimé avec succès')
+        toast.success('Personnel supprimé avec succès')
         setDeleteOpen(false)
         setDeletingId(null)
         setDeletingName('')
@@ -579,7 +682,7 @@ export function PersonnelView() {
       })
 
       if (res.ok) {
-        toast.success('Journalier affecté au chantier avec succès')
+        toast.success('Personnel affecté au chantier avec succès')
         setAssignOpen(false)
         fetchJournaliers()
       } else {
@@ -639,7 +742,7 @@ export function PersonnelView() {
   const kpiCards = kpi
     ? [
         {
-          label: 'Total journaliers',
+          label: 'Total personnel',
           value: kpi.total,
           icon: Users,
           color: 'text-amber-600',
@@ -647,25 +750,33 @@ export function PersonnelView() {
           border: 'border-amber-200',
         },
         {
-          label: 'Gros Œuvre',
-          value: kpi.grosOeuvre,
+          label: 'Journaliers',
+          value: kpi.journaliers,
           icon: HardHat,
           color: 'text-orange-600',
           bg: 'bg-orange-50',
           border: 'border-orange-200',
         },
         {
-          label: 'Enveloppe Ext.',
-          value: kpi.enveloppe,
-          icon: Home,
-          color: 'text-teal-600',
-          bg: 'bg-teal-50',
-          border: 'border-teal-200',
+          label: 'CDI',
+          value: kpi.cdi,
+          icon: ShieldCheck,
+          color: 'text-emerald-600',
+          bg: 'bg-emerald-50',
+          border: 'border-emerald-200',
         },
         {
-          label: 'Second Œuvre',
-          value: kpi.secondOeuvre,
-          icon: Sparkles,
+          label: 'CDD',
+          value: kpi.cdd,
+          icon: FileText,
+          color: 'text-sky-600',
+          bg: 'bg-sky-50',
+          border: 'border-sky-200',
+        },
+        {
+          label: 'Stagiaires',
+          value: kpi.stagiaires,
+          icon: GraduationCap,
           color: 'text-violet-600',
           bg: 'bg-violet-50',
           border: 'border-violet-200',
@@ -683,6 +794,8 @@ export function PersonnelView() {
 
   // ── Render ────────────────────────────────────────────────────────────
 
+  const isJournalierType = form.typeContrat === 'JOURNALIER'
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -690,7 +803,7 @@ export function PersonnelView() {
         <div>
           <h2 className="text-2xl font-bold text-foreground">Personnel</h2>
           <p className="text-[15px] text-muted-foreground mt-1">
-            Gérez les journaliers et leurs affectations
+            Gérez le personnel et leurs affectations
           </p>
         </div>
         <Button
@@ -698,12 +811,12 @@ export function PersonnelView() {
           className="bg-amber-600 hover:bg-amber-700 text-white gap-2"
         >
           <UserPlus className="w-4 h-4" />
-          Nouveau journalier
+          Nouveau personnel
         </Button>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {kpiCards.map((card) => {
           const Icon = card.icon
           return (
@@ -735,6 +848,31 @@ export function PersonnelView() {
                 </div>
               </CardContent>
             </Card>
+          )
+        })}
+      </div>
+
+      {/* Contract type filter */}
+      <div className="flex flex-wrap gap-2">
+        {CONTRAT_TYPES.map((ct) => {
+          const Icon = ct.icon
+          const isActive = contratFilter === ct.value
+          return (
+            <Button
+              key={ct.value}
+              variant={isActive ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setContratFilter(ct.value)}
+              className={cn(
+                'gap-1.5 text-xs',
+                isActive
+                  ? 'bg-amber-600 hover:bg-amber-700 text-white border-amber-600'
+                  : 'border-border hover:border-amber-300'
+              )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {ct.label}
+            </Button>
           )
         })}
       </div>
@@ -777,16 +915,20 @@ export function PersonnelView() {
                 <SelectItem value="TOUS">Toutes les spécialités</SelectItem>
                 {phaseFilter === 'TOUS'
                   ? PHASE_GROUPS.map((group) => (
-                      <>
-                        <SelectItem key={group.value} value={group.value} disabled className="font-semibold text-xs text-muted-foreground cursor-default pointer-events-none">
-                          ── {group.label} ──
-                        </SelectItem>
+                      <SelectGroup key={group.value}>
+                        <SelectLabel className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                          {(() => {
+                            const Icon = group.icon
+                            return <Icon className="w-3 h-3" />
+                          })()}
+                          {group.label}
+                        </SelectLabel>
                         {group.specialties.map((s) => (
                           <SelectItem key={s.value} value={s.value}>
                             {s.label}
                           </SelectItem>
                         ))}
-                      </>
+                      </SelectGroup>
                     ))
                   : availableSpecialties.map((s) => (
                       <SelectItem key={s.value} value={s.value}>
@@ -845,27 +987,27 @@ export function PersonnelView() {
             <Users className="w-8 h-8 text-amber-600" />
           </div>
           <h3 className="text-xl font-semibold text-foreground">
-            Aucun journalier trouvé
+            Aucun personnel trouvé
           </h3>
           <p className="text-[15px] text-muted-foreground mt-1 max-w-sm">
-            {search || specialtyFilter !== 'TOUS' || phaseFilter !== 'TOUS' || chantierFilter !== 'TOUS'
-              ? 'Aucun journalier ne correspond à vos critères de recherche.'
-              : 'Commencez par ajouter votre premier journalier.'}
+            {search || specialtyFilter !== 'TOUS' || phaseFilter !== 'TOUS' || chantierFilter !== 'TOUS' || contratFilter !== 'TOUS'
+              ? 'Aucun personnel ne correspond à vos critères de recherche.'
+              : 'Commencez par ajouter votre premier personnel.'}
           </p>
-          {!search && specialtyFilter === 'TOUS' && phaseFilter === 'TOUS' && chantierFilter === 'TOUS' && (
+          {!search && specialtyFilter === 'TOUS' && phaseFilter === 'TOUS' && chantierFilter === 'TOUS' && contratFilter === 'TOUS' && (
             <Button
               onClick={openCreate}
               className="mt-4 bg-amber-600 hover:bg-amber-700 text-white gap-2"
             >
               <UserPlus className="w-4 h-4" />
-              Ajouter un journalier
+              Ajouter du personnel
             </Button>
           )}
         </motion.div>
       ) : (
         <AnimatePresence mode="wait">
           <motion.div
-            key={search + specialtyFilter + phaseFilter + chantierFilter}
+            key={search + specialtyFilter + phaseFilter + chantierFilter + contratFilter}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -881,6 +1023,10 @@ export function PersonnelView() {
                 .trim() || ''
               const SpecialtyIcon = SPECIALTY_ICONS[specialtyKey]
               const phaseGroup = getPhaseGroupForSpecialty(journalier.specialite)
+              const contratBadge = CONTRAT_BADGE[journalier.typeContrat]
+              const statutBadge = journalier.statutContrat !== 'ACTIF'
+                ? STATUT_CONTRAT_BADGE[journalier.statutContrat]
+                : null
 
               return (
                 <motion.div
@@ -898,13 +1044,20 @@ export function PersonnelView() {
                           'h-12 w-12 shrink-0 border',
                           phaseGroup
                             ? cn(phaseGroup.bg, phaseGroup.color, phaseGroup.border)
-                            : 'bg-gray-100 text-gray-600 border-gray-200'
+                            : journalier.typeContrat !== 'JOURNALIER'
+                              ? cn(
+                                  CONTRAT_BADGE[journalier.typeContrat]?.class.replace('border-', 'border-'),
+                                  CONTRAT_BADGE[journalier.typeContrat]?.class.replace(/text-\S+/, '').split(' ')[0],
+                                )
+                              : 'bg-gray-100 text-gray-600 border-gray-200'
                         )}>
                           <AvatarFallback className={cn(
                             'font-bold text-sm',
                             phaseGroup
                               ? cn(phaseGroup.bg, phaseGroup.color)
-                              : 'bg-gray-100 text-gray-600'
+                              : journalier.typeContrat !== 'JOURNALIER'
+                                ? CONTRAT_BADGE[journalier.typeContrat]?.class.replace('border-', '')
+                                : 'bg-gray-100 text-gray-600'
                           )}>
                             {getInitials(journalier.nom, journalier.prenom)}
                           </AvatarFallback>
@@ -916,18 +1069,32 @@ export function PersonnelView() {
                             <h3 className="font-semibold text-foreground text-[15px] truncate">
                               {getFullName(journalier)}
                             </h3>
+                            {/* Contract type badge */}
                             <Badge
                               variant="outline"
                               className={cn(
-                                'text-xs shrink-0 gap-1',
-                                getSpecialtyBadgeClass(journalier.specialite)
+                                'text-xs shrink-0 gap-1 font-medium',
+                                contratBadge?.class
                               )}
                             >
-                              {SpecialtyIcon && (
-                                <SpecialtyIcon className="w-3 h-3" />
-                              )}
-                              {formatSpecialty(journalier.specialite)}
+                              {CONTRAT_TYPE_LABELS[journalier.typeContrat] || journalier.typeContrat}
                             </Badge>
+                            {/* Specialty badge */}
+                            {journalier.specialite && (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'text-xs shrink-0 gap-1',
+                                  getSpecialtyBadgeClass(journalier.specialite)
+                                )}
+                              >
+                                {SpecialtyIcon && (
+                                  <SpecialtyIcon className="w-3 h-3" />
+                                )}
+                                {formatSpecialty(journalier.specialite)}
+                              </Badge>
+                            )}
+                            {/* Phase group badge */}
                             {phaseGroup && (
                               <Badge
                                 variant="outline"
@@ -941,13 +1108,62 @@ export function PersonnelView() {
                                 {phaseGroup.label}
                               </Badge>
                             )}
+                            {/* Statut contrat badge (only if not ACTIF) */}
+                            {statutBadge && (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'text-[10px] shrink-0',
+                                  statutBadge.class
+                                )}
+                              >
+                                {statutBadge.label}
+                              </Badge>
+                            )}
                           </div>
+
+                          {/* Poste subtitle for non-journalier types */}
+                          {journalier.poste && journalier.typeContrat !== 'JOURNALIER' && (
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                              {journalier.poste}{journalier.departement ? ` — ${journalier.departement}` : ''}
+                            </p>
+                          )}
 
                           {/* Phone */}
                           {journalier.telephone && (
                             <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
                               <Phone className="w-3.5 h-3.5 shrink-0 text-amber-500" />
                               <span>{journalier.telephone}</span>
+                            </div>
+                          )}
+
+                          {/* Salary display */}
+                          {(journalier.typeContrat === 'JOURNALIER' && journalier.tauxJournalier) && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                              <Briefcase className="w-3 h-3 shrink-0 text-orange-500" />
+                              <span className="font-medium text-orange-700">
+                                {formatCurrency(journalier.tauxJournalier)}/jour
+                              </span>
+                            </div>
+                          )}
+                          {(journalier.typeContrat !== 'JOURNALIER' && journalier.salaireMensuel) && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                              <Briefcase className="w-3 h-3 shrink-0 text-emerald-500" />
+                              <span className="font-medium text-emerald-700">
+                                {formatCurrency(journalier.salaireMensuel)}/mois
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Contract dates for non-journalier */}
+                          {journalier.typeContrat !== 'JOURNALIER' && journalier.dateDebutContrat && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                              <CalendarDays className="w-3 h-3 shrink-0" />
+                              <span>
+                                {formatDate(journalier.dateDebutContrat)}
+                                {journalier.dateFinContrat && ` → ${formatDate(journalier.dateFinContrat)}`}
+                                {!journalier.dateFinContrat && ' → en cours'}
+                              </span>
                             </div>
                           )}
 
@@ -1041,18 +1257,18 @@ export function PersonnelView() {
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingId ? 'Modifier le journalier' : 'Nouveau journalier'}
+              {editingId ? 'Modifier le personnel' : 'Nouveau personnel'}
             </DialogTitle>
             <DialogDescription>
               {editingId
-                ? 'Modifiez les informations du journalier ci-dessous.'
-                : 'Remplissez les informations pour ajouter un nouveau journalier.'}
+                ? 'Modifiez les informations du personnel ci-dessous.'
+                : 'Remplissez les informations pour ajouter un nouveau membre du personnel.'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-2">
+            {/* Nom / Prénom */}
             <div className="grid grid-cols-2 gap-4">
-              {/* Nom */}
               <div className="grid gap-2">
                 <Label htmlFor="nom">Nom *</Label>
                 <Input
@@ -1064,8 +1280,6 @@ export function PersonnelView() {
                   }
                 />
               </div>
-
-              {/* Prénom */}
               <div className="grid gap-2">
                 <Label htmlFor="prenom">Prénom *</Label>
                 <Input
@@ -1092,34 +1306,243 @@ export function PersonnelView() {
               />
             </div>
 
-            {/* Spécialité */}
+            {/* Type de contrat */}
             <div className="grid gap-2">
-              <Label>Spécialité</Label>
+              <Label>Type de contrat *</Label>
+              <div className="flex flex-wrap gap-2">
+                {CONTRAT_TYPES.filter((ct) => ct.value !== 'TOUS').map((ct) => {
+                  const Icon = ct.icon
+                  const isActive = form.typeContrat === ct.value
+                  return (
+                    <Button
+                      key={ct.value}
+                      type="button"
+                      variant={isActive ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setForm({ ...form, typeContrat: ct.value as JournalierFormData['typeContrat'] })}
+                      className={cn(
+                        'gap-1.5 text-xs',
+                        isActive
+                          ? 'bg-amber-600 hover:bg-amber-700 text-white border-amber-600'
+                          : 'border-border hover:border-amber-300'
+                      )}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      {ct.label}
+                    </Button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* JOURNALIER-specific fields */}
+            {isJournalierType && (
+              <>
+                {/* Spécialité (required for journalier) */}
+                <div className="grid gap-2">
+                  <Label>Spécialité</Label>
+                  <Select
+                    value={form.specialite}
+                    onValueChange={(value) =>
+                      setForm({ ...form, specialite: value })
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Sélectionner une spécialité" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PHASE_GROUPS.map((group) => (
+                        <SelectGroup key={group.value}>
+                          <SelectLabel className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                            {(() => {
+                              const Icon = group.icon
+                              return <Icon className="w-3 h-3" />
+                            })()}
+                            {group.label}
+                          </SelectLabel>
+                          {group.specialties.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>
+                              {s.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Taux journalier */}
+                <div className="grid gap-2">
+                  <Label htmlFor="tauxJournalier" className="flex items-center gap-1.5">
+                    <Briefcase className="w-3.5 h-3.5 text-orange-500" />
+                    Taux journalier (FCFA)
+                  </Label>
+                  <Input
+                    id="tauxJournalier"
+                    type="number"
+                    placeholder="Ex: 15000"
+                    value={form.tauxJournalier}
+                    onChange={(e) =>
+                      setForm({ ...form, tauxJournalier: e.target.value })
+                    }
+                    min="0"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* CDD / CDI / STAGIAIRE-specific fields */}
+            {!isJournalierType && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Poste */}
+                  <div className="grid gap-2">
+                    <Label htmlFor="poste">Poste</Label>
+                    <Input
+                      id="poste"
+                      placeholder="Ex: Chef d'équipe"
+                      value={form.poste}
+                      onChange={(e) =>
+                        setForm({ ...form, poste: e.target.value })
+                      }
+                    />
+                  </div>
+                  {/* Département */}
+                  <div className="grid gap-2">
+                    <Label htmlFor="departement">Département</Label>
+                    <Input
+                      id="departement"
+                      placeholder="Ex: Production"
+                      value={form.departement}
+                      onChange={(e) =>
+                        setForm({ ...form, departement: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* Spécialité (optional for non-journalier) */}
+                <div className="grid gap-2">
+                  <Label>Spécialité</Label>
+                  <Select
+                    value={form.specialite}
+                    onValueChange={(value) =>
+                      setForm({ ...form, specialite: value })
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Sélectionner une spécialité (optionnel)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PHASE_GROUPS.map((group) => (
+                        <SelectGroup key={group.value}>
+                          <SelectLabel className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                            {(() => {
+                              const Icon = group.icon
+                              return <Icon className="w-3 h-3" />
+                            })()}
+                            {group.label}
+                          </SelectLabel>
+                          {group.specialties.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>
+                              {s.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Salaire mensuel */}
+                <div className="grid gap-2">
+                  <Label htmlFor="salaireMensuel" className="flex items-center gap-1.5">
+                    <Briefcase className="w-3.5 h-3.5 text-emerald-500" />
+                    Salaire mensuel (FCFA)
+                  </Label>
+                  <Input
+                    id="salaireMensuel"
+                    type="number"
+                    placeholder="Ex: 350000"
+                    value={form.salaireMensuel}
+                    onChange={(e) =>
+                      setForm({ ...form, salaireMensuel: e.target.value })
+                    }
+                    min="0"
+                  />
+                </div>
+
+                {/* Contract dates */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="dateDebutContrat" className="flex items-center gap-1.5">
+                      <CalendarDays className="w-3.5 h-3.5 text-amber-500" />
+                      Date début contrat
+                    </Label>
+                    <Input
+                      id="dateDebutContrat"
+                      type="date"
+                      value={form.dateDebutContrat}
+                      onChange={(e) =>
+                        setForm({ ...form, dateDebutContrat: e.target.value })
+                      }
+                    />
+                  </div>
+                  {/* Date fin only for CDD */}
+                  {form.typeContrat === 'CDD' && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="dateFinContrat" className="flex items-center gap-1.5">
+                        <CalendarDays className="w-3.5 h-3.5 text-amber-500" />
+                        Date fin contrat
+                      </Label>
+                      <Input
+                        id="dateFinContrat"
+                        type="date"
+                        value={form.dateFinContrat}
+                        onChange={(e) =>
+                          setForm({ ...form, dateFinContrat: e.target.value })
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* N° CNPS */}
+                <div className="grid gap-2">
+                  <Label htmlFor="numeroCNPS">N° CNPS</Label>
+                  <Input
+                    id="numeroCNPS"
+                    placeholder="Ex: CNPS-2024-001"
+                    value={form.numeroCNPS}
+                    onChange={(e) =>
+                      setForm({ ...form, numeroCNPS: e.target.value })
+                    }
+                  />
+                </div>
+              </>
+            )}
+
+            <Separator />
+
+            {/* Statut contrat (always shown) */}
+            <div className="grid gap-2">
+              <Label>Statut du contrat</Label>
               <Select
-                value={form.specialite}
+                value={form.statutContrat}
                 onValueChange={(value) =>
-                  setForm({ ...form, specialite: value })
+                  setForm({ ...form, statutContrat: value as JournalierFormData['statutContrat'] })
                 }
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sélectionner une spécialité" />
+                  <SelectValue placeholder="Statut du contrat" />
                 </SelectTrigger>
                 <SelectContent>
-                  {PHASE_GROUPS.map((group) => (
-                    <SelectGroup key={group.value}>
-                      <SelectLabel className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                        {(() => {
-                          const Icon = group.icon
-                          return <Icon className="w-3 h-3" />
-                        })()}
-                        {group.label}
-                      </SelectLabel>
-                      {group.specialties.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          {s.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
+                  {Object.entries(STATUT_CONTRAT_BADGE).map(([key, val]) => (
+                    <SelectItem key={key} value={key}>
+                      {val.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1165,7 +1588,7 @@ export function PersonnelView() {
             <AlertDialogTitle>Supprimer {deletingName} ?</AlertDialogTitle>
             <AlertDialogDescription>
               Cette action est irréversible. Toutes les données associées à ce
-              journalier (affectations, pointages, paiements) seront
+              membre du personnel (affectations, pointages, paiements) seront
               supprimées définitivement.
             </AlertDialogDescription>
           </AlertDialogHeader>

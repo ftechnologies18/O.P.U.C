@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
     const phaseFilter = searchParams.get('phase')
     const chantierId = searchParams.get('chantierId')
     const specialites = searchParams.getAll('specialites') // array of specialty values for phase filter
+    const typeContrat = searchParams.get('typeContrat')
 
     const where: Record<string, unknown> = {}
 
@@ -68,6 +69,11 @@ export async function GET(request: NextRequest) {
     // Phase-based specialty filter (multiple specialties via specialites param)
     else if (specialites && specialites.length > 0) {
       where.specialite = { in: specialites }
+    }
+
+    // Filter by type de contrat
+    if (typeContrat && typeContrat.trim() && typeContrat.trim() !== 'TOUS') {
+      where.typeContrat = typeContrat.trim()
     }
 
     // Filter by chantier assignment
@@ -120,12 +126,39 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Counts by type de contrat
+    let countJournaliers = 0
+    let countCdd = 0
+    let countCdi = 0
+    let countStagiaires = 0
+
+    for (const j of allJournaliers) {
+      switch (j.typeContrat) {
+        case 'CDD':
+          countCdd++
+          break
+        case 'CDI':
+          countCdi++
+          break
+        case 'STAGIAIRE':
+          countStagiaires++
+          break
+        default:
+          countJournaliers++
+          break
+      }
+    }
+
     const kpi = {
       total: allJournaliers.length,
       grosOeuvre,
       enveloppe,
       secondOeuvre,
       nonAffecte,
+      journaliers: countJournaliers,
+      cdd: countCdd,
+      cdi: countCdi,
+      stagiaires: countStagiaires,
     }
 
     return NextResponse.json({
@@ -144,7 +177,22 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { nom, prenom, telephone, specialite } = body
+    const {
+      nom,
+      prenom,
+      telephone,
+      specialite,
+      typeContrat,
+      tauxJournalier,
+      salaireMensuel,
+      dateDebutContrat,
+      dateFinContrat,
+      statutContrat,
+      numeroCNPS,
+      nbCongesRestants,
+      poste,
+      departement,
+    } = body
 
     if (!nom || nom.trim() === '') {
       return NextResponse.json(
@@ -160,12 +208,57 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate type de contrat
+    const contratType = typeContrat || 'JOURNALIER'
+    const validTypes = ['JOURNALIER', 'CDD', 'CDI', 'STAGIAIRE']
+    if (!validTypes.includes(contratType)) {
+      return NextResponse.json(
+        { error: 'Type de contrat invalide. Valeurs acceptées : JOURNALIER, CDD, CDI, STAGIAIRE' },
+        { status: 400 }
+      )
+    }
+
+    // JOURNALIER must have tauxJournalier
+    if (contratType === 'JOURNALIER' && (tauxJournalier === undefined || tauxJournalier === null || tauxJournalier <= 0)) {
+      return NextResponse.json(
+        { error: 'Le taux journalier est requis pour un journalier' },
+        { status: 400 }
+      )
+    }
+
+    // CDD/CDI/STAGIAIRE must have salaireMensuel
+    if ((contratType === 'CDD' || contratType === 'CDI' || contratType === 'STAGIAIRE') && (salaireMensuel === undefined || salaireMensuel === null || salaireMensuel <= 0)) {
+      return NextResponse.json(
+        { error: 'Le salaire mensuel est requis pour ce type de contrat' },
+        { status: 400 }
+      )
+    }
+
+    // Validate statut contrat
+    const validStatuts = ['ACTIF', 'ESSAI', 'TERMINE', 'SUSPENDU']
+    if (statutContrat && !validStatuts.includes(statutContrat)) {
+      return NextResponse.json(
+        { error: 'Statut de contrat invalide. Valeurs acceptées : ACTIF, ESSAI, TERMINE, SUSPENDU' },
+        { status: 400 }
+      )
+    }
+
     const journalier = await db.journalier.create({
       data: {
         nom: nom.trim(),
         prenom: prenom.trim(),
         telephone: telephone?.trim() || null,
         specialite: specialite?.trim() || null,
+        typeContrat: contratType,
+        tauxJournalier: tauxJournalier ? Number(tauxJournalier) : null,
+        salaireMensuel: salaireMensuel ? Number(salaireMensuel) : null,
+        dateDebutContrat: dateDebutContrat ? new Date(dateDebutContrat) : null,
+        dateFinContrat: dateFinContrat ? new Date(dateFinContrat) : null,
+        statutContrat: statutContrat || 'ACTIF',
+        numeroCNPS: numeroCNPS?.trim() || null,
+        nbCongesRestants: nbCongesRestants !== undefined ? Number(nbCongesRestants) : 0,
+        poste: poste?.trim() || null,
+        departement: departement?.trim() || null,
       },
     })
 

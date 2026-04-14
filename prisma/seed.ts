@@ -10,6 +10,7 @@ async function main() {
   console.log('🗑️  Cleaning existing data...')
   await prisma.notification.deleteMany()
   await prisma.photo.deleteMany()
+  await prisma.salaireMensuel.deleteMany()
   await prisma.sortieStock.deleteMany()
   await prisma.entreeStock.deleteMany()
   await prisma.stockMateriel.deleteMany()
@@ -125,172 +126,178 @@ async function main() {
     },
   })
 
-  // 4. Create demo Journaliers (diverse specialties across all phases)
+  // 4. Create demo Personnel (journaliers + salariés sous contrat)
   console.log('👷 Creating Journaliers...')
   const journaliers = await Promise.all([
-    // ── Gros Œuvre & Préparation ──
+    // ── Journaliers (Gros Œuvre) ──
     prisma.journalier.create({
       data: {
-        nom: 'Diop',
-        prenom: 'Ibrahima',
-        telephone: '+221 78 200 0001',
-        specialite: 'Maçon',
+        nom: 'Diop', prenom: 'Ibrahima', telephone: '+221 78 200 0001',
+        specialite: 'Maçon', typeContrat: 'JOURNALIER', tauxJournalier: 5000,
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Ndiaye', prenom: 'Ousmane', telephone: '+221 78 200 0002',
+        specialite: 'Ferrailleur', typeContrat: 'JOURNALIER', tauxJournalier: 5500,
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Diallo', prenom: 'Amadou', telephone: '+221 78 200 0006',
+        specialite: 'Terrassier', typeContrat: 'JOURNALIER', tauxJournalier: 4500,
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Sarr', prenom: 'Moussa', telephone: '+221 78 200 0007',
+        specialite: 'Coffreur-bancheur', typeContrat: 'JOURNALIER', tauxJournalier: 6000,
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Kane', prenom: 'Boubacar', telephone: '+221 78 200 0008',
+        specialite: 'Grutier', typeContrat: 'JOURNALIER', tauxJournalier: 8000,
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Gueye', prenom: 'Pape', telephone: '+221 78 200 0009',
+        specialite: "Monteur d'échafaudages", typeContrat: 'JOURNALIER', tauxJournalier: 4500,
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
+      },
+    }),
+    // ── Journaliers (Enveloppe) ──
+    prisma.journalier.create({
+      data: {
+        nom: 'Thiam', prenom: 'Mamadou', telephone: '+221 78 200 0010',
+        specialite: 'Charpentier', typeContrat: 'JOURNALIER', tauxJournalier: 5500,
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Mbaye', prenom: 'Cheikh', telephone: '+221 78 200 0011',
+        specialite: 'Couvreur / Zingueur', typeContrat: 'JOURNALIER', tauxJournalier: 5500,
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Niang', prenom: 'Abdou', telephone: '+221 78 200 0012',
+        specialite: 'Façadier / Bardeur', typeContrat: 'JOURNALIER', tauxJournalier: 5000,
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
+      },
+    }),
+    // ── Journaliers (Second Œuvre) ──
+    prisma.journalier.create({
+      data: {
+        nom: 'Sow', prenom: 'Mamadou', telephone: '+221 78 200 0003',
+        specialite: 'Électricien', typeContrat: 'JOURNALIER', tauxJournalier: 7000,
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Fall', prenom: 'Abdoulaye', telephone: '+221 78 200 0004',
+        specialite: 'Plombier', typeContrat: 'JOURNALIER', tauxJournalier: 6000,
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Ba', prenom: 'Cheikh', telephone: '+221 78 200 0005',
+        specialite: 'Peintre', typeContrat: 'JOURNALIER', tauxJournalier: 4500,
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Sy', prenom: 'Ibrahima', telephone: '+221 78 200 0013',
+        specialite: 'Carreleur', typeContrat: 'JOURNALIER', tauxJournalier: 5000,
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Cissé', prenom: 'Oumar', telephone: '+221 78 200 0014',
+        specialite: 'Plâtrier', typeContrat: 'JOURNALIER', tauxJournalier: 5000,
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
+      },
+    }),
+    // ── Salariés sous CDI ──
+    prisma.journalier.create({
+      data: {
+        nom: 'Diarra', prenom: 'Seydou', telephone: '+221 78 200 0015',
+        specialite: 'CVC', typeContrat: 'CDI', salaireMensuel: 350000,
+        poste: 'Technicien CVC', departement: 'Technique',
+        dateDebutContrat: new Date('2024-01-15'), statutContrat: 'ACTIF',
+        numeroCNPS: 'CNPS-2024-0015', nbCongesRestants: 18,
         entrepriseId: entreprise.id,
       },
     }),
     prisma.journalier.create({
       data: {
-        nom: 'Ndiaye',
-        prenom: 'Ousmane',
-        telephone: '+221 78 200 0002',
-        specialite: 'Ferrailleur',
+        nom: 'Touré', prenom: 'Bakary', telephone: '+221 78 200 0016',
+        specialite: 'Menuisier intérieur', typeContrat: 'CDI', salaireMensuel: 300000,
+        poste: 'Menuisier qualifié', departement: 'Atelier',
+        dateDebutContrat: new Date('2023-06-01'), statutContrat: 'ACTIF',
+        numeroCNPS: 'CNPS-2023-0016', nbCongesRestants: 24,
         entrepriseId: entreprise.id,
       },
     }),
     prisma.journalier.create({
       data: {
-        nom: 'Diallo',
-        prenom: 'Amadou',
-        telephone: '+221 78 200 0006',
-        specialite: 'Terrassier',
+        nom: 'Keita', prenom: 'Souleymane', telephone: '+221 78 200 0017',
+        specialite: 'Électricien', typeContrat: 'CDI', salaireMensuel: 400000,
+        poste: 'Électricien senior', departement: 'Technique',
+        dateDebutContrat: new Date('2023-03-01'), statutContrat: 'ACTIF',
+        numeroCNPS: 'CNPS-2023-0017', nbCongesRestants: 22,
         entrepriseId: entreprise.id,
       },
     }),
     prisma.journalier.create({
       data: {
-        nom: 'Sarr',
-        prenom: 'Moussa',
-        telephone: '+221 78 200 0007',
-        specialite: 'Coffreur-bancheur',
+        nom: 'Camara', prenom: 'Lamine', telephone: '+221 78 200 0018',
+        specialite: 'Canalisateur VRD', typeContrat: 'CDI', salaireMensuel: 320000,
+        poste: 'Chef d\'équipe VRD', departement: 'Travaux publics',
+        dateDebutContrat: new Date('2024-06-01'), statutContrat: 'ACTIF',
+        numeroCNPS: 'CNPS-2024-0018', nbCongesRestants: 20,
         entrepriseId: entreprise.id,
+      },
+    }),
+    // ── Salariés sous CDD ──
+    prisma.journalier.create({
+      data: {
+        nom: 'Konaté', prenom: 'Adama', telephone: '+221 78 200 0019',
+        specialite: 'Isolation', typeContrat: 'CDD', salaireMensuel: 250000,
+        poste: 'Applicateur isolation', departement: 'Second œuvre',
+        dateDebutContrat: new Date('2025-09-01'), dateFinContrat: new Date('2026-08-31'),
+        statutContrat: 'ESSAI', entrepriseId: entreprise.id,
       },
     }),
     prisma.journalier.create({
       data: {
-        nom: 'Kane',
-        prenom: 'Boubacar',
-        telephone: '+221 78 200 0008',
-        specialite: 'Grutier',
-        entrepriseId: entreprise.id,
+        nom: 'Ouédraogo', prenom: 'Hamidou', telephone: '+221 78 200 0020',
+        specialite: 'Étancheur', typeContrat: 'CDD', salaireMensuel: 280000,
+        poste: 'Étancheur', departement: 'Enveloppe',
+        dateDebutContrat: new Date('2025-11-01'), dateFinContrat: new Date('2026-04-30'),
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
       },
     }),
+    // ── Stagiaire ──
     prisma.journalier.create({
       data: {
-        nom: 'Gueye',
-        prenom: 'Pape',
-        telephone: '+221 78 200 0009',
-        specialite: "Monteur d'échafaudages",
-        entrepriseId: entreprise.id,
-      },
-    }),
-    // ── Enveloppe Extérieure ──
-    prisma.journalier.create({
-      data: {
-        nom: 'Thiam',
-        prenom: 'Mamadou',
-        telephone: '+221 78 200 0010',
-        specialite: 'Charpentier',
-        entrepriseId: entreprise.id,
-      },
-    }),
-    prisma.journalier.create({
-      data: {
-        nom: 'Mbaye',
-        prenom: 'Cheikh',
-        telephone: '+221 78 200 0011',
-        specialite: 'Couvreur / Zingueur',
-        entrepriseId: entreprise.id,
-      },
-    }),
-    prisma.journalier.create({
-      data: {
-        nom: 'Niang',
-        prenom: 'Abdou',
-        telephone: '+221 78 200 0012',
-        specialite: 'Façadier / Bardeur',
-        entrepriseId: entreprise.id,
-      },
-    }),
-    // ── Second Œuvre & Finitions ──
-    prisma.journalier.create({
-      data: {
-        nom: 'Sow',
-        prenom: 'Mamadou',
-        telephone: '+221 78 200 0003',
-        specialite: 'Électricien',
-        entrepriseId: entreprise.id,
-      },
-    }),
-    prisma.journalier.create({
-      data: {
-        nom: 'Fall',
-        prenom: 'Abdoulaye',
-        telephone: '+221 78 200 0004',
-        specialite: 'Plombier',
-        entrepriseId: entreprise.id,
-      },
-    }),
-    prisma.journalier.create({
-      data: {
-        nom: 'Ba',
-        prenom: 'Cheikh',
-        telephone: '+221 78 200 0005',
-        specialite: 'Peintre',
-        entrepriseId: entreprise.id,
-      },
-    }),
-    prisma.journalier.create({
-      data: {
-        nom: 'Sy',
-        prenom: 'Ibrahima',
-        telephone: '+221 78 200 0013',
-        specialite: 'Carreleur',
-        entrepriseId: entreprise.id,
-      },
-    }),
-    prisma.journalier.create({
-      data: {
-        nom: 'Cissé',
-        prenom: 'Oumar',
-        telephone: '+221 78 200 0014',
-        specialite: 'Plâtrier',
-        entrepriseId: entreprise.id,
-      },
-    }),
-    prisma.journalier.create({
-      data: {
-        nom: 'Diarra',
-        prenom: 'Seydou',
-        telephone: '+221 78 200 0015',
-        specialite: 'CVC',
-        entrepriseId: entreprise.id,
-      },
-    }),
-    prisma.journalier.create({
-      data: {
-        nom: 'Touré',
-        prenom: 'Bakary',
-        telephone: '+221 78 200 0016',
-        specialite: 'Menuisier intérieur',
-        entrepriseId: entreprise.id,
-      },
-    }),
-    prisma.journalier.create({
-      data: {
-        nom: 'Keita',
-        prenom: 'Souleymane',
-        telephone: '+221 78 200 0017',
-        specialite: 'Isolation',
-        entrepriseId: entreprise.id,
-      },
-    }),
-    prisma.journalier.create({
-      data: {
-        nom: 'Camara',
-        prenom: 'Lamine',
-        telephone: '+221 78 200 0018',
-        specialite: 'Canalisateur VRD',
-        entrepriseId: entreprise.id,
+        nom: 'Dembélé', prenom: 'Moussa', telephone: '+221 78 200 0021',
+        specialite: 'Plombier', typeContrat: 'STAGIAIRE', salaireMensuel: 100000,
+        poste: 'Stagiaire plomberie', departement: 'Technique',
+        dateDebutContrat: new Date('2026-01-06'), dateFinContrat: new Date('2026-07-06'),
+        statutContrat: 'ACTIF', entrepriseId: entreprise.id,
       },
     }),
   ])

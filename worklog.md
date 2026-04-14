@@ -162,3 +162,179 @@ Stage Summary:
 - KPIs show distribution across Gros Œuvre, Enveloppe, and Second Œuvre
 - Each specialty has unique icon, color, and avatar theming
 - 18 demo journaliers in seed data spanning all trades
+
+---
+Task ID: 3
+Agent: API Agent
+Task: Create SalaireMensuel API routes for monthly salary management
+
+Work Log:
+- Created /api/salaires/route.ts: GET with filters (mois, annee, statut, typeContrat, search, chantierId) + KPI (totalSalaires, enAttente, payes, partiel, masseTotale, massePayee); POST with field validation, journalier type check (CDD/CDI/STAGIAIRE only), uniqueness constraint check, auto-calculated netAPayer
+- Created /api/salaires/[id]/route.ts: GET with journalier (nom, prenom, specialite, typeContrat, poste, departement, salaireMensuel, statutContrat) and validePar relations; PUT with partial field updates, netAPayer recalculation, statut change validation (requires datePaiement for PAYE/PARTIEL); DELETE with existence check
+- Created /api/salaires/generate/route.ts: POST bulk generation finding eligible journaliers (typeContrat CDD/CDI/STAGIAIRE, statutContrat ACTIF/ESSAI), skipping existing records, creating with salaireBase=journalier.salaireMensuel, netAPayer=salaireBase, all deductions=0, statut=EN_ATTENTE; optional chantierId filter via active affectation; returns created/skipped/total counts
+- All routes follow project patterns: NextRequest/NextResponse, Promise<{id}> params with await, French error messages, console.error logging
+- Ran bun run lint: no errors
+- Dev server compiled successfully
+
+Stage Summary:
+- 3 API route files created for monthly salary (SalaireMensuel) management
+- GET /api/salaires supports comprehensive filtering (mois, annee, statut, typeContrat, search, chantierId) with KPI aggregation
+- POST /api/salaires creates single record with auto netAPayer calculation and uniqueness validation
+- GET/PUT/DELETE /api/salaires/[id] for individual record management with recalculation on update
+- POST /api/salaires/generate bulk creates salary records for all eligible CDD/CDI/STAGIAIRE journaliers
+- Only CDD/CDI/STAGIAIRE contract types included (JOURNALIER excluded, uses hebdomadaire)
+
+---
+Task ID: 2
+Agent: API Agent
+Task: Update personnel API routes to support contract type fields (typeContrat, tauxJournalier, salaireMensuel, etc.)
+
+Work Log:
+- Read worklog.md and all 3 existing personnel API route files for context
+- Read prisma/schema.prisma to confirm Journalier model new fields
+- Updated /api/personnel/route.ts:
+  - GET: Added `?typeContrat=JOURNALIER` query param filter (skipped when "TOUS" or not specified)
+  - GET: Added contract type KPI counts (journaliers, cdd, cdi, stagiaires) alongside existing phase-based KPIs
+  - GET: All existing phase-based filtering (GROS_OEUVRE, ENVELOPPE, SECOND_OEUVRE specialites) preserved
+  - POST: Accepts all new fields (typeContrat, tauxJournalier, salaireMensuel, dateDebutContrat, dateFinContrat, statutContrat, numeroCNPS, nbCongesRestants, poste, departement)
+  - POST: Validation - JOURNALIER type must have tauxJournalier, CDD/CDI/STAGIAIRE must have salaireMensuel
+  - POST: Validates typeContrat against allowed values, statutContrat against allowed values
+- Updated /api/personnel/[id]/route.ts:
+  - PUT: Accepts and saves all new contract fields with conditional updates (only updates provided fields)
+  - PUT: Validates typeContrat and salaire/taux rules when typeContrat is changed
+  - GET: New fields included automatically from Prisma (no changes needed)
+- Verified /api/personnel/[id]/affectations/route.ts: unchanged, references journalierId which is unaffected
+- Fixed variable name collision in GET handler (renamed KPI count variables to countJournaliers/countCdd/countCdi/countStagiaires)
+- Ran bun run lint: no errors
+- Dev server compiled successfully
+
+Stage Summary:
+- Personnel API now supports 4 contract types: JOURNALIER, CDD, CDI, STAGIAIRE
+- GET /api/personnel supports ?typeContrat= filter alongside existing phase/specialty filters
+- KPI response includes both phase-based counts and contract type counts
+- POST/PUT validate contract-specific salary requirements
+- All existing filtering (search, phase, specialite, chantier) preserved and compatible
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Update PersonnelView component with contract type support (JOURNALIER/CDD/CDI/STAGIAIRE)
+
+Work Log:
+- Updated Journalier interface with all new fields: typeContrat, tauxJournalier, salaireMensuel, dateDebutContrat, dateFinContrat, statutContrat, numeroCNPS, nbCongesRestants, poste, departement
+- Updated JournalierFormData with all new fields for the create/edit form
+- Updated KpiData with contract type counts: journaliers, cdd, cdi, stagiaires
+- Added new Lucide icon imports: GraduationCap, FileText, ShieldCheck
+- Added contract type constants: CONTRAT_TYPES (5 options with icons/colors), CONTRAT_BADGE (4 badge styles), STATUT_CONTRAT_BADGE (4 status styles with labels), CONTRAT_TYPE_LABELS
+- Added contratFilter state (default 'TOUS') with amber toggle button row for filtering by contract type
+- Updated fetchJournaliers to pass ?typeContrat= query param when contratFilter is not 'TOUS'
+- Updated KPI cards from 5 to 6: Total personnel (amber), Journaliers (orange/HardHat), CDI (emerald/ShieldCheck), CDD (sky/FileText), Stagiaires (violet/GraduationCap), Non affectés (gray)
+- Updated KPI grid to lg:grid-cols-6
+- Updated journalier cards: contract type badge after name, specialty badge (only if set), statut contrat badge (only if not ACTIF), poste/departement subtitle for non-journalier types, salary display (tauxJournalier for JOURNALIER, salaireMensuel for others), contract dates for non-journalier types
+- Updated avatar coloring: uses phase group colors when specialty available, falls back to contract type badge colors for non-journalier types without specialty
+- Updated Create/Edit dialog with dynamic form based on typeContrat:
+  - Always shown: Nom, Prénom, Téléphone, Type de contrat (toggle buttons), Statut contrat (select)
+  - JOURNALIER: Spécialité (required), Taux journalier (FCFA)
+  - CDD/CDI/STAGIAIRE: Poste, Département, Spécialité (optional), Salaire mensuel (FCFA), Date début contrat, Date fin contrat (CDD only), N° CNPS
+- Updated openEdit to populate all new fields including date splitting (T removal)
+- Updated handleSubmit with contract-type-specific validation and body construction
+- Updated EMPTY_FORM with all new fields and sensible defaults (typeContrat: 'JOURNALIER', statutContrat: 'ACTIF')
+- Added formatCurrency helper using Intl.NumberFormat('fr-FR') for "XXX XXX FCFA" formatting
+- Updated empty state check to include contratFilter
+- Updated AnimatePresence key to include contratFilter
+- Updated header text from "journaliers" to "personnel" throughout
+- Ran bun run lint: no errors
+- Dev server compiled successfully
+
+Stage Summary:
+- PersonnelView now supports 4 contract types: JOURNALIER, CDD, CDI, STAGIAIRE
+- Contract type filter with amber toggle buttons (Tous/Journaliers/CDD/CDI/Stagiaires)
+- 6 KPI cards showing distribution by contract type + non-assigned count
+- Dynamic create/edit form that changes fields based on selected contract type
+- Journalier cards display contract type badge, salary info, contract dates, and status
+- All existing functionality preserved: search, phase filter, specialty filter, chantier filter, assign, remove assignment, delete
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: Add monthly salary tab to PaieView with Tabs component
+
+Work Log:
+- Read existing paie-view.tsx (1117 lines) and worklog.md for context
+- Added shadcn/ui Tabs, TabsContent, TabsList, TabsTrigger imports
+- Added new Lucide icon imports: Pencil, Search
+- Added Textarea component import
+- Added SalaireMensuel, SalJournalier, SalKpi type interfaces
+- Added monthly salary constants: MOIS_NAMES (12 French months), SAL_STATUT_CONFIG (EN_ATTENTE/PAYE/PARTIEL), SAL_FILTER_TABS, TYPE_CONTRAT_BADGE (CDD/CDI/STAGIAIRE)
+- Moved calcDaysWorked helper function above the component (it was at bottom of file, causing potential reference issues)
+- Wrapped entire existing weekly payment UI in `<Tabs defaultValue="hebdomadaire">` → `<TabsContent value="hebdomadaire">`
+- Updated header title from "Paie Hebdomadaire" to "Gestion de la Paie" and subtitle to "Gestion des paiements hebdomadaires et salaires mensuels"
+- Added TabsList with 2 triggers: "Paie Hebdomadaire" (CalendarDays icon) and "Salaires Mensuels" (Wallet icon)
+- Created complete monthly salary tab (`TabsContent value="mensuel"`) with:
+  - Selection card: Mois dropdown (12 months), Année picker with +/- navigation, "Générer les fiches" button, KPI summary box (total salariés, en attente, masse totale)
+  - Search bar with Search icon + filter tabs (Tous/En attente/Payés/Partiels) in same row
+  - Full salary table with columns: Employé (name + specialty + type contract badge), Poste, Salaire base, Primes, H.sup (hours + amount), Absences (days badge), Retenues (total deductions), Net à payer (bold amber), Statut (color-coded badge), Actions
+  - Table footer with totals for all numeric columns
+  - All state variables prefixed with `sal` to avoid conflicts with weekly state
+- Created Edit Salary Dialog: all editable fields (salaireBase, primes, heuresSupp, montantHeuresSupp, retenuesCNPS, retenuesIR, avances, absences, retenueAbsences), auto-calculated netAPayer in real-time (base + primes + h.sup − CNPS − IR − avances − absences), amber highlighted net display
+- Created Validate Salary Payment Dialog: employee name + net display, montant versé input (pre-filled), mode paiement select, date paiement, observation textarea, partial payment warning
+- Created Delete Salary Confirmation Dialog using AlertDialog
+- All monthly API calls: GET /api/salaires with filters, POST /api/salaires/generate, PUT /api/salaires/[id] for edit and validate, DELETE /api/salaires/[id]
+- File grew from ~1117 to 2206 lines (all existing weekly functionality preserved intact)
+- Ran bun run lint: no errors
+- Dev server compiled successfully
+
+Stage Summary:
+- PaieView now has 2 tabs: "Paie Hebdomadaire" (existing) and "Salaires Mensuels" (new)
+- Monthly salary tab supports: month/year selection, bulk fiche generation, search, status filtering
+- Full CRUD for monthly salary records: edit salary details, validate payment, delete
+- Real-time net salary calculation in edit dialog
+- Color-coded status badges (amber for EN_ATTENTE, emerald for PAYE, orange for PARTIEL)
+- Contract type badges on employee rows (CDD blue, CDI violet, STAGIAIRE teal)
+- All existing weekly payment functionality completely preserved and intact
+
+---
+Task ID: 6
+Agent: Main Agent
+Task: Update seed data with diverse contract types and global integration
+
+Work Log:
+- Updated seed.ts cleanup to delete SalaireMensuel before other tables
+- Created 21 demo personnel members across 4 contract types:
+  - 15 Journaliers (with tauxJournalier): Diop, Ndiaye, Diallo, Sarr, Kane, Gueye, Thiam, Mbaye, Niang, Sow, Fall, Ba, Sy, Cissé
+  - 4 CDI (with salaireMensuel + CNPS + conges): Diarra (CVC, 350k), Touré (Menuiserie, 300k), Keita (Élec, 400k), Camara (VRD, 320k)
+  - 2 CDD: Konaté (Isolation, 250k, période essai), Ouédraogo (Étancheur, 280k)
+  - 1 STAGIAIRE: Dembélé (Plomberie, 100k)
+- Each CDI employee has: poste, departement, dateDebutContrat, numeroCNPS, nbCongesRestants
+- Each CDD employee has: poste, departement, dateDebutContrat, dateFinContrat
+- All journaliers have explicit tauxJournalier values (4500-8000 FCFA/jour)
+- Ran db push and prisma generate successfully
+- Re-seeded database: 21 personnel, all with proper contract types
+- bun run lint: clean, no errors
+
+Stage Summary:
+- 21 demo personnel: 15 journaliers, 4 CDI, 2 CDD, 1 stagiaire
+- All journaliers have daily rates, all salariés have monthly salaries
+- CDI employees have CNPS numbers and leave balances
+- Database fully compatible with new multi-type personnel system
+
+---
+Task ID: 7 (Global)
+Agent: Main Agent
+Task: Personnel multi-type contract system — Full implementation
+
+Work Log:
+- Updated Prisma schema: added 10 new fields to Journalier model, created SalaireMensuel model
+- Updated 2 API routes for personnel (GET/POST with typeContrat filter + new fields)
+- Created 3 new API routes for salaires (CRUD + generate)
+- Updated PersonnelView with contract type filter, dynamic form, badges, 6 KPI cards
+- Added monthly salary tab to PaieView with full CRUD, edit, validate, delete
+- Updated seed with 21 diverse personnel members
+- All lint clean, compilation OK
+
+Stage Summary:
+- Complete personnel system with 4 contract types: JOURNALIER, CDD, CDI, STAGIAIRE
+- Dual payment system: weekly (journaliers) + monthly (salariés sous contrat)
+- Dynamic forms, color-coded badges, phase/contract/specialty filters
+- Auto-calculated net salary with deductions (CNPS, IR, absences, advances)
+- Bulk salary generation for all eligible employees per month

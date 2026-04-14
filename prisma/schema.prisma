@@ -42,6 +42,7 @@ model User {
   taches        Tache[]
   documents     DocumentChantier[]
   paiementsValides PaiementHebdo[] @relation("PaiementValidateur")
+  salairesValides    SalaireMensuel[] @relation("SalaireValidateur")
 
   // Accounts and sessions for NextAuth
   accounts      Account[]
@@ -111,20 +112,31 @@ model Chantier {
   documents           DocumentChantier[]
 }
 
-// Workers (Journaliers)
+// Workers / Personnel (Journaliers + Salariés sous contrat)
 model Journalier {
-  id            String   @id @default(cuid())
-  nom           String
-  prenom        String
-  telephone     String?
-  specialite    String?  // maçon, ferrailleur, électricien...
-  photo         String?  // URL to photo
-  entrepriseId  String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  entreprise    Entreprise? @relation(fields: [entrepriseId], references: [id])
-  affectations  JournalierAffectation[]
-  pointages     Pointage[]
+  id                String    @id @default(cuid())
+  nom               String
+  prenom            String
+  telephone         String?
+  specialite        String?   // maçon, ferrailleur, électricien...
+  photo             String?   // URL to photo
+  typeContrat       String    @default("JOURNALIER") // JOURNALIER, CDD, CDI, STAGIAIRE
+  tauxJournalier    Float?    // Taux journalier (pour JOURNALIER)
+  salaireMensuel    Float?    // Salaire mensuel fixe (pour CDD/CDI)
+  dateDebutContrat  DateTime? // Date de début du contrat
+  dateFinContrat    DateTime? // Date de fin du contrat (pour CDD)
+  statutContrat     String    @default("ACTIF") // ACTIF, ESSAI, TERMINE, SUSPENDU
+  numeroCNPS        String?   // Numéro de sécurité sociale / CNPS
+  nbCongesRestants  Int       @default(0) // Jours de congés restants
+  poste             String?   // Intitulé du poste
+  departement      String?   // Département (ex: direction, technique)
+  entrepriseId      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  entreprise        Entreprise?        @relation(fields: [entrepriseId], references: [id])
+  affectations      JournalierAffectation[]
+  pointages         Pointage[]
+  salaires          SalaireMensuel[]
 }
 
 // Journalier assignment to a site
@@ -361,6 +373,34 @@ model ContratST {
   updatedAt       DateTime @updatedAt
   sousTraitant    SousTraitant @relation(fields: [sousTraitantId], references: [id])
   chantier        Chantier     @relation(fields: [chantierId], references: [id])
+}
+
+// Monthly salaries (for CDD/CDI/STAGIAIRE)
+model SalaireMensuel {
+  id                String    @id @default(cuid())
+  journalierId      String
+  mois              Int       // 1-12
+  annee             Int       // 2025, 2026...
+  salaireBase       Float     // Salaire mensuel de base
+  primes            Float     @default(0)  // Primes diverses
+  heuresSupp        Float     @default(0)  // Nombre d'heures supplémentaires
+  montantHeuresSupp Float     @default(0)  // Montant des heures sup
+  retenuesCNPS      Float     @default(0)  // Cotisations CNPS
+  retenuesIR        Float     @default(0)  // Impôt sur le revenu
+  avances           Float     @default(0)  // Avances déduites
+  absences          Int       @default(0)  // Jours d'absence
+  retenueAbsences   Float     @default(0)  // Montant retenu pour absences
+  netAPayer         Float     // Montant net à payer
+  statut            String    @default("EN_ATTENTE") // EN_ATTENTE, PAYE, PARTIEL
+  datePaiement      DateTime?
+  modePaiement      String?   // ESPECES, VIREMENT, MOBILE_MONEY
+  observation       String?
+  valideParId       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  journalier        Journalier @relation(fields: [journalierId], references: [id])
+  validePar         User?     @relation("SalaireValidateur", fields: [valideParId], references: [id])
+  @@unique([journalierId, mois, annee])
 }
 
 // Photos
