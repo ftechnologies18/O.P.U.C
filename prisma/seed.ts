@@ -125,9 +125,10 @@ async function main() {
     },
   })
 
-  // 4. Create demo Journaliers
+  // 4. Create demo Journaliers (diverse specialties across all phases)
   console.log('👷 Creating Journaliers...')
   const journaliers = await Promise.all([
+    // ── Gros Œuvre & Préparation ──
     prisma.journalier.create({
       data: {
         nom: 'Diop',
@@ -146,6 +147,71 @@ async function main() {
         entrepriseId: entreprise.id,
       },
     }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Diallo',
+        prenom: 'Amadou',
+        telephone: '+221 78 200 0006',
+        specialite: 'Terrassier',
+        entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Sarr',
+        prenom: 'Moussa',
+        telephone: '+221 78 200 0007',
+        specialite: 'Coffreur-bancheur',
+        entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Kane',
+        prenom: 'Boubacar',
+        telephone: '+221 78 200 0008',
+        specialite: 'Grutier',
+        entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Gueye',
+        prenom: 'Pape',
+        telephone: '+221 78 200 0009',
+        specialite: "Monteur d'échafaudages",
+        entrepriseId: entreprise.id,
+      },
+    }),
+    // ── Enveloppe Extérieure ──
+    prisma.journalier.create({
+      data: {
+        nom: 'Thiam',
+        prenom: 'Mamadou',
+        telephone: '+221 78 200 0010',
+        specialite: 'Charpentier',
+        entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Mbaye',
+        prenom: 'Cheikh',
+        telephone: '+221 78 200 0011',
+        specialite: 'Couvreur / Zingueur',
+        entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Niang',
+        prenom: 'Abdou',
+        telephone: '+221 78 200 0012',
+        specialite: 'Façadier / Bardeur',
+        entrepriseId: entreprise.id,
+      },
+    }),
+    // ── Second Œuvre & Finitions ──
     prisma.journalier.create({
       data: {
         nom: 'Sow',
@@ -170,6 +236,60 @@ async function main() {
         prenom: 'Cheikh',
         telephone: '+221 78 200 0005',
         specialite: 'Peintre',
+        entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Sy',
+        prenom: 'Ibrahima',
+        telephone: '+221 78 200 0013',
+        specialite: 'Carreleur',
+        entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Cissé',
+        prenom: 'Oumar',
+        telephone: '+221 78 200 0014',
+        specialite: 'Plâtrier',
+        entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Diarra',
+        prenom: 'Seydou',
+        telephone: '+221 78 200 0015',
+        specialite: 'CVC',
+        entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Touré',
+        prenom: 'Bakary',
+        telephone: '+221 78 200 0016',
+        specialite: 'Menuisier intérieur',
+        entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Keita',
+        prenom: 'Souleymane',
+        telephone: '+221 78 200 0017',
+        specialite: 'Isolation',
+        entrepriseId: entreprise.id,
+      },
+    }),
+    prisma.journalier.create({
+      data: {
+        nom: 'Camara',
+        prenom: 'Lamine',
+        telephone: '+221 78 200 0018',
+        specialite: 'Canalisateur VRD',
         entrepriseId: entreprise.id,
       },
     }),

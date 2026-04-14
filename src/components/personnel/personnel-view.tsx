@@ -24,6 +24,22 @@ import {
   CheckCircle2,
   X,
   Briefcase,
+  Shovel,
+  Pipette,
+  Hammer,
+  Link,
+  Crane,
+  Climb,
+  Ruler,
+  Home,
+  Shield,
+  Wind,
+  Layers,
+  ThermometerSun,
+  Sofa,
+  BrushCleaning,
+  Sparkles,
+  type LucideIcon,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -54,7 +70,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -93,10 +111,10 @@ interface ChantierOption {
 
 interface KpiData {
   total: number
-  macons: number
-  ferrailleurs: number
-  electriciens: number
-  autres: number
+  grosOeuvre: number
+  enveloppe: number
+  secondOeuvre: number
+  nonAffecte: number
 }
 
 interface JournalierFormData {
@@ -114,35 +132,155 @@ interface AssignFormData {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const SPECIALTIES = [
-  { value: 'TOUS', label: 'Tous' },
-  { value: 'Maçon', label: 'Maçon' },
-  { value: 'Ferrailleur', label: 'Ferrailleur' },
-  { value: 'Électricien', label: 'Électricien' },
-  { value: 'Plombier', label: 'Plombier' },
-  { value: 'Peintre', label: 'Peintre' },
-  { value: 'Autre', label: 'Autre' },
+interface SpecialtyItem {
+  value: string
+  label: string
+  icon?: LucideIcon
+}
+
+interface PhaseGroup {
+  value: string
+  label: string
+  icon: LucideIcon
+  color: string
+  bg: string
+  border: string
+  specialties: SpecialtyItem[]
+}
+
+const PHASE_GROUPS: PhaseGroup[] = [
+  {
+    value: 'GROS_OEUVRE',
+    label: 'Gros Œuvre & Préparation',
+    icon: HardHat,
+    color: 'text-orange-600',
+    bg: 'bg-orange-50',
+    border: 'border-orange-200',
+    specialties: [
+      { value: 'Terrassier', label: 'Terrassier', icon: Shovel },
+      { value: 'Canalisateur VRD', label: 'Canalisateur / VRD', icon: Pipette },
+      { value: 'Maçon', label: 'Maçon', icon: Wrench },
+      { value: 'Coffreur-bancheur', label: 'Coffreur-bancheur', icon: Layers },
+      { value: 'Ferrailleur', label: 'Ferrailleur', icon: Link },
+      { value: 'Monteur d\'échafaudages', label: 'Monteur d\'échafaudages', icon: Climb },
+      { value: 'Grutier', label: 'Grutier', icon: Crane },
+    ],
+  },
+  {
+    value: 'ENVELOPPE',
+    label: 'Enveloppe Extérieure',
+    icon: Home,
+    color: 'text-teal-600',
+    bg: 'bg-teal-50',
+    border: 'border-teal-200',
+    specialties: [
+      { value: 'Charpentier', label: 'Charpentier', icon: Hammer },
+      { value: 'Couvreur / Zingueur', label: 'Couvreur / Zingueur', icon: Home },
+      { value: 'Étancheur', label: 'Étancheur', icon: Shield },
+      { value: 'Menuisier extérieur', label: 'Menuisier extérieur', icon: Ruler },
+      { value: 'Façadier / Bardeur', label: 'Façadier / Bardeur', icon: Layers },
+    ],
+  },
+  {
+    value: 'SECOND_OEUVRE',
+    label: 'Second Œuvre & Finitions',
+    icon: Sparkles,
+    color: 'text-violet-600',
+    bg: 'bg-violet-50',
+    border: 'border-violet-200',
+    specialties: [
+      { value: 'Isolation', label: 'Isolation', icon: ThermometerSun },
+      { value: 'Plâtrier', label: 'Cloisons & Plafonds (Plâtrerie)', icon: Layers },
+      { value: 'Plombier', label: 'Plomberie & Sanitaires', icon: Droplets },
+      { value: 'CVC', label: 'Chauffage, Ventilation, Climatisation (CVC)', icon: Wind },
+      { value: 'Électricien', label: 'Électricité', icon: Zap },
+      { value: 'Menuisier intérieur', label: 'Menuiserie intérieure', icon: Sofa },
+      { value: 'Carreleur', label: 'Revêtements de sols et murs', icon: Ruler },
+      { value: 'Peintre', label: 'Peinture et finitions', icon: Paintbrush },
+      { value: 'Agenceur', label: 'Agencement et décoration', icon: BrushCleaning },
+    ],
+  },
 ]
 
+// Flat list for backward compatibility
+const ALL_SPECIALTIES: SpecialtyItem[] = PHASE_GROUPS.flatMap((g) => g.specialties)
+
+const PHASE_FILTER_OPTIONS = [
+  { value: 'TOUS', label: 'Toutes les phases' },
+  { value: 'GROS_OEUVRE', label: '🏗️ Gros Œuvre' },
+  { value: 'ENVELOPPE', label: '🏠 Enveloppe Extérieure' },
+  { value: 'SECOND_OEUVRE', label: '🛠️ Second Œuvre' },
+]
+
+// Get phase group for a given specialty
+function getPhaseGroupForSpecialty(specialty: string | null): PhaseGroup | null {
+  if (!specialty) return null
+  const key = specialty.trim()
+  return PHASE_GROUPS.find((g) => g.specialties.some((s) => s.value === key)) || null
+}
+
 const SPECIALTY_COLORS: Record<string, string> = {
+  terrassier: 'bg-orange-100 text-orange-700 border-orange-200',
+  'canalisateur vrd': 'bg-orange-100 text-orange-700 border-orange-200',
   maçon: 'bg-amber-100 text-amber-700 border-amber-200',
-  'macon': 'bg-amber-100 text-amber-700 border-amber-200',
+  macon: 'bg-amber-100 text-amber-700 border-amber-200',
+  'coffreur-bancheur': 'bg-orange-100 text-orange-700 border-orange-200',
   ferrailleur: 'bg-slate-100 text-slate-700 border-slate-200',
-  électricien: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-  'electricien': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  "monteur d'échafaudages": 'bg-orange-100 text-orange-700 border-orange-200',
+  grutier: 'bg-orange-100 text-orange-700 border-orange-200',
+  charpentier: 'bg-teal-100 text-teal-700 border-teal-200',
+  'couvreur / zingueur': 'bg-teal-100 text-teal-700 border-teal-200',
+  étancheur: 'bg-teal-100 text-teal-700 border-teal-200',
+  'etancheur': 'bg-teal-100 text-teal-700 border-teal-200',
+  'menuisier extérieur': 'bg-teal-100 text-teal-700 border-teal-200',
+  'menuisier exterieur': 'bg-teal-100 text-teal-700 border-teal-200',
+  'façadier / bardeur': 'bg-teal-100 text-teal-700 border-teal-200',
+  'facadier / bardeur': 'bg-teal-100 text-teal-700 border-teal-200',
+  isolation: 'bg-violet-100 text-violet-700 border-violet-200',
+  plâtrier: 'bg-violet-100 text-violet-700 border-violet-200',
+  platrier: 'bg-violet-100 text-violet-700 border-violet-200',
   plombier: 'bg-blue-100 text-blue-700 border-blue-200',
+  cvc: 'bg-cyan-100 text-cyan-700 border-cyan-200',
+  électricien: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  electricien: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  'menuisier intérieur': 'bg-violet-100 text-violet-700 border-violet-200',
+  'menuisier interieur': 'bg-violet-100 text-violet-700 border-violet-200',
+  carreleur: 'bg-rose-100 text-rose-700 border-rose-200',
   peintre: 'bg-purple-100 text-purple-700 border-purple-200',
+  agenceur: 'bg-pink-100 text-pink-700 border-pink-200',
+  // Legacy compatibility
   autre: 'bg-gray-100 text-gray-700 border-gray-200',
 }
 
-const SPECIALTY_ICONS: Record<string, typeof Wrench> = {
+const SPECIALTY_ICONS: Record<string, LucideIcon> = {
+  terrassier: Shovel,
+  'canalisateur vrd': Pipette,
   maçon: Wrench,
   macon: Wrench,
-  ferrailleur: Briefcase,
+  'coffreur-bancheur': Layers,
+  ferrailleur: Link,
+  "monteur d'échafaudages": Climb,
+  grutier: Crane,
+  charpentier: Hammer,
+  'couvreur / zingueur': Home,
+  étancheur: Shield,
+  'etancheur': Shield,
+  'menuisier extérieur': Ruler,
+  'menuisier exterieur': Ruler,
+  'façadier / bardeur': Layers,
+  'facadier / bardeur': Layers,
+  isolation: ThermometerSun,
+  plâtrier: Layers,
+  platrier: Layers,
+  plombier: Droplets,
+  cvc: Wind,
   électricien: Zap,
   electricien: Zap,
-  plombier: Droplets,
+  'menuisier intérieur': Sofa,
+  'menuisier interieur': Sofa,
+  carreleur: Ruler,
   peintre: Paintbrush,
+  agenceur: BrushCleaning,
 }
 
 const EMPTY_FORM: JournalierFormData = {
@@ -203,6 +341,7 @@ export function PersonnelView() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [specialtyFilter, setSpecialtyFilter] = useState('TOUS')
+  const [phaseFilter, setPhaseFilter] = useState('TOUS')
   const [chantierFilter, setChantierFilter] = useState('TOUS')
 
   // Form dialog state
@@ -236,12 +375,26 @@ export function PersonnelView() {
 
   // ── Fetch data ─────────────────────────────────────────────────────────
 
+  // Compute specialty list based on phase filter
+  const availableSpecialties = phaseFilter === 'TOUS'
+    ? ALL_SPECIALTIES
+    : PHASE_GROUPS.find((g) => g.value === phaseFilter)?.specialties || ALL_SPECIALTIES
+
   const fetchJournaliers = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       if (search.trim()) params.set('search', search.trim())
       if (specialtyFilter !== 'TOUS') params.set('specialite', specialtyFilter)
+      if (phaseFilter !== 'TOUS') {
+        // Send all specialties of this phase group
+        const group = PHASE_GROUPS.find((g) => g.value === phaseFilter)
+        if (group) {
+          group.specialties.forEach((s) => {
+            params.append('specialites', s.value)
+          })
+        }
+      }
       if (chantierFilter !== 'TOUS') params.set('chantierId', chantierFilter)
 
       const res = await fetch(`/api/personnel?${params.toString()}`)
@@ -257,7 +410,7 @@ export function PersonnelView() {
     } finally {
       setLoading(false)
     }
-  }, [search, specialtyFilter, chantierFilter])
+  }, [search, specialtyFilter, phaseFilter, chantierFilter])
 
   const fetchChantiers = useCallback(async () => {
     try {
@@ -275,6 +428,11 @@ export function PersonnelView() {
       // silently fail — chantiers are only needed for assignment dialog
     }
   }, [])
+
+  // Reset specialty filter when phase changes
+  useEffect(() => {
+    setSpecialtyFilter('TOUS')
+  }, [phaseFilter])
 
   useEffect(() => {
     fetchJournaliers()
@@ -489,36 +647,36 @@ export function PersonnelView() {
           border: 'border-amber-200',
         },
         {
-          label: 'Maçons',
-          value: kpi.macons,
-          icon: Wrench,
+          label: 'Gros Œuvre',
+          value: kpi.grosOeuvre,
+          icon: HardHat,
           color: 'text-orange-600',
           bg: 'bg-orange-50',
           border: 'border-orange-200',
         },
         {
-          label: 'Ferrailleurs',
-          value: kpi.ferrailleurs,
-          icon: Briefcase,
-          color: 'text-slate-600',
-          bg: 'bg-slate-50',
-          border: 'border-slate-200',
+          label: 'Enveloppe Ext.',
+          value: kpi.enveloppe,
+          icon: Home,
+          color: 'text-teal-600',
+          bg: 'bg-teal-50',
+          border: 'border-teal-200',
         },
         {
-          label: 'Électriciens',
-          value: kpi.electriciens,
-          icon: Zap,
-          color: 'text-yellow-600',
-          bg: 'bg-yellow-50',
-          border: 'border-yellow-200',
+          label: 'Second Œuvre',
+          value: kpi.secondOeuvre,
+          icon: Sparkles,
+          color: 'text-violet-600',
+          bg: 'bg-violet-50',
+          border: 'border-violet-200',
         },
         {
-          label: 'Autres',
-          value: kpi.autres,
+          label: 'Non affectés',
+          value: kpi.nonAffecte,
           icon: HardHat,
-          color: 'text-emerald-600',
-          bg: 'bg-emerald-50',
-          border: 'border-emerald-200',
+          color: 'text-gray-500',
+          bg: 'bg-gray-50',
+          border: 'border-gray-200',
         },
       ]
     : []
@@ -596,17 +754,45 @@ export function PersonnelView() {
               />
             </div>
 
+            {/* Phase filter */}
+            <Select value={phaseFilter} onValueChange={setPhaseFilter}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Phase de travail" />
+              </SelectTrigger>
+              <SelectContent>
+                {PHASE_FILTER_OPTIONS.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             {/* Specialty filter */}
             <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Spécialité" />
               </SelectTrigger>
               <SelectContent>
-                {SPECIALTIES.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
-                ))}
+                <SelectItem value="TOUS">Toutes les spécialités</SelectItem>
+                {phaseFilter === 'TOUS'
+                  ? PHASE_GROUPS.map((group) => (
+                      <>
+                        <SelectItem key={group.value} value={group.value} disabled className="font-semibold text-xs text-muted-foreground cursor-default pointer-events-none">
+                          ── {group.label} ──
+                        </SelectItem>
+                        {group.specialties.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>
+                            {s.label}
+                          </SelectItem>
+                        ))}
+                      </>
+                    ))
+                  : availableSpecialties.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
               </SelectContent>
             </Select>
 
@@ -662,11 +848,11 @@ export function PersonnelView() {
             Aucun journalier trouvé
           </h3>
           <p className="text-[15px] text-muted-foreground mt-1 max-w-sm">
-            {search || specialtyFilter !== 'TOUS' || chantierFilter !== 'TOUS'
+            {search || specialtyFilter !== 'TOUS' || phaseFilter !== 'TOUS' || chantierFilter !== 'TOUS'
               ? 'Aucun journalier ne correspond à vos critères de recherche.'
               : 'Commencez par ajouter votre premier journalier.'}
           </p>
-          {!search && specialtyFilter === 'TOUS' && chantierFilter === 'TOUS' && (
+          {!search && specialtyFilter === 'TOUS' && phaseFilter === 'TOUS' && chantierFilter === 'TOUS' && (
             <Button
               onClick={openCreate}
               className="mt-4 bg-amber-600 hover:bg-amber-700 text-white gap-2"
@@ -679,7 +865,7 @@ export function PersonnelView() {
       ) : (
         <AnimatePresence mode="wait">
           <motion.div
-            key={search + specialtyFilter + chantierFilter}
+            key={search + specialtyFilter + phaseFilter + chantierFilter}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -694,6 +880,7 @@ export function PersonnelView() {
                 ?.toLowerCase()
                 .trim() || ''
               const SpecialtyIcon = SPECIALTY_ICONS[specialtyKey]
+              const phaseGroup = getPhaseGroupForSpecialty(journalier.specialite)
 
               return (
                 <motion.div
@@ -707,8 +894,18 @@ export function PersonnelView() {
                       {/* Main row */}
                       <div className="flex items-start gap-4">
                         {/* Avatar */}
-                        <Avatar className="h-12 w-12 shrink-0 bg-amber-100 text-amber-700 border border-amber-200">
-                          <AvatarFallback className="bg-amber-100 text-amber-700 font-bold text-sm">
+                        <Avatar className={cn(
+                          'h-12 w-12 shrink-0 border',
+                          phaseGroup
+                            ? cn(phaseGroup.bg, phaseGroup.color, phaseGroup.border)
+                            : 'bg-gray-100 text-gray-600 border-gray-200'
+                        )}>
+                          <AvatarFallback className={cn(
+                            'font-bold text-sm',
+                            phaseGroup
+                              ? cn(phaseGroup.bg, phaseGroup.color)
+                              : 'bg-gray-100 text-gray-600'
+                          )}>
                             {getInitials(journalier.nom, journalier.prenom)}
                           </AvatarFallback>
                         </Avatar>
@@ -731,6 +928,19 @@ export function PersonnelView() {
                               )}
                               {formatSpecialty(journalier.specialite)}
                             </Badge>
+                            {phaseGroup && (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'text-[10px] shrink-0',
+                                  phaseGroup.bg,
+                                  phaseGroup.color.replace('text-', 'text-'),
+                                  phaseGroup.border
+                                )}
+                              >
+                                {phaseGroup.label}
+                              </Badge>
+                            )}
                           </div>
 
                           {/* Phone */}
@@ -895,12 +1105,22 @@ export function PersonnelView() {
                   <SelectValue placeholder="Sélectionner une spécialité" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Maçon">Maçon</SelectItem>
-                  <SelectItem value="Ferrailleur">Ferrailleur</SelectItem>
-                  <SelectItem value="Électricien">Électricien</SelectItem>
-                  <SelectItem value="Plombier">Plombier</SelectItem>
-                  <SelectItem value="Peintre">Peintre</SelectItem>
-                  <SelectItem value="Autre">Autre</SelectItem>
+                  {PHASE_GROUPS.map((group) => (
+                    <SelectGroup key={group.value}>
+                      <SelectLabel className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                        {(() => {
+                          const Icon = group.icon
+                          return <Icon className="w-3 h-3" />
+                        })()}
+                        {group.label}
+                      </SelectLabel>
+                      {group.specialties.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

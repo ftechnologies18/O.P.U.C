@@ -1,12 +1,55 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
+// Specialty phase groups
+const GROS_OEUVRE_SPECIALTIES = [
+  'Terrassier',
+  'Canalisateur VRD',
+  'Maçon',
+  'Coffreur-bancheur',
+  'Ferrailleur',
+  "Monteur d'échafaudages",
+  'Grutier',
+]
+
+const ENVELOPPE_SPECIALTIES = [
+  'Charpentier',
+  'Couvreur / Zingueur',
+  'Étancheur',
+  'Étancheur',
+  'Menuisier extérieur',
+  'Façadier / Bardeur',
+]
+
+const SECOND_OEUVRE_SPECIALTIES = [
+  'Isolation',
+  'Plâtrier',
+  'Plombier',
+  'CVC',
+  'Électricien',
+  'Electricien',
+  'Menuisier intérieur',
+  'Carreleur',
+  'Peintre',
+  'Agenceur',
+]
+
+function isSpecialtyInGroup(specialty: string | null, group: string[]): boolean {
+  if (!specialty) return false
+  const trimmed = specialty.trim()
+  return group.some(
+    (s) => s.toLowerCase() === trimmed.toLowerCase()
+  )
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const specialite = searchParams.get('specialite')
+    const phaseFilter = searchParams.get('phase')
     const chantierId = searchParams.get('chantierId')
+    const specialites = searchParams.getAll('specialites') // array of specialty values for phase filter
 
     const where: Record<string, unknown> = {}
 
@@ -18,8 +61,13 @@ export async function GET(request: NextRequest) {
       ]
     }
 
+    // Single specialty filter
     if (specialite && specialite.trim() && specialite !== 'TOUS') {
       where.specialite = specialite.trim()
+    }
+    // Phase-based specialty filter (multiple specialties via specialites param)
+    else if (specialites && specialites.length > 0) {
+      where.specialite = { in: specialites }
     }
 
     // Filter by chantier assignment
@@ -55,22 +103,29 @@ export async function GET(request: NextRequest) {
     // KPI stats
     const allJournaliers = await db.journalier.findMany()
 
-    const specialiteCounts: Record<string, number> = {}
+    let grosOeuvre = 0
+    let enveloppe = 0
+    let secondOeuvre = 0
+    let nonAffecte = 0
+
     for (const j of allJournaliers) {
-      const spec = j.specialite?.trim().toLowerCase() || 'autre'
-      specialiteCounts[spec] = (specialiteCounts[spec] || 0) + 1
+      if (isSpecialtyInGroup(j.specialite, GROS_OEUVRE_SPECIALTIES)) {
+        grosOeuvre++
+      } else if (isSpecialtyInGroup(j.specialite, ENVELOPPE_SPECIALTIES)) {
+        enveloppe++
+      } else if (isSpecialtyInGroup(j.specialite, SECOND_OEUVRE_SPECIALTIES)) {
+        secondOeuvre++
+      } else {
+        nonAffecte++
+      }
     }
 
     const kpi = {
       total: allJournaliers.length,
-      macons: specialiteCounts['macon'] || specialiteCounts['maçon'] || 0,
-      ferrailleurs: specialiteCounts['ferrailleur'] || 0,
-      electriciens: specialiteCounts['electricien'] || specialiteCounts['électricien'] || 0,
-      autres: allJournaliers.length - (
-        (specialiteCounts['macon'] || specialiteCounts['maçon'] || 0) +
-        (specialiteCounts['ferrailleur'] || 0) +
-        (specialiteCounts['electricien'] || specialiteCounts['électricien'] || 0)
-      ),
+      grosOeuvre,
+      enveloppe,
+      secondOeuvre,
+      nonAffecte,
     }
 
     return NextResponse.json({

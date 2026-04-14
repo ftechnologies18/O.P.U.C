@@ -132,3 +132,33 @@ Stage Summary:
 - 4 API route files supporting full CRUD for engins and locations
 - KPI cards, search/filter, create/edit/delete dialogs, statut change functionality
 - Follows exact coding patterns from sous-traitants-view.tsx reference
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Update personnel spécialités with comprehensive construction trades organized by phases
+
+Work Log:
+- Replaced the 6 basic spécialités (Maçon, Ferrailleur, Électricien, Plombier, Peintre, Autre) with 21 comprehensive trades organized in 3 phase groups:
+  - **Gros Œuvre & Préparation** (7): Terrassier, Canalisateur VRD, Maçon, Coffreur-bancheur, Ferrailleur, Monteur d'échafaudages, Grutier
+  - **Enveloppe Extérieure** (5): Charpentier, Couvreur/Zingueur, Étancheur, Menuisier extérieur, Façadier/Bardeur
+  - **Second Œuvre & Finitions** (9): Isolation, Plâtrier, Plombier, CVC, Électricien, Menuisier intérieur, Carreleur, Peintre, Agenceur
+- Created PHASE_GROUPS constant with icons, colors, and specialty arrays
+- Added unique icons for each specialty (Shovel, Pipette, Hammer, Link, Crane, Climb, Shield, Wind, Sofa, BrushCleaning, etc.)
+- Added unique color coding per specialty based on their phase group (orange for Gros Œuvre, teal for Enveloppe, violet/rose/pink for Second Œuvre)
+- Added phase filter dropdown ("Toutes les phases / 🏗️ Gros Œuvre / 🏠 Enveloppe Extérieure / 🛠️ Second Œuvre")
+- Updated KPI cards: Total, Gros Œuvre, Enveloppe Ext., Second Œuvre, Non affectés
+- Dynamic avatar coloring based on phase group (orange/teal/violet)
+- Phase group badge shown on each journalier card
+- Form dialog uses SelectGroup/SelectLabel to group specialties by phase
+- Updated API /api/personnel/route.ts with phase-based KPI counts and multi-specialty filtering
+- Updated seed.ts with 18 diverse journaliers covering all 3 phase groups
+- Re-seeded database successfully
+- Lint clean, compilation OK
+
+Stage Summary:
+- Personnel module now has 21 construction trades organized by 3 phase groups
+- Phase filter enables quick filtering of workers by construction phase
+- KPIs show distribution across Gros Œuvre, Enveloppe, and Second Œuvre
+- Each specialty has unique icon, color, and avatar theming
+- 18 demo journaliers in seed data spanning all trades
