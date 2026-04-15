@@ -29,6 +29,8 @@ import {
   Loader2,
   Save,
   RefreshCw,
+  Building2,
+  Checkbox,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -37,6 +39,8 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox as CheckboxUI } from '@/components/ui/checkbox'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Table,
   TableBody,
@@ -125,6 +129,18 @@ interface PaginationInfo {
   totalPages: number
 }
 
+interface ChantierItem {
+  id: string
+  nom: string
+  statut: string
+  adresse: string | null
+}
+
+interface ChantierAccessEntry {
+  chantierId: string
+  roleAcces: string
+}
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const TABS = [
@@ -154,6 +170,20 @@ const ROLE_CONFIG: Record<string, { label: string; className: string }> = {
     label: 'Sous-traitant',
     className: 'bg-slate-100 text-slate-700 border-slate-200',
   },
+}
+
+const STATUT_CONFIG: Record<string, { label: string; className: string }> = {
+  EN_PREPARATION: { label: 'En préparation', className: 'bg-gray-100 text-gray-700' },
+  EN_COURS: { label: 'En cours', className: 'bg-emerald-100 text-emerald-700' },
+  EN_PAUSE: { label: 'En pause', className: 'bg-amber-100 text-amber-700' },
+  TERMINE: { label: 'Terminé', className: 'bg-slate-100 text-slate-600' },
+  RECEPTIONNE: { label: 'Réceptionné', className: 'bg-blue-100 text-blue-700' },
+}
+
+const ROLE_ACCES_LABELS: Record<string, string> = {
+  LECTURE: 'Lecture seule',
+  ECRITURE: 'Lecture + Écriture',
+  GESTION: 'Gestion complète',
 }
 
 const ROLE_OPTIONS = Object.entries(ROLE_CONFIG).map(([value, config]) => ({
@@ -402,6 +432,33 @@ function UsersTab({ session }: { session: any }) {
   const [newPassword, setNewPassword] = useState('')
   const [resettingPwd, setResettingPwd] = useState(false)
 
+  // Search & Filters
+  const [searchQuery, setSearchQuery] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+
+  // Chantier assignment dialog
+  const [chantierDialogOpen, setChantierDialogOpen] = useState(false)
+  const [chantierUser, setChantierUser] = useState<User | null>(null)
+  const [allChantiers, setAllChantiers] = useState<ChantierItem[]>([])
+  const [selectedChantiers, setSelectedChantiers] = useState<Record<string, string>>({})
+  const [chantierLoading, setChantierLoading] = useState(false)
+  const [chantierSaving, setChantierSaving] = useState(false)
+
+  // Computed filtered users
+  const filteredUsers = users.filter((u) => {
+    const q = searchQuery.toLowerCase()
+    const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+    const matchRole = !roleFilter || u.role === roleFilter
+    const matchStatus = !statusFilter || (statusFilter === 'active' ? u.active : !u.active)
+    return matchSearch && matchRole && matchStatus
+  })
+
+  // Summary stats
+  const totalUsers = users.length
+  const activeUsers = users.filter((u) => u.active).length
+  const blockedUsers = users.filter((u) => !u.active).length
+
   // Fetch users
   const fetchUsers = useCallback(async () => {
     setLoading(true)
@@ -576,6 +633,83 @@ function UsersTab({ session }: { session: any }) {
     }
   }
 
+  const openChantierDialog = async (user: User) => {
+    setChantierUser(user)
+    setChantierDialogOpen(true)
+    setChantierLoading(true)
+    try {
+      // Fetch all chantiers
+      const chantiersRes = await fetch('/api/chantiers')
+      // Fetch user's current accesses
+      const accessRes = await fetch(`/api/users/${user.id}/chantiers`)
+
+      if (chantiersRes.ok && accessRes.ok) {
+        const chantiersData = await chantiersRes.json()
+        const accessData = await accessRes.json()
+        setAllChantiers((chantiersData.chantiers || chantiersData || []).map((c: any) => ({
+          id: c.id,
+          nom: c.nom,
+          statut: c.statut,
+          adresse: c.adresse || null,
+        })))
+        // Build selected map
+        const accessMap: Record<string, string> = {}
+        for (const access of (accessData.accesses || [])) {
+          accessMap[access.chantierId] = access.roleAcces || 'LECTURE'
+        }
+        setSelectedChantiers(accessMap)
+      } else {
+        toast.error("Erreur lors du chargement des chantiers")
+      }
+    } catch {
+      toast.error('Erreur de connexion')
+    } finally {
+      setChantierLoading(false)
+    }
+  }
+
+  const handleSaveChantierAccess = async () => {
+    if (!chantierUser) return
+    setChantierSaving(true)
+    try {
+      const chantiers = Object.entries(selectedChantiers).map(([chantierId, roleAcces]) => ({
+        chantierId,
+        roleAcces,
+      }))
+      const res = await fetch(`/api/users/${chantierUser.id}/chantiers`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chantiers }),
+      })
+      if (res.ok) {
+        toast.success(`Accès chantier mis à jour pour ${chantierUser.name}`)
+        setChantierDialogOpen(false)
+        fetchUsers()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || "Une erreur est survenue")
+      }
+    } catch {
+      toast.error('Erreur de connexion')
+    } finally {
+      setChantierSaving(false)
+    }
+  }
+
+  const toggleChantierAccess = (chantierId: string) => {
+    setSelectedChantiers((prev) => {
+      const next = { ...prev }
+      if (next[chantierId]) {
+        delete next[chantierId]
+      } else {
+        next[chantierId] = 'LECTURE'
+      }
+      return next
+    })
+  }
+
+  const hasActiveFilters = searchQuery || roleFilter || statusFilter
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
@@ -590,17 +724,116 @@ function UsersTab({ session }: { session: any }) {
         </Button>
       </div>
 
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <Card className="border shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Total</p>
+                  <p className="text-2xl font-bold mt-1 text-foreground">{totalUsers}</p>
+                </div>
+                <div className="p-2 rounded-lg border bg-gray-50 border-gray-200">
+                  <Users className="w-4 h-4 text-gray-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
+          <Card className="border shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Actifs</p>
+                  <p className="text-2xl font-bold mt-1 text-foreground">{activeUsers}</p>
+                </div>
+                <div className="p-2 rounded-lg border bg-emerald-50 border-emerald-200">
+                  <Check className="w-4 h-4 text-emerald-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.2 }}>
+          <Card className="border shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Bloqués</p>
+                  <p className="text-2xl font-bold mt-1 text-foreground">{blockedUsers}</p>
+                </div>
+                <div className="p-2 rounded-lg border bg-red-50 border-red-200">
+                  <Lock className="w-4 h-4 text-red-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Search & Filter Bar */}
+      <Card className="border shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Rechercher par nom ou email..."
+                className="pl-9"
+              />
+            </div>
+            <Select value={roleFilter || '__all__'} onValueChange={(v) => setRoleFilter(v === '__all__' ? '' : v)}>
+              <SelectTrigger className="sm:w-[180px]">
+                <SelectValue placeholder="Tous les rôles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Tous les rôles</SelectItem>
+                {ROLE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter || '__all__'} onValueChange={(v) => setStatusFilter(v === '__all__' ? '' : v)}>
+              <SelectTrigger className="sm:w-[140px]">
+                <SelectValue placeholder="Tous" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Tous</SelectItem>
+                <SelectItem value="active">Actifs</SelectItem>
+                <SelectItem value="blocked">Bloqués</SelectItem>
+              </SelectContent>
+            </Select>
+            {hasActiveFilters && (
+              <Button variant="outline" onClick={() => { setSearchQuery(''); setRoleFilter(''); setStatusFilter('') }} className="gap-2">
+                <FilterX className="w-4 h-4" />
+                <span className="hidden sm:inline">Réinitialiser</span>
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Users Table */}
       {loading ? (
         <UsersTableSkeleton />
-      ) : users.length === 0 ? (
+      ) : filteredUsers.length === 0 ? (
         <Card className="border shadow-sm">
           <CardContent className="py-16 flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
               <Users className="w-8 h-8 text-emerald-600" />
             </div>
-            <h3 className="text-lg font-semibold text-foreground">Aucun utilisateur</h3>
-            <p className="text-sm text-muted-foreground mt-1">Commencez par créer un utilisateur.</p>
+            <h3 className="text-lg font-semibold text-foreground">
+              {hasActiveFilters ? 'Aucun résultat' : 'Aucun utilisateur'}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {hasActiveFilters ? 'Aucun utilisateur ne correspond à vos filtres.' : 'Commencez par créer un utilisateur.'}
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -620,7 +853,7 @@ function UsersTab({ session }: { session: any }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((user, index) => {
+                  {filteredUsers.map((user, index) => {
                     const roleBadge = getRoleBadge(user.role)
                     return (
                       <motion.tr
@@ -668,7 +901,11 @@ function UsersTab({ session }: { session: any }) {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge
+                            variant="secondary"
+                            className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors"
+                            onClick={() => openChantierDialog(user)}
+                          >
                             {user._count.chantierAccess}
                           </Badge>
                         </TableCell>
@@ -700,6 +937,10 @@ function UsersTab({ session }: { session: any }) {
                               <DropdownMenuItem onClick={() => openResetPassword(user)}>
                                 <KeyRound className="w-4 h-4 mr-2" />
                                 Réinitialiser mot de passe
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openChantierDialog(user)}>
+                                <Building2 className="w-4 h-4 mr-2" />
+                                Accès Chantiers
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -925,6 +1166,115 @@ function UsersTab({ session }: { session: any }) {
                 Générer
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Chantier Assignment Dialog */}
+      <Dialog open={chantierDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setChantierUser(null)
+          setSelectedChantiers({})
+          setAllChantiers([])
+        }
+        setChantierDialogOpen(open)
+      }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Accès Chantiers - {chantierUser?.name}</DialogTitle>
+            <DialogDescription>
+              Attribuer ou modifier les accès aux chantiers
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            {chantierLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Chargement des chantiers...</span>
+              </div>
+            ) : allChantiers.length === 0 ? (
+              <div className="text-center py-8">
+                <Building2 className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Aucun chantier disponible</p>
+              </div>
+            ) : (
+              <ScrollArea className="max-h-96 pr-4">
+                <div className="space-y-3">
+                  {allChantiers.map((chantier) => {
+                    const isChecked = !!selectedChantiers[chantier.id]
+                    const statutCfg = STATUT_CONFIG[chantier.statut]
+                    return (
+                      <div
+                        key={chantier.id}
+                        className={cn(
+                          'flex items-start gap-3 p-3 rounded-lg border transition-colors',
+                          isChecked ? 'bg-emerald-50/50 border-emerald-200' : 'border-border hover:bg-muted/50'
+                        )}
+                      >
+                        <div className="pt-0.5">
+                          <CheckboxUI
+                            checked={isChecked}
+                            onCheckedChange={() => toggleChantierAccess(chantier.id)}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-foreground">{chantier.nom}</span>
+                            {statutCfg && (
+                              <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', statutCfg.className)}>
+                                {statutCfg.label}
+                              </Badge>
+                            )}
+                          </div>
+                          {chantier.adresse && (
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                              {chantier.adresse}
+                            </p>
+                          )}
+                          {isChecked && (
+                            <div className="mt-2">
+                              <Select
+                                value={selectedChantiers[chantier.id]}
+                                onValueChange={(value) => setSelectedChantiers((prev) => ({ ...prev, [chantier.id]: value }))}
+                              >
+                                <SelectTrigger className="h-8 w-full max-w-[220px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Object.entries(ROLE_ACCES_LABELS).map(([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                      {label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setChantierDialogOpen(false)
+              setChantierUser(null)
+              setSelectedChantiers({})
+              setAllChantiers([])
+            }}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleSaveChantierAccess}
+              disabled={chantierSaving || chantierLoading}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {chantierSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Enregistrer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
