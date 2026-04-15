@@ -102,19 +102,20 @@ interface UserFormData {
 
 interface AuditLog {
   id: string
-  utilisateurId: string | null
-  module: string
-  action: string
-  entityType: string | null
-  entityId: string | null
-  details: string | null
-  ipAddress: string | null
-  createdAt: string
+  userId: string
   utilisateur: {
     id: string
     name: string
     email: string
   } | null
+  entrepriseId: string | null
+  module: string
+  action: string
+  entityType: string | null
+  entityId: string | null
+  details: string | null
+  adresseIp: string | null
+  createdAt: string
 }
 
 interface PaginationInfo {
@@ -539,7 +540,7 @@ function UsersTab({ session }: { session: any }) {
       })
       if (res.ok) {
         const data = await res.json()
-        setNewPassword(data.password)
+        setNewPassword(data.newPassword)
         toast.success('Mot de passe réinitialisé')
       } else {
         const data = await res.json()
@@ -944,7 +945,7 @@ function RolesTab({ session }: { session: any }) {
       const res = await fetch('/api/permissions')
       if (res.ok) {
         const json = await res.json()
-        setPermissions(json || {})
+        setPermissions(json.permissions || {})
       } else {
         toast.error("Erreur lors du chargement des permissions")
       }
@@ -1139,8 +1140,8 @@ function AuditTab() {
         setTodayCount(allLogs.filter((l) => new Date(l.createdAt) >= todayStart).length)
         const activeUsers = new Set(
           allLogs
-            .filter((l) => new Date(l.createdAt) >= h24ago && l.utilisateurId)
-            .map((l) => l.utilisateurId)
+            .filter((l) => new Date(l.createdAt) >= h24ago && l.userId)
+            .map((l) => l.userId)
         )
         setActiveUsers24h(activeUsers.size)
         setLastActionTime(allLogs.length > 0 ? allLogs[0].createdAt : null)
