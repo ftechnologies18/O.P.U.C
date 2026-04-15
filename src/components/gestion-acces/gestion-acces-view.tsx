@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
@@ -31,6 +31,7 @@ import {
   RefreshCw,
   Building2,
   Checkbox,
+  AlertTriangle,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -226,6 +227,45 @@ const PERMISSION_LEVELS: Record<string, { label: string; bgClass: string; border
   GESTION: { label: 'Gestion', bgClass: 'bg-emerald-50', borderClass: 'border-emerald-300' },
 }
 
+// Enhanced cell-level config for clickable toggle buttons
+const LEVEL_CELL_CONFIG: Record<string, { label: string; shortLabel: string; bgClass: string; textClass: string; hoverClass: string; ringClass: string }> = {
+  GESTION: {
+    label: 'Gestion complète',
+    shortLabel: 'G',
+    bgClass: 'bg-emerald-100',
+    textClass: 'text-emerald-800',
+    hoverClass: 'hover:bg-emerald-200',
+    ringClass: 'ring-emerald-300',
+  },
+  ECRITURE: {
+    label: 'Écriture',
+    shortLabel: 'E',
+    bgClass: 'bg-amber-100',
+    textClass: 'text-amber-800',
+    hoverClass: 'hover:bg-amber-200',
+    ringClass: 'ring-amber-300',
+  },
+  LECTURE: {
+    label: 'Lecture seule',
+    shortLabel: 'L',
+    bgClass: 'bg-blue-100',
+    textClass: 'text-blue-800',
+    hoverClass: 'hover:bg-blue-200',
+    ringClass: 'ring-blue-300',
+  },
+  AUCUN: {
+    label: 'Aucun accès',
+    shortLabel: '—',
+    bgClass: 'bg-gray-100',
+    textClass: 'text-gray-400',
+    hoverClass: 'hover:bg-gray-200',
+    ringClass: 'ring-gray-300',
+  },
+}
+
+// Level cycle order: AUCUN → LECTURE → ECRITURE → GESTION → AUCUN
+const LEVEL_CYCLE = ['AUCUN', 'LECTURE', 'ECRITURE', 'GESTION']
+
 const PERMISSION_MODULES: { key: string; label: string }[] = [
   { key: 'dashboard', label: 'Tableau de bord' },
   { key: 'chantiers', label: 'Chantiers' },
@@ -346,6 +386,12 @@ function getActionBadge(action: string): { label: string; className: string } {
 
 function getModuleLabel(module: string): string {
   return MODULE_LABELS[module] || module
+}
+
+function cycleToNextLevel(current: string): string {
+  const idx = LEVEL_CYCLE.indexOf(current)
+  if (idx === -1) return 'LECTURE'
+  return LEVEL_CYCLE[(idx + 1) % LEVEL_CYCLE.length]
 }
 
 // ─── Loading Skeletons ───────────────────────────────────────────────────────
@@ -1282,12 +1328,63 @@ function UsersTab({ session }: { session: any }) {
   )
 }
 
-// ─── Tab 2: RolesTab (ADMIN only) ────────────────────────────────────────────
+// ─── Tab 2: RolesTab (ADMIN only) — Enhanced ─────────────────────────────────
 
 function RolesTab({ session }: { session: any }) {
   const [permissions, setPermissions] = useState<Record<string, Record<string, string>>>({})
+  const [originalPermissions, setOriginalPermissions] = useState<Record<string, Record<string, string>>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  // Copy role dialog state
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false)
+  const [copySource, setCopySource] = useState('')
+  const [copyTargets, setCopyTargets] = useState<Set<string>>(new Set())
+
+  const hasUnsavedChanges = useMemo(() => {
+    return JSON.stringify(permissions) !== JSON.stringify(originalPermissions)
+  }, [permissions, originalPermissions])
+
+  // Warn before leaving page with unsaved changes
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
+  // Role summaries: counts of GESTION, ECRITURE, LECTURE, AUCUN per role
+  const roleSummaries = useMemo(() => {
+    return ROLES_LIST.map((role) => {
+      const rolePerms = permissions[role] || {}
+      const counts = { GESTION: 0, ECRITURE: 0, LECTURE: 0, AUCUN: 0 }
+      PERMISSION_MODULES.forEach((mod) => {
+        const level = rolePerms[mod.key] || 'AUCUN'
+        if (level in counts) counts[level]++
+        else counts.AUCUN++
+      })
+      return { role, ...counts, total: PERMISSION_MODULES.length }
+    })
+  }, [permissions])
+
+  // Copy role preview: modules that will change
+  const copyPreview = useMemo(() => {
+    if (!copySource || copyTargets.size === 0) return []
+    const sourcePerms = permissions[copySource] || {}
+    return PERMISSION_MODULES.map((mod) => {
+      const changes: { target: string; oldVal: string; newVal: string }[] = []
+      copyTargets.forEach((target) => {
+        const currentVal = permissions[target]?.[mod.key] || 'AUCUN'
+        const newVal = sourcePerms[mod.key] || 'AUCUN'
+        if (currentVal !== newVal) {
+          changes.push({ target, oldVal: currentVal, newVal })
+        }
+      })
+      return { module: mod, changes }
+    }).filter((item) => item.changes.length > 0)
+  }, [copySource, copyTargets, permissions])
 
   const fetchPermissions = useCallback(async () => {
     setLoading(true)
@@ -1295,7 +1392,9 @@ function RolesTab({ session }: { session: any }) {
       const res = await fetch('/api/permissions')
       if (res.ok) {
         const json = await res.json()
-        setPermissions(json.permissions || {})
+        const perms = json.permissions || {}
+        setPermissions(perms)
+        setOriginalPermissions(JSON.parse(JSON.stringify(perms)))
       } else {
         toast.error("Erreur lors du chargement des permissions")
       }
@@ -1320,9 +1419,30 @@ function RolesTab({ session }: { session: any }) {
     }))
   }
 
+  const handleCycleLevel = (role: string, module: string) => {
+    const current = permissions[role]?.[module] || 'AUCUN'
+    const next = cycleToNextLevel(current)
+    updatePermission(role, module, next)
+  }
+
+  const handleBulkSet = (role: string, level: string) => {
+    const newPerms: Record<string, string> = {}
+    PERMISSION_MODULES.forEach((mod) => {
+      newPerms[mod.key] = level
+    })
+    setPermissions((prev) => ({
+      ...prev,
+      [role]: newPerms,
+    }))
+    toast.success(`${getRoleBadge(role).label} : tous les modules définis sur ${PERMISSION_LEVELS[level]?.label || level}`)
+  }
+
   const handleResetDefault = () => {
-    setPermissions(JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS)))
-    toast.success('Permissions réinitialisées par défaut')
+    if (window.confirm('Réinitialiser toutes les permissions par défaut ? Les modifications non sauvegardées seront perdues.')) {
+      const defaults = JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS))
+      setPermissions(defaults)
+      toast.success('Permissions réinitialisées par défaut')
+    }
   }
 
   const handleSave = async () => {
@@ -1334,6 +1454,7 @@ function RolesTab({ session }: { session: any }) {
         body: JSON.stringify({ permissions }),
       })
       if (res.ok) {
+        setOriginalPermissions(JSON.parse(JSON.stringify(permissions)))
         toast.success('Permissions enregistrées avec succès')
       } else {
         const data = await res.json()
@@ -1346,6 +1467,40 @@ function RolesTab({ session }: { session: any }) {
     }
   }
 
+  // Copy role handlers
+  const openCopyDialog = () => {
+    setCopySource('')
+    setCopyTargets(new Set())
+    setCopyDialogOpen(true)
+  }
+
+  const handleCopyRole = () => {
+    if (!copySource || copyTargets.size === 0) return
+    const sourcePerms = permissions[copySource] || {}
+    setPermissions((prev) => {
+      const next = { ...prev }
+      copyTargets.forEach((target) => {
+        next[target] = { ...sourcePerms }
+      })
+      return next
+    })
+    const sourceLabel = getRoleBadge(copySource).label
+    const targetLabels = Array.from(copyTargets).map((t) => getRoleBadge(t).label).join(', ')
+    toast.success(`Permissions copiées de ${sourceLabel} vers ${targetLabels}`)
+    setCopyDialogOpen(false)
+    setCopySource('')
+    setCopyTargets(new Set())
+  }
+
+  const toggleCopyTarget = (role: string) => {
+    setCopyTargets((prev) => {
+      const next = new Set(prev)
+      if (next.has(role)) next.delete(role)
+      else next.add(role)
+      return next
+    })
+  }
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
@@ -1356,89 +1511,244 @@ function RolesTab({ session }: { session: any }) {
             Configurer les accès par module pour chaque rôle
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={handleResetDefault}
-          className="gap-2"
-        >
-          <RotateCcw className="w-4 h-4" />
-          Réinitialiser par défaut
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            onClick={openCopyDialog}
+            className="gap-2"
+            disabled={loading}
+          >
+            <Copy className="w-4 h-4" />
+            <span className="hidden sm:inline">Copier un rôle...</span>
+            <span className="sm:hidden">Copier</span>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleResetDefault}
+            className="gap-2"
+            disabled={loading}
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span className="hidden sm:inline">Par défaut</span>
+          </Button>
+        </div>
       </div>
+
+      {/* Role Summary Cards */}
+      {!loading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {roleSummaries.map((summary, idx) => {
+            const roleBadge = getRoleBadge(summary.role)
+            const total = summary.total
+            return (
+              <motion.div
+                key={summary.role}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: idx * 0.05 }}
+              >
+                <Card className="border shadow-sm">
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', roleBadge.className)}>
+                        {roleBadge.label}
+                      </Badge>
+                    </div>
+                    {/* Progress bar */}
+                    <div className="flex rounded-full overflow-hidden h-2 bg-gray-100 mb-1.5">
+                      {summary.GESTION > 0 && (
+                        <div
+                          className="bg-emerald-500 transition-all duration-300"
+                          style={{ width: `${(summary.GESTION / total) * 100}%` }}
+                        />
+                      )}
+                      {summary.ECRITURE > 0 && (
+                        <div
+                          className="bg-amber-400 transition-all duration-300"
+                          style={{ width: `${(summary.ECRITURE / total) * 100}%` }}
+                        />
+                      )}
+                      {summary.LECTURE > 0 && (
+                        <div
+                          className="bg-blue-400 transition-all duration-300"
+                          style={{ width: `${(summary.LECTURE / total) * 100}%` }}
+                        />
+                      )}
+                      {summary.AUCUN > 0 && (
+                        <div
+                          className="bg-gray-200 transition-all duration-300"
+                          style={{ width: `${(summary.AUCUN / total) * 100}%` }}
+                        />
+                      )}
+                    </div>
+                    {/* Count badges */}
+                    <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                      {summary.GESTION > 0 && (
+                        <span className="flex items-center gap-0.5 text-emerald-700 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                          {summary.GESTION}G
+                        </span>
+                      )}
+                      {summary.ECRITURE > 0 && (
+                        <span className="flex items-center gap-0.5 text-amber-700 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                          {summary.ECRITURE}E
+                        </span>
+                      )}
+                      {summary.LECTURE > 0 && (
+                        <span className="flex items-center gap-0.5 text-blue-700 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
+                          {summary.LECTURE}L
+                        </span>
+                      )}
+                      {summary.AUCUN > 0 && (
+                        <span className="flex items-center gap-0.5 text-gray-400 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block" />
+                          {summary.AUCUN}—
+                        </span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Permissions Matrix */}
       {loading ? (
         <PermissionsTableSkeleton />
       ) : (
-        <Card className="border shadow-sm">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="pl-4 min-w-[160px] sticky left-0 bg-background z-10">Rôle</TableHead>
-                    {PERMISSION_MODULES.map((mod) => (
-                      <TableHead key={mod.key} className="min-w-[120px] text-center text-xs font-medium px-2 py-3">
-                        {mod.label}
+        <>
+          {/* Legend bar */}
+          <div className="flex items-center gap-4 flex-wrap text-xs text-muted-foreground px-1">
+            <span className="font-medium text-foreground">Légende :</span>
+            {Object.entries(LEVEL_CELL_CONFIG).map(([key, cfg]) => (
+              <span key={key} className="flex items-center gap-1.5">
+                <span className={cn('inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold', cfg.bgClass, cfg.textClass)}>
+                  {cfg.shortLabel}
+                </span>
+                <span>{cfg.label}</span>
+              </span>
+            ))}
+            <span className="text-muted-foreground/60">•</span>
+            <span>Cliquez pour changer le niveau</span>
+          </div>
+
+          <Card className="border shadow-sm">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="pl-4 min-w-[160px] sticky left-0 bg-background z-10">Rôle</TableHead>
+                      {PERMISSION_MODULES.map((mod) => (
+                        <TableHead key={mod.key} className="min-w-[56px] text-center text-xs font-medium px-1 py-3">
+                          {mod.label}
+                        </TableHead>
+                      ))}
+                      <TableHead className="min-w-[44px] text-center text-xs font-medium px-1 py-3 sticky right-0 bg-background z-10">
+                        <span className="sr-only">Actions en masse</span>
+                        <MoreHorizontal className="w-3.5 h-3.5 text-muted-foreground mx-auto" />
                       </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {ROLES_LIST.map((role) => {
-                    const roleBadge = getRoleBadge(role)
-                    return (
-                      <TableRow key={role}>
-                        <TableCell className="pl-4 py-2 sticky left-0 bg-background z-10">
-                          <Badge variant="outline" className={cn('text-xs', roleBadge.className)}>
-                            {roleBadge.label}
-                          </Badge>
-                        </TableCell>
-                        {PERMISSION_MODULES.map((mod) => {
-                          const currentLevel = permissions[role]?.[mod.key] || 'AUCUN'
-                          const levelConfig = PERMISSION_LEVELS[currentLevel] || PERMISSION_LEVELS.AUCUN
-                          return (
-                            <TableCell key={mod.key} className="px-2 py-2 text-center">
-                              <Select
-                                value={currentLevel}
-                                onValueChange={(value) => updatePermission(role, mod.key, value)}
-                              >
-                                <SelectTrigger
-                                  className={cn(
-                                    'h-8 text-xs border',
-                                    levelConfig.bgClass,
-                                    levelConfig.borderClass,
-                                    'hover:opacity-90 transition-opacity'
-                                  )}
-                                >
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {Object.entries(PERMISSION_LEVELS).map(([value, config]) => (
-                                    <SelectItem key={value} value={value} className="text-xs">
-                                      {config.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                          )
-                        })}
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {ROLES_LIST.map((role) => {
+                      const roleBadge = getRoleBadge(role)
+                      return (
+                        <TableRow key={role}>
+                          <TableCell className="pl-4 py-2 sticky left-0 bg-background z-10">
+                            <Badge variant="outline" className={cn('text-xs', roleBadge.className)}>
+                              {roleBadge.label}
+                            </Badge>
+                          </TableCell>
+                          {PERMISSION_MODULES.map((mod) => {
+                            const currentLevel = permissions[role]?.[mod.key] || 'AUCUN'
+                            const cellCfg = LEVEL_CELL_CONFIG[currentLevel] || LEVEL_CELL_CONFIG.AUCUN
+                            return (
+                              <TableCell key={mod.key} className="px-1 py-1.5 text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCycleLevel(role, mod.key)}
+                                      className={cn(
+                                        'inline-flex items-center justify-center w-9 h-7 rounded-md text-xs font-bold',
+                                        'border transition-all duration-150 cursor-pointer select-none',
+                                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
+                                        cellCfg.bgClass,
+                                        cellCfg.textClass,
+                                        cellCfg.hoverClass,
+                                        `focus-visible:${cellCfg.ringClass}`,
+                                        'border-transparent hover:border-current/20',
+                                        'active:scale-95'
+                                      )}
+                                    >
+                                      {cellCfg.shortLabel}
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="text-xs">
+                                    <span>{mod.label} — {cellCfg.label}</span>
+                                    <br />
+                                    <span className="text-muted-foreground">Cliquez pour : {LEVEL_CELL_CONFIG[cycleToNextLevel(currentLevel)]?.label}</span>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TableCell>
+                            )
+                          })}
+                          {/* Bulk Actions Column */}
+                          <TableCell className="px-1 py-2 text-center sticky right-0 bg-background z-10">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                  <MoreHorizontal className="w-3.5 h-3.5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleBulkSet(role, 'GESTION')}>
+                                  <Check className="w-3.5 h-3.5 mr-2 text-emerald-600" />
+                                  <span>Tout autoriser (GESTION)</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleBulkSet(role, 'LECTURE')}>
+                                  <Eye className="w-3.5 h-3.5 mr-2 text-blue-600" />
+                                  <span>Lecture seule (LECTURE)</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleBulkSet(role, 'AUCUN')} className="text-red-600 focus:text-red-600">
+                                  <Lock className="w-3.5 h-3.5 mr-2" />
+                                  <span>Tout interdire (AUCUN)</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
 
-      {/* Save Button */}
-      <div className="flex justify-end">
+      {/* Save Button with unsaved changes indicator */}
+      <div className="flex items-center justify-end gap-3">
+        {hasUnsavedChanges && (
+          <motion.div
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200"
+          >
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+            <span className="text-xs font-medium text-amber-700">Modifications non sauvegardées</span>
+          </motion.div>
+        )}
         <Button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || !hasUnsavedChanges}
           className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
         >
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -1446,6 +1756,133 @@ function RolesTab({ session }: { session: any }) {
           Appliquer les permissions
         </Button>
       </div>
+
+      {/* Copy Role Dialog */}
+      <Dialog open={copyDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setCopySource('')
+          setCopyTargets(new Set())
+        }
+        setCopyDialogOpen(open)
+      }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Copier les permissions d&apos;un rôle</DialogTitle>
+            <DialogDescription>
+              Sélectionnez un rôle source et les rôles cibles pour copier les permissions.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            {/* Source role */}
+            <div className="grid gap-2">
+              <Label>Rôle source</Label>
+              <Select value={copySource} onValueChange={(v) => setCopySource(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner le rôle source" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES_LIST.map((role) => {
+                    const cfg = getRoleBadge(role)
+                    return (
+                      <SelectItem key={role} value={role}>
+                        {cfg.label}
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Target roles */}
+            <div className="grid gap-2">
+              <Label>Rôles cibles</Label>
+              <div className="space-y-2">
+                {ROLES_LIST.map((role) => {
+                  const cfg = getRoleBadge(role)
+                  const isDisabled = role === copySource
+                  const isChecked = copyTargets.has(role)
+                  return (
+                    <label
+                      key={role}
+                      className={cn(
+                        'flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors',
+                        isDisabled ? 'opacity-40 cursor-not-allowed border-gray-100' : isChecked ? 'bg-emerald-50/50 border-emerald-200' : 'border-border hover:bg-muted/50'
+                      )}
+                    >
+                      <CheckboxUI
+                        checked={isChecked}
+                        disabled={isDisabled}
+                        onCheckedChange={() => toggleCopyTarget(role)}
+                      />
+                      <Badge variant="outline" className={cn('text-xs', cfg.className)}>
+                        {cfg.label}
+                      </Badge>
+                      {isDisabled && copySource === role && (
+                        <span className="text-xs text-muted-foreground">(source)</span>
+                      )}
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Preview */}
+            {copyPreview.length > 0 && (
+              <div className="grid gap-2">
+                <Label>Aperçu des modifications ({copyPreview.length} module(s))</Label>
+                <ScrollArea className="max-h-48">
+                  <div className="space-y-1.5">
+                    {copyPreview.slice(0, 10).map((item) => (
+                      <div key={item.module.key} className="text-xs bg-muted/50 rounded px-2.5 py-1.5">
+                        <span className="font-medium text-foreground">{item.module.label}</span>
+                        <span className="text-muted-foreground mx-1">:</span>
+                        {item.changes.map((change) => {
+                          const oldCfg = LEVEL_CELL_CONFIG[change.oldVal]
+                          const newCfg = LEVEL_CELL_CONFIG[change.newVal]
+                          return (
+                            <span key={change.target} className="inline-flex items-center gap-0.5 mr-2">
+                              <span className="text-muted-foreground">{getRoleBadge(change.target).label}</span>
+                              <span className={cn('inline-flex items-center justify-center w-4 h-4 rounded text-[9px] font-bold', oldCfg?.bgClass, oldCfg?.textClass)}>
+                                {oldCfg?.shortLabel}
+                              </span>
+                              <span className="text-muted-foreground">→</span>
+                              <span className={cn('inline-flex items-center justify-center w-4 h-4 rounded text-[9px] font-bold', newCfg?.bgClass, newCfg?.textClass)}>
+                                {newCfg?.shortLabel}
+                              </span>
+                            </span>
+                          )
+                        })}
+                      </div>
+                    ))}
+                    {copyPreview.length > 10 && (
+                      <p className="text-xs text-muted-foreground text-center py-1">
+                        ... et {copyPreview.length - 10} autre(s) modification(s)
+                      </p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setCopyDialogOpen(false)
+              setCopySource('')
+              setCopyTargets(new Set())
+            }}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleCopyRole}
+              disabled={!copySource || copyTargets.size === 0}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+            >
+              <Copy className="w-4 h-4" />
+              Copier les permissions
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   )
 }
@@ -1458,7 +1895,7 @@ function AuditTab() {
   const [loading, setLoading] = useState(true)
 
   // Filters
-  const [moduleFilter, setModuleFilter] = useState('')
+  const [oduleFilter, setModuleFilter] = useState('')
   const [actionFilter, setActionFilter] = useState('')
 
   // Summary stats
