@@ -138,7 +138,7 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { nom, adresse, maitreOuvrage, dateDebut, dateFinPrevue, budgetPrevisionnel, description, statut } = body
+    const { nom, adresse, maitreOuvrage, dateDebut, dateFinPrevue, budgetPrevisionnel, description, statut, modeCarburant } = body
 
     const existing = await db.chantier.findUnique({ where: { id } })
     if (!existing) {
@@ -159,6 +159,7 @@ export async function PUT(
         budgetPrevisionnel: budgetPrevisionnel !== undefined ? Number(budgetPrevisionnel) : undefined,
         description: description !== undefined ? (description?.trim() || null) : undefined,
         statut: statut || undefined,
+        modeCarburant: modeCarburant || undefined,
       },
     })
 

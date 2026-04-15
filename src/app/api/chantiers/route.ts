@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { nom, adresse, maitreOuvrage, dateDebut, dateFinPrevue, budgetPrevisionnel, description } = body
+    const { nom, adresse, maitreOuvrage, dateDebut, dateFinPrevue, budgetPrevisionnel, description, modeCarburant } = body
 
     if (!nom || nom.trim() === '') {
       return NextResponse.json(
@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
         dateFinPrevue: dateFinPrevue ? new Date(dateFinPrevue) : null,
         budgetPrevisionnel: budgetPrevisionnel || 0,
         description: description?.trim() || null,
+        modeCarburant: modeCarburant || 'STOCK_PHYSIQUE',
       },
     })
 

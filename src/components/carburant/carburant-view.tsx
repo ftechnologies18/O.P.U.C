@@ -27,6 +27,7 @@ import {
   CircleDollarSign,
   BarChart3,
   Zap,
+  RefreshCw,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -222,6 +223,7 @@ export function CarburantView() {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('stock')
   const [formSubmitting, setFormSubmitting] = useState(false)
+  const [changingMode, setChangingMode] = useState(false)
 
   // Dialog states
   const [stockDialogOpen, setStockDialogOpen] = useState(false)
@@ -804,6 +806,33 @@ export function CarburantView() {
     }
   }
 
+  // ─── Toggle mode carburant ──────────────────────────────────────
+  async function handleChangeMode(newMode: string) {
+    if (!activeChantierId || changingMode) return
+    setChangingMode(true)
+    try {
+      const res = await fetch(`/api/chantiers/${activeChantierId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modeCarburant: newMode }),
+      })
+      if (res.ok) {
+        setModeCarburant(newMode)
+        toast.success(
+          newMode === 'STOCK_PHYSIQUE'
+            ? 'Mode changé : Stock physique'
+            : 'Mode changé : Achat direct'
+        )
+      } else {
+        toast.error('Erreur lors du changement de mode')
+      }
+    } catch {
+      toast.error('Erreur de connexion')
+    } finally {
+      setChangingMode(false)
+    }
+  }
+
   // ─── Computed values ──────────────────────────────────────────────
   const entreePrixTotal =
     (parseFloat(entreeForm.quantite) || 0) *
@@ -873,27 +902,40 @@ export function CarburantView() {
               </SelectContent>
             </Select>
             {activeChantierId && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  'text-xs font-medium',
-                  modeCarburant === 'STOCK_PHYSIQUE'
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/40'
-                    : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/40'
-                )}
-              >
-                {modeCarburant === 'STOCK_PHYSIQUE' ? (
-                  <>
-                    <Gauge className="w-3 h-3 mr-1" />
-                    Stock physique
-                  </>
-                ) : (
-                  <>
-                    <ReceiptText className="w-3 h-3 mr-1" />
-                    Achat direct
-                  </>
-                )}
-              </Badge>
+              <>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'text-xs font-medium',
+                    modeCarburant === 'STOCK_PHYSIQUE'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/40'
+                      : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/40'
+                  )}
+                >
+                  {modeCarburant === 'STOCK_PHYSIQUE' ? (
+                    <>
+                      <Gauge className="w-3 h-3 mr-1" />
+                      Stock physique
+                    </>
+                  ) : (
+                    <>
+                      <ReceiptText className="w-3 h-3 mr-1" />
+                      Achat direct
+                    </>
+                  )}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1.5 text-muted-foreground hover:text-amber-600"
+                  onClick={() => handleChangeMode(modeCarburant === 'STOCK_PHYSIQUE' ? 'ACHAT_DIRECT' : 'STOCK_PHYSIQUE')}
+                  disabled={changingMode}
+                  title="Changer le mode de gestion carburant"
+                >
+                  <RefreshCw className={cn('w-3.5 h-3.5', changingMode && 'animate-spin')} />
+                  <span className="text-xs hidden sm:inline">Changer mode</span>
+                </Button>
+              </>
             )}
           </div>
         </CardContent>

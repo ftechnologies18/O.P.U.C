@@ -75,6 +75,7 @@ interface Chantier {
     phases: number
     journaliers: number
   }
+  modeCarburant: string
   createdAt: string
   updatedAt: string
 }
@@ -95,6 +96,7 @@ interface FormData {
   budgetPrevisionnel: string
   description: string
   statut: string
+  modeCarburant: string
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -133,6 +135,7 @@ const EMPTY_FORM: FormData = {
   budgetPrevisionnel: '',
   description: '',
   statut: 'EN_PREPARATION',
+  modeCarburant: 'STOCK_PHYSIQUE',
 }
 
 const NUMBER_FORMAT = new Intl.NumberFormat('fr-FR')
@@ -221,6 +224,7 @@ export function ChantiersView() {
       budgetPrevisionnel: String(chantier.budgetPrevisionnel),
       description: chantier.description || '',
       statut: chantier.statut,
+      modeCarburant: chantier.modeCarburant || 'STOCK_PHYSIQUE',
     })
     setFormOpen(true)
   }
@@ -241,6 +245,7 @@ export function ChantiersView() {
         dateFinPrevue: form.dateFinPrevue || null,
         budgetPrevisionnel: Number(form.budgetPrevisionnel) || 0,
         description: form.description.trim() || null,
+        modeCarburant: form.modeCarburant,
       }
 
       let res: Response
@@ -719,6 +724,40 @@ export function ChantiersView() {
                   setForm({ ...form, description: e.target.value })
                 }
               />
+            </div>
+
+            {/* Mode Carburant */}
+            <div className="grid gap-2">
+              <Label>Mode de gestion carburant</Label>
+              <Select
+                value={form.modeCarburant}
+                onValueChange={(value) =>
+                  setForm({ ...form, modeCarburant: value })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sélectionner un mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="STOCK_PHYSIQUE">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+                      Stock physique (cuve / citerne)
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="ACHAT_DIRECT">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
+                      Achat direct en station-service
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {form.modeCarburant === 'STOCK_PHYSIQUE'
+                  ? 'Gestion avec cuve/citerne sur le chantier : entrées → stock → sorties vers engins'
+                  : 'Achat au coup par coup en station : bons d\'achat avec reçus directement affectés aux engins'}
+              </p>
             </div>
 
             {/* Statut (only for edit) */}
