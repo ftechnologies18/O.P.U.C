@@ -48,6 +48,19 @@ model User {
   accounts      Account[]
   sessions      Session[]
   notifications Notification[]
+  auditLogs     AuditLog[]
+  chantierAccess UserChantierAccess[]
+}
+
+// User → Chantier access mapping
+model UserChantierAccess {
+  id         String   @id @default(cuid())
+  userId     String
+  chantierId String
+  roleAcces  String   @default("LECTURE") // LECTURE, ECRITURE, GESTION
+  utilisateur User    @relation(fields: [userId], references: [id])
+  chantier     Chantier @relation(fields: [chantierId], references: [id])
+  @@unique([userId, chantierId])
 }
 
 // NextAuth models
@@ -116,6 +129,7 @@ model Chantier {
   sortiesCarburant    SortieCarburant[]
   achatsCarburant     BonAchatCarburant[]
   relevesCompteur    ReleveCompteurEngin[]
+  userAccess         UserChantierAccess[]
 }
 
 // Workers / Personnel (Journaliers + Salariés sous contrat)
@@ -542,6 +556,31 @@ model ReleveCompteurEngin {
   updatedAt     DateTime  @updatedAt
   equipement    Equipement @relation(fields: [equipementId], references: [id])
   chantier      Chantier   @relation(fields: [chantierId], references: [id])
+}
+
+// Audit Log — tracks all important actions
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String
+  utilisateur  User     @relation(fields: [userId], references: [id])
+  entrepriseId String?
+  action       String   // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, BLOCK, UNBLOCK, ROLE_CHANGE, PASSWORD_RESET, VALIDATE
+  module       String   // chantiers, personnel, pointage, stocks, carburant, engins, etc.
+  entityId     String?  // ID of the modified entity
+  entityType   String?  // Chantier, Journalier, Equipement, User, etc.
+  details      String?  // Description / old values JSON
+  adresseIp    String?
+  createdAt    DateTime @default(now())
+}
+
+// Permission Configuration — RBAC matrix stored as JSON
+model PermissionConfig {
+  id           String   @id @default(cuid())
+  entrepriseId String?
+  role         String   @unique // ADMIN, CHEF_ENTREPRISE, CONDUCTEUR, CHEF_CHANTIER, SOUS_TRAITANT
+  permissions  String   @default("{}") // JSON: { "chantiers": "GESTION", "stocks": "ECRITURE", ... }
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 // Notifications

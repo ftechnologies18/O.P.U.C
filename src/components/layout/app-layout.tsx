@@ -30,6 +30,7 @@ import {
   ChevronsRight,
   Truck,
   Fuel,
+  ShieldCheck,
 } from 'lucide-react'
 import { SearchCommand } from './search-command'
 import { UserMenu } from './user-menu'
@@ -82,6 +83,7 @@ const navSections = [
   {
     group: 'Configuration',
     items: [
+      { id: 'gestion-acces', label: 'Gestion des Accès', icon: ShieldCheck },
       { id: 'parametres', label: 'Paramètres', icon: Settings },
     ],
   },

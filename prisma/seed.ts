@@ -8,6 +8,9 @@ async function main() {
 
   // Clean up existing data
   console.log('🗑️  Cleaning existing data...')
+  await prisma.auditLog.deleteMany()
+  await prisma.userChantierAccess.deleteMany()
+  await prisma.permissionConfig.deleteMany()
   await prisma.notification.deleteMany()
   await prisma.photo.deleteMany()
   await prisma.releveCompteurEngin.deleteMany()
@@ -968,6 +971,50 @@ async function main() {
   // --- Chantier 2: ACHAT_DIRECT mode (future, but create a couple entries) ---
   // (when chantier 2 starts, they'll buy directly from stations)
   // No data yet since chantier2 is EN_PREPARATION
+
+  // 19. Create default permission configs
+  console.log('🔐 Creating Permission Configs...')
+  const defaultPermissions = {
+    ADMIN: { dashboard: 'GESTION', chantiers: 'GESTION', planning: 'GESTION', pointage: 'GESTION', personnel: 'GESTION', paie: 'GESTION', 'sous-traitants': 'GESTION', budget: 'GESTION', stocks: 'GESTION', engins: 'GESTION', carburant: 'GESTION', rapports: 'GESTION', photos: 'GESTION', documents: 'GESTION', parametres: 'GESTION', 'gestion-acces': 'GESTION' },
+    CHEF_ENTREPRISE: { dashboard: 'GESTION', chantiers: 'GESTION', planning: 'GESTION', pointage: 'GESTION', personnel: 'GESTION', paie: 'GESTION', 'sous-traitants': 'GESTION', budget: 'GESTION', stocks: 'GESTION', engins: 'GESTION', carburant: 'GESTION', rapports: 'GESTION', photos: 'GESTION', documents: 'GESTION', parametres: 'ECRITURE', 'gestion-acces': 'GESTION' },
+    CONDUCTEUR: { dashboard: 'LECTURE', chantiers: 'ECRITURE', planning: 'ECRITURE', pointage: 'ECRITURE', personnel: 'LECTURE', paie: 'LECTURE', 'sous-traitants': 'LECTURE', budget: 'LECTURE', stocks: 'ECRITURE', engins: 'GESTION', carburant: 'GESTION', rapports: 'ECRITURE', photos: 'ECRITURE', documents: 'ECRITURE', parametres: 'LECTURE', 'gestion-acces': 'AUCUN' },
+    CHEF_CHANTIER: { dashboard: 'LECTURE', chantiers: 'ECRITURE', planning: 'LECTURE', pointage: 'GESTION', personnel: 'LECTURE', paie: 'LECTURE', 'sous-traitants': 'LECTURE', budget: 'LECTURE', stocks: 'ECRITURE', engins: 'LECTURE', carburant: 'ECRITURE', rapports: 'ECRITURE', photos: 'ECRITURE', documents: 'ECRITURE', parametres: 'LECTURE', 'gestion-acces': 'AUCUN' },
+    SOUS_TRAITANT: { dashboard: 'AUCUN', chantiers: 'LECTURE', planning: 'AUCUN', pointage: 'AUCUN', personnel: 'AUCUN', paie: 'AUCUN', 'sous-traitants': 'ECRITURE', budget: 'LECTURE', stocks: 'AUCUN', engins: 'AUCUN', carburant: 'AUCUN', rapports: 'LECTURE', photos: 'LECTURE', documents: 'LECTURE', parametres: 'AUCUN', 'gestion-acces': 'AUCUN' },
+  }
+  for (const [role, perms] of Object.entries(defaultPermissions)) {
+    await prisma.permissionConfig.create({
+      data: { role, permissions: JSON.stringify(perms), entrepriseId: entreprise.id },
+    })
+  }
+
+  // 20. Create user-chantier access mappings
+  console.log('🔑 Creating User-Chantier Access...')
+  await prisma.userChantierAccess.createMany({
+    data: [
+      { userId: admin.id, chantierId: chantier1.id, roleAcces: 'GESTION' },
+      { userId: admin.id, chantierId: chantier2.id, roleAcces: 'GESTION' },
+      { userId: chefEntreprise.id, chantierId: chantier1.id, roleAcces: 'GESTION' },
+      { userId: chefEntreprise.id, chantierId: chantier2.id, roleAcces: 'GESTION' },
+      { userId: conducteur.id, chantierId: chantier1.id, roleAcces: 'ECRITURE' },
+      { userId: conducteur.id, chantierId: chantier2.id, roleAcces: 'ECRITURE' },
+      { userId: chefChantier.id, chantierId: chantier1.id, roleAcces: 'GESTION' },
+    ],
+  })
+
+  // 21. Create sample audit logs
+  console.log('📋 Creating Audit Logs...')
+  await prisma.auditLog.createMany({
+    data: [
+      { userId: admin.id, entrepriseId: entreprise.id, action: 'LOGIN', module: 'auth', details: 'Connexion réussie' },
+      { userId: chefEntreprise.id, entrepriseId: entreprise.id, action: 'LOGIN', module: 'auth', details: 'Connexion réussie' },
+      { userId: chefChantier.id, entrepriseId: entreprise.id, action: 'CREATE', module: 'pointage', entityType: 'Pointage', details: 'Pointage créé pour 4 journaliers - Résidence Les Palmiers' },
+      { userId: conducteur.id, entrepriseId: entreprise.id, action: 'UPDATE', module: 'chantiers', entityType: 'Chantier', entityId: chantier1.id, details: 'Avancement phase 2 mis à jour à 65%' },
+      { userId: admin.id, entrepriseId: entreprise.id, action: 'CREATE', module: 'users', entityType: 'User', details: 'Utilisateur Karim Mensah (CONDUCTEUR) créé' },
+      { userId: chefChantier.id, entrepriseId: entreprise.id, action: 'CREATE', module: 'rapports', entityType: 'RapportJournalier', details: 'Rapport journalier soumis - Chantier Les Palmiers' },
+      { userId: admin.id, entrepriseId: entreprise.id, action: 'VALIDATE', module: 'pointage', entityType: 'Pointage', details: 'Validation pointages semaine en cours' },
+      { userId: chefEntreprise.id, entrepriseId: entreprise.id, action: 'UPDATE', module: 'budget', entityType: 'Chantier', entityId: chantier1.id, details: 'Budget révisé - Résidence Les Palmiers' },
+    ],
+  })
 
   console.log('✅ Seeding completed successfully!')
   console.log('')

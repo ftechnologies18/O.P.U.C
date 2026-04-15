@@ -22,6 +22,7 @@ import { CarburantView } from '@/components/carburant/carburant-view'
 import { DocumentsView } from '@/components/documents/documents-view'
 import { ParametresView } from '@/components/parametres/parametres-view'
 import { PhotosView } from '@/components/photos/photos-view'
+import { GestionAccesView } from '@/components/gestion-acces/gestion-acces-view'
 import { useAppStore } from '@/store/app-store'
 import { Loader2 } from 'lucide-react'
 
@@ -78,6 +79,8 @@ function AppContent() {
         return <DocumentsView />
       case 'parametres':
         return <ParametresView />
+      case 'gestion-acces':
+        return <GestionAccesView />
       default:
         return <PlaceholderView viewId={currentView} />
     }

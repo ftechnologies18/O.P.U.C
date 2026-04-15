@@ -443,3 +443,88 @@ Stage Summary:
 - After mode change, all data is refreshed from the server
 - Server is the single source of truth for modeCarburant
 - Added AlertDialog confirmation to prevent accidental mode changes
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Create permissions and audit-logs API routes
+
+Work Log:
+- Created /api/permissions/route.ts:
+  - GET: Returns all permission configs as object keyed by role, parses JSON permissions field for each config
+  - PUT: Only ADMIN can modify. Validates roles (ADMIN, CHEF_ENTREPRISE, CONDUCTEUR, CHEF_CHANTIER, SOUS_TRAITANT) and permission levels (AUCUN, LECTURE, ECRITURE, GESTION). Uses deleteMany + create pattern for upsert. Creates audit log entry on success. Returns updated configs.
+- Created /api/audit-logs/route.ts:
+  - GET: Paginated audit logs with optional filters (userId, module, action, page, limit). Includes utilisateur relation (id, name, email). Handles null utilisateur gracefully (deleted users show "Utilisateur supprimé"). Returns pagination metadata (page, limit, total, totalPages). Ordered by createdAt desc.
+- Both routes use getServerSession(authOptions) for authentication and return 401 if no session
+- Both routes follow existing project patterns: NextRequest/NextResponse, French error messages, console.error logging
+- Ran bun run lint: 0 errors
+- Dev server compiled successfully
+
+Stage Summary:
+- 2 API route files created for RBAC permissions management and audit log retrieval
+- Permissions route supports reading and writing the RBAC matrix with full validation
+- Audit logs route supports paginated listing with filters and handles deleted user references
+- Admin-only protection on permission modifications with audit trail
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Create "Gestion des Accès" API routes — User management module
+
+Work Log:
+- Created /api/users/route.ts:
+  - GET: Lists all users ordered by name, includes entreprise relation and chantierAccess count, returns users without passwords
+  - POST: Creates new user with bcrypt password hashing, validates required fields (name, email, password, role) and role against allowed values, checks email uniqueness, creates audit log entry (action: CREATE, module: users), returns created user without password
+- Created /api/users/[id]/route.ts:
+  - GET: Gets single user by ID with entreprise relation and chantier accesses, returns without password
+  - PUT: Updates user fields (name, role, telephone, email), prevents non-ADMIN users from updating their own role, validates role and email uniqueness, tracks changes for audit log (action: UPDATE)
+  - DELETE: Deletes user, prevents self-deletion, cascades to UserChantierAccess first, creates audit log (action: DELETE)
+- Created /api/users/[id]/toggle-active/route.ts:
+  - PATCH: Toggles user active/inactive status, prevents disabling self, creates audit log with action BLOCK or UNBLOCK
+- Created /api/users/[id]/reset-password/route.ts:
+  - POST: Generates random 10-char alphanumeric password (excluding ambiguous chars like 0/O/1/l/I), hashes with bcrypt, saves, returns plain text password for admin communication, creates audit log (action: PASSWORD_RESET)
+- Created /api/users/[id]/chantiers/route.ts:
+  - GET: Gets all chantier accesses for a user with chantier details (nom, statut, adresse)
+  - PUT: Replaces all chantier accesses (delete existing + create new), validates each chantierId exists and roleAcces is valid (LECTURE/ECRITURE/GESTION), creates audit log
+- All routes use getServerSession(authOptions) for authentication with 401 response
+- All routes follow project patterns: NextRequest/NextResponse, Promise<{id}> params with await, try/catch error handling, French error messages
+- Ran bun run lint: 0 errors
+- Dev server compiled successfully
+
+Stage Summary:
+- 5 API route files created for complete user management (Gestion des Accès module)
+- Full CRUD for users with auth protection and audit logging on all mutations
+- Toggle active/inactive status endpoint with self-protection
+- Password reset endpoint returning generated password in plain text
+- Chantier access management with full replace strategy (delete + create)
+- All mutations logged to AuditLog with action, module, entityType, entityId, and details
+
+---
+Task ID: 6
+Agent: Main Agent
+Task: Create GestionAccesView component — Gestion des Accès (Users, Permissions, Audit)
+
+Work Log:
+- Created /src/components/gestion-acces/gestion-acces-view.tsx (~750 lines) with 3 tab components:
+  - **UsersTab**: Full user management with table (avatar initials, name, email, telephone, role badge, status badge, chantier count, dropdown actions), create/edit dialog (name, email, password with eye toggle + auto-generate + copy, telephone, role select), toggle active, reset password dialog (generate + copy), delete with window.confirm, toast notifications, loading skeleton
+  - **RolesTab** (ADMIN only): Permissions & Rôles matrix with 5 roles × 16 modules, each cell a color-coded Select (AUCUN=gray, LECTURE=blue, ECRITURE=amber, GESTION=green), "Réinitialiser par défaut" button, "Appliquer les permissions" save button, sticky role column, responsive overflow-x-auto, loading skeleton
+  - **AuditTab**: Journal d'Audit with 3 summary cards (actions today, active users 24h, last action relative time), filter row (module select + action select + reset button), paginated table (relative time with tooltip for exact time, avatar + user name, module badge, action badge with 10 color-coded types, truncated details), pagination (previous/next + page X sur Y), loading skeleton
+- All UI text in French throughout
+- Role badge colors: ADMIN=red/rose gradient, CHEF_ENTREPRISE=violet, CONDUCTEUR=blue, CHEF_CHANTIER=amber, SOUS_TRAITANT=slate
+- French labels for all roles, actions, modules
+- Used shadcn/ui components: Button, Input, Label, Select, Badge, Card, Dialog, DropdownMenu, Tabs, Table, Skeleton, Tooltip
+- framer-motion animations on main containers and table rows
+- Helper functions: getInitials, formatRelativeTime, formatExactTime, generatePassword
+- DEFAULT_PERMISSIONS constant for reset-to-default functionality
+- Tab visibility: Roles tab hidden for non-ADMIN users via visibleTabs filter
+- API endpoints wired: GET/POST /api/users, PUT/DELETE /api/users/[id], PATCH /api/users/[id]/toggle-active, POST /api/users/[id]/reset-password, GET/PUT /api/permissions, GET /api/audit-logs
+- Ran bun run lint: 0 errors
+- Dev server compiled successfully
+
+Stage Summary:
+- Complete GestionAccesView component with 3-tab layout for access management
+- Tab 1 (Users): Full CRUD with table, create/edit dialog, toggle active, reset password, delete
+- Tab 2 (Permissions): RBAC matrix editor with 5×16 grid, default preset reset, save to API
+- Tab 3 (Audit): Paginated audit log viewer with filters, summary cards, relative timestamps
+- ADMIN-only permission tab access via session role check
+- Consistent with O.P.U.C project patterns: shadcn/ui, framer-motion, toast notifications, loading skeletons
