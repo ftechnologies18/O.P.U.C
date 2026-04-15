@@ -224,6 +224,8 @@ export function CarburantView() {
   const [activeTab, setActiveTab] = useState('stock')
   const [formSubmitting, setFormSubmitting] = useState(false)
   const [changingMode, setChangingMode] = useState(false)
+  const [modeDialogOpen, setModeDialogOpen] = useState(false)
+  const [pendingNewMode, setPendingNewMode] = useState<string>('')
 
   // Dialog states
   const [stockDialogOpen, setStockDialogOpen] = useState(false)
@@ -806,30 +808,41 @@ export function CarburantView() {
     }
   }
 
-  // ─── Toggle mode carburant ──────────────────────────────────────
-  async function handleChangeMode(newMode: string) {
-    if (!activeChantierId || changingMode) return
+  // ─── Toggle mode carburant (with confirmation) ─────────────
+  function askChangeMode() {
+    if (!activeChantierId) return
+    const newMode = modeCarburant === 'STOCK_PHYSIQUE' ? 'ACHAT_DIRECT' : 'STOCK_PHYSIQUE'
+    setPendingNewMode(newMode)
+    setModeDialogOpen(true)
+  }
+
+  async function handleChangeMode() {
+    if (!activeChantierId || changingMode || !pendingNewMode) return
     setChangingMode(true)
+    setModeDialogOpen(false)
     try {
       const res = await fetch(`/api/chantiers/${activeChantierId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ modeCarburant: newMode }),
+        body: JSON.stringify({ modeCarburant: pendingNewMode }),
       })
       if (res.ok) {
-        setModeCarburant(newMode)
         toast.success(
-          newMode === 'STOCK_PHYSIQUE'
+          pendingNewMode === 'STOCK_PHYSIQUE'
             ? 'Mode changé : Stock physique'
             : 'Mode changé : Achat direct'
         )
+        // Re-fetch all data from server (source of truth) to sync mode + data
+        await fetchCarburantData()
       } else {
-        toast.error('Erreur lors du changement de mode')
+        const data = await res.json().catch(() => null)
+        toast.error(data?.error || 'Erreur lors du changement de mode')
       }
     } catch {
       toast.error('Erreur de connexion')
     } finally {
       setChangingMode(false)
+      setPendingNewMode('')
     }
   }
 
@@ -928,7 +941,7 @@ export function CarburantView() {
                   variant="ghost"
                   size="sm"
                   className="h-8 gap-1.5 text-muted-foreground hover:text-amber-600"
-                  onClick={() => handleChangeMode(modeCarburant === 'STOCK_PHYSIQUE' ? 'ACHAT_DIRECT' : 'STOCK_PHYSIQUE')}
+                  onClick={askChangeMode}
                   disabled={changingMode}
                   title="Changer le mode de gestion carburant"
                 >
@@ -2551,6 +2564,55 @@ export function CarburantView() {
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}
               Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ─── AlertDialog: Mode change confirmation ────────────────── */}
+      <AlertDialog open={modeDialogOpen} onOpenChange={(open) => !open && setModeDialogOpen(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <RefreshCw className="w-5 h-5 text-amber-500" />
+              Changer le mode de gestion carburant
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted">
+                    <Gauge className="w-4 h-4 text-emerald-600" />
+                    <span className="text-sm font-medium">Stock physique</span>
+                  </div>
+                  <span className="text-muted-foreground">→</span>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted">
+                    <ReceiptText className="w-4 h-4 text-amber-600" />
+                    <span className="text-sm font-medium">Achat direct</span>
+                  </div>
+                </div>
+                <p className="text-sm">
+                  Vous allez passer en mode{' '}
+                  <span className="font-semibold text-foreground">
+                    {pendingNewMode === 'STOCK_PHYSIQUE' ? 'Stock physique (cuve/citerne sur le chantier)' : 'Achat direct en station-service'}
+                  </span>
+                  . Les données existantes seront conservées.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={changingMode}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleChangeMode}
+              disabled={changingMode}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {changingMode && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Confirmer le changement
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

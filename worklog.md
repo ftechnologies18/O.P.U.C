@@ -419,3 +419,27 @@ Stage Summary:
 - Fix: Prisma Client regeneration resolved the issue
 - Chantier form now correctly saves all fields including modeCarburant
 - No code changes were needed — only `bunx prisma generate` was required
+
+---
+Task ID: 9
+Agent: Main Agent
+Task: Fix carburant mode change button not working (spins but mode stays static)
+
+Work Log:
+- User reported: "le bouton changer mode au niveau de carburant de fonctionne il tourne mais le mode ne change pas (statique)"
+- Analyzed handleChangeMode function in carburant-view.tsx
+- Found that after PUT success, mode was only updated locally via setModeCarburant(newMode) without calling fetchCarburantData()
+- The mode data wasn't refreshed from the server (source of truth), causing potential stale state
+- Added confirmation dialog (AlertDialog) before mode change for better UX
+- Split logic into askChangeMode() (opens dialog) and handleChangeMode() (executes change)
+- Key fix: after PUT success, now calls `await fetchCarburantData()` which reads the authoritative mode from server AND refreshes all data (stocks, achats, releves, etc.)
+- Also improved error handling: shows actual error message from API response
+- Added visual mode change confirmation dialog with icons and description
+- Ran bun run lint: 0 errors
+- Dev server compiled successfully
+
+Stage Summary:
+- Mode change button now works correctly with confirmation dialog
+- After mode change, all data is refreshed from the server
+- Server is the single source of truth for modeCarburant
+- Added AlertDialog confirmation to prevent accidental mode changes
