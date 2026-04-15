@@ -21,6 +21,7 @@ import {
   Phone,
   Wrench,
   Loader2,
+  Fuel,
 } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -56,6 +57,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -111,6 +119,7 @@ interface ChantierDetail {
   budgetPrevisionnel: number
   statut: string
   description?: string
+  modeCarburant?: string
   entrepriseId?: string
   createdAt: string
   updatedAt: string
@@ -237,6 +246,7 @@ export function ChantierDetailView() {
     dateFinPrevue: '',
     budgetPrevisionnel: '',
     statut: '',
+    modeCarburant: 'STOCK_PHYSIQUE',
   })
 
   const openEditDialog = () => {
@@ -250,6 +260,7 @@ export function ChantierDetailView() {
       dateFinPrevue: chantier.dateFinPrevue ? chantier.dateFinPrevue.split('T')[0] : '',
       budgetPrevisionnel: String(chantier.budgetPrevisionnel),
       statut: chantier.statut,
+      modeCarburant: chantier.modeCarburant || 'STOCK_PHYSIQUE',
     })
     setEditDialogOpen(true)
   }
@@ -264,6 +275,7 @@ export function ChantierDetailView() {
         body: JSON.stringify({
           ...editForm,
           budgetPrevisionnel: parseFloat(editForm.budgetPrevisionnel) || 0,
+          modeCarburant: editForm.modeCarburant,
         }),
       })
       if (res.ok) {
@@ -1146,18 +1158,55 @@ export function ChantierDetailView() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-statut">Statut</Label>
-              <select
-                id="edit-statut"
+              <Select
                 value={editForm.statut}
-                onChange={(e) => setEditForm({ ...editForm, statut: e.target.value })}
-                className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                onValueChange={(value) => setEditForm({ ...editForm, statut: value })}
               >
-                <option value="EN_PREPARATION">En préparation</option>
-                <option value="EN_COURS">En cours</option>
-                <option value="EN_PAUSE">En pause</option>
-                <option value="TERMINE">Terminé</option>
-                <option value="RECEPTIONNE">Réceptionné</option>
-              </select>
+                <SelectTrigger id="edit-statut" className="w-full">
+                  <SelectValue placeholder="Sélectionner un statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EN_PREPARATION">En préparation</SelectItem>
+                  <SelectItem value="EN_COURS">En cours</SelectItem>
+                  <SelectItem value="EN_PAUSE">En pause</SelectItem>
+                  <SelectItem value="TERMINE">Terminé</SelectItem>
+                  <SelectItem value="RECEPTIONNE">Réceptionné</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Mode Carburant */}
+            <div className="grid gap-2">
+              <Label className="flex items-center gap-1.5">
+                <Fuel className="w-3.5 h-3.5" />
+                Mode de gestion carburant
+              </Label>
+              <Select
+                value={editForm.modeCarburant}
+                onValueChange={(value) => setEditForm({ ...editForm, modeCarburant: value })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sélectionner un mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="STOCK_PHYSIQUE">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+                      Stock physique (cuve / citerne)
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="ACHAT_DIRECT">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block w-2 h-2 rounded-full bg-sky-500" />
+                      Achat direct en station-service
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {editForm.modeCarburant === 'STOCK_PHYSIQUE'
+                  ? 'Gestion avec cuve/citerne sur le chantier : entrées → stock → sorties vers engins'
+                  : 'Achat au coup par coup en station : bons d\'achat avec reçus directement affectés aux engins'}
+              </p>
             </div>
           </div>
           <DialogFooter>

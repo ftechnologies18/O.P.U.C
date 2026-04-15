@@ -398,3 +398,24 @@ Stage Summary:
 - Equipment hour meter tracking integrated with counter readings
 - Stats per equipment with L/h consumption calculation and color-coded thresholds
 - Consistent with O.P.U.C amber theme and existing component patterns
+
+---
+Task ID: 8
+Agent: Main Agent
+Task: Fix chantier form modifications not saving (modeCarburant + all settings)
+
+Work Log:
+- User reported: "au niveau du formulaire lorsqu'on applique une modification rien ne se passe"
+- Checked dev.log and found PrismaClientValidationError: "Unknown argument `modeCarburant`"
+- Root cause: Prisma schema had modeCarburant field but the generated Prisma Client was outdated
+- Ran `bunx prisma generate` to regenerate the Prisma Client
+- Ran `bun run db:push` to confirm schema was already in sync
+- Restarted dev server to pick up new client
+- Verified PUT /api/chantiers/[id] now returns 200 and correctly updates modeCarburant
+- Tested switching modeCarburant from ACHAT_DIRECT to STOCK_PHYSIQUE and back — both work
+- Reverted test data to original seed values
+
+Stage Summary:
+- Fix: Prisma Client regeneration resolved the issue
+- Chantier form now correctly saves all fields including modeCarburant
+- No code changes were needed — only `bunx prisma generate` was required
