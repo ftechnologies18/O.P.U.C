@@ -338,3 +338,63 @@ Stage Summary:
 - Dynamic forms, color-coded badges, phase/contract/specialty filters
 - Auto-calculated net salary with deductions (CNPS, IR, absences, advances)
 - Bulk salary generation for all eligible employees per month
+
+---
+Task ID: 2
+Agent: carburant-api-agent
+Task: Create all API routes for carburant (fuel management) module
+
+Work Log:
+- Created /api/carburant/route.ts (main endpoint with KPIs: totalStockDisponible, totalAchatsDirect, coutTotal, totalLitresConsommes; includes recentBonAchats, recentSorties, recentReleves last 30 days)
+- Created /api/carburant/stock/route.ts (GET with computed quantiteDisponible per stock; POST with typeCarburant validation)
+- Created /api/carburant/stock/[id]/route.ts (GET with chantier relation; PUT for capacite/seuilAlerte; DELETE blocks if entrees/sorties exist)
+- Created /api/carburant/entrees/route.ts (GET with chantierId/stockId/dateDebut/dateFin filters; POST with stock existence check, auto prixTotal fallback)
+- Created /api/carburant/entrees/[id]/route.ts (DELETE with existence check)
+- Created /api/carburant/sorties/route.ts (GET with chantierId/stockId/equipementId/dateDebut/dateFin filters; POST updates equipement.compteurHeuresActuel when compteurHeuresApres provided)
+- Created /api/carburant/sorties/[id]/route.ts (DELETE with existence check)
+- Created /api/carburant/achats/route.ts (GET with chantierId/equipementId/dateDebut/dateFin filters; POST with typeCarburant validation, updates equipement.compteurHeuresActuel)
+- Created /api/carburant/achats/[id]/route.ts (DELETE with existence check)
+- Created /api/carburant/releves/route.ts (GET with chantierId/equipementId filter, ordered by dateReleve desc; POST updates equipement.compteurHeuresActuel)
+- Created /api/carburant/releves/[id]/route.ts (DELETE with existence check)
+- Created /api/carburant/stats/route.ts (GET with chantierId/mois/annee; returns coutTotalMois, litresTotalMois, coutMoyenLitre, consommationParEngin with litresParHeure calculation, tendanceMensuelle last 6 months)
+- Ran bun run lint: no errors
+- Dev server compiled successfully
+
+Stage Summary:
+- 11 API route files created for full fuel management CRUD
+- Supports both STOCK_PHYSIQUE and ACHAT_DIRECT modes
+- Stats endpoint with consumption analysis per equipment and monthly trend
+
+---
+Task ID: 3
+Agent: carburant-frontend-agent
+Task: Create carburant-view.tsx fuel management frontend component
+
+Work Log:
+- Created /src/components/carburant/carburant-view.tsx (~1100 lines)
+- Implemented dual mode: STOCK_PHYSIQUE and ACHAT_DIRECT with dynamic tab switching
+- Implemented 3 tabs: Stock Carburant (STOCK_PHYSIQUE), Achats Station (ACHAT_DIRECT), Consommation & Compteurs (both modes)
+- Added 4 KPI cards: Stock disponible, Coût carburant (mois), Litres consommés (mois), Prix moyen / litre
+- Chantier selector with mode badge display (Stock physique / Achat direct)
+- Tab 1 (Stock): stock tanks table with status badges, entrées form + table, sorties form + table
+- Tab 2 (Achats Station): full achat form + table with all fields (station, reçu, engin, opérateur, compteurs)
+- Tab 3 (Consommation): relevés compteur form + table, résumé consommation par engin with L/h and color-coded badges
+- Stock creation dialog with type, capacity, threshold fields
+- Delete confirmation AlertDialog for all entity types
+- Auto-calculated prixTotal in entrée and achat forms
+- ACHAT_DIRECT info banner when mode is active
+- Stock alert banner when tanks are low/critical
+- Responsive design with mobile-first approach, overflow-x-auto tables, hidden columns on small screens
+- Framer Motion animations on KPI cards, table rows, alert banners
+- FCFA formatting with fr-FR locale, date formatting with date-fns fr locale
+- Follows exact StocksView patterns: chantier selector, loading skeletons, empty states, toast notifications
+- All API endpoints wired: /api/carburant, /api/carburant/stock, /api/carburant/entrees, /api/carburant/sorties, /api/carburant/achats, /api/carburant/releves, /api/carburant/stats
+- Ran bun run lint: 0 errors, 0 warnings
+- Dev server compiled successfully
+
+Stage Summary:
+- Full fuel management UI component created
+- Supports both physical stock and direct station purchase modes
+- Equipment hour meter tracking integrated with counter readings
+- Stats per equipment with L/h consumption calculation and color-coded thresholds
+- Consistent with O.P.U.C amber theme and existing component patterns

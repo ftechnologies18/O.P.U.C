@@ -110,6 +110,12 @@ model Chantier {
   contratsST          ContratST[]
   locationsEngins     LocationEngin[]
   documents           DocumentChantier[]
+  modeCarburant       String  @default("STOCK_PHYSIQUE") // STOCK_PHYSIQUE, ACHAT_DIRECT
+  stocksCarburant     StockCarburant[]
+  entreesCarburant    EntreeCarburant[]
+  sortiesCarburant    SortieCarburant[]
+  achatsCarburant     BonAchatCarburant[]
+  relevesCompteur    ReleveCompteurEngin[]
 }
 
 // Workers / Personnel (Journaliers + Salariés sous contrat)
@@ -297,6 +303,10 @@ model Equipement {
   entreprise      Entreprise? @relation(fields: [entrepriseId], references: [id])
   affectations    EquipementAffectation[]
   locations       LocationEngin[]
+  compteurHeuresActuel Float @default(0) // Compteur d'heures actuel
+  sortiesCarburant    SortieCarburant[]
+  achatsCarburant     BonAchatCarburant[]
+  relevesCompteur    ReleveCompteurEngin[]
 }
 
 model EquipementAffectation {
@@ -441,6 +451,97 @@ model RapportJournalier {
   chantier       Chantier  @relation(fields: [chantierId], references: [id])
   auteur         User      @relation(fields: [auteurId], references: [id])
   photos         Photo[]
+}
+
+// ═══════════════════════════════════════════════════════════
+//   FUEL MANAGEMENT (Carburant)
+// ═══════════════════════════════════════════════════════════
+
+// Fuel stock per chantier (for STOCK_PHYSIQUE mode)
+model StockCarburant {
+  id            String   @id @default(cuid())
+  chantierId    String
+  typeCarburant String   @default("GASOIL") // GASOIL, ESSENCE
+  capacite      Float    @default(5000)     // Capacity in liters
+  seuilAlerte   Float    @default(500)      // Alert threshold
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  chantier      Chantier        @relation(fields: [chantierId], references: [id])
+  entrees       EntreeCarburant[]
+  sorties       SortieCarburant[]
+}
+
+// Fuel supply entries (for STOCK_PHYSIQUE mode)
+model EntreeCarburant {
+  id              String   @id @default(cuid())
+  stockCarburantId String
+  chantierId      String
+  dateEntree      DateTime @default(now())
+  quantite        Float    // Liters
+  prixUnitaire    Float    // FCFA per liter
+  prixTotal       Float    // Total cost
+  fournisseur     String?
+  numeroBL        String?  // Bon de livraison
+  observation     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  stock           StockCarburant @relation(fields: [stockCarburantId], references: [id])
+  chantier        Chantier      @relation(fields: [chantierId], references: [id])
+}
+
+// Fuel distribution from stock (for STOCK_PHYSIQUE mode)
+model SortieCarburant {
+  id                String    @id @default(cuid())
+  stockCarburantId  String
+  chantierId        String
+  equipementId      String?   // Which equipment received fuel
+  dateSortie        DateTime  @default(now())
+  quantite          Float     // Liters
+  operateur         String?
+  compteurHeuresAvant  Float?  // Hour meter before fueling
+  compteurHeuresApres  Float?  // Hour meter after fueling
+  observation       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  stock             StockCarburant @relation(fields: [stockCarburantId], references: [id])
+  chantier          Chantier      @relation(fields: [chantierId], references: [id])
+  equipement        Equipement?  @relation(fields: [equipementId], references: [id])
+}
+
+// Direct purchase from gas station (for ACHAT_DIRECT mode)
+model BonAchatCarburant {
+  id                  String    @id @default(cuid())
+  chantierId          String
+  dateAchat           DateTime  @default(now())
+  typeCarburant       String    @default("GASOIL")
+  quantite            Float     // Liters
+  prixUnitaire        Float     // FCFA per liter
+  prixTotal           Float     // Total cost
+  stationService      String?   // Gas station name
+  numeroRecu          String?   // Receipt number
+  equipementId        String?   // Which equipment was fueled
+  operateur           String?
+  compteurHeuresAvant  Float?
+  compteurHeuresApres  Float?
+  observation         String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  chantier            Chantier     @relation(fields: [chantierId], references: [id])
+  equipement          Equipement?  @relation(fields: [equipementId], references: [id])
+}
+
+// Hour meter readings per equipment
+model ReleveCompteurEngin {
+  id            String    @id @default(cuid())
+  equipementId  String
+  chantierId    String
+  dateReleve    DateTime  @default(now())
+  heuresKm      Float     // Current reading
+  observation    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  equipement    Equipement @relation(fields: [equipementId], references: [id])
+  chantier      Chantier   @relation(fields: [chantierId], references: [id])
 }
 
 // Notifications

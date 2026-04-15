@@ -18,6 +18,7 @@ import { RapportsView } from '@/components/rapports/rapports-view'
 import { PlanningView } from '@/components/planning/planning-view'
 import { SousTraitantsView } from '@/components/sous-traitants/sous-traitants-view'
 import { EnginsView } from '@/components/engins/engins-view'
+import { CarburantView } from '@/components/carburant/carburant-view'
 import { DocumentsView } from '@/components/documents/documents-view'
 import { ParametresView } from '@/components/parametres/parametres-view'
 import { PhotosView } from '@/components/photos/photos-view'
@@ -69,6 +70,8 @@ function AppContent() {
         return <SousTraitantsView />
       case 'engins':
         return <EnginsView />
+      case 'carburant':
+        return <CarburantView />
       case 'photos':
         return <PhotosView />
       case 'documents':

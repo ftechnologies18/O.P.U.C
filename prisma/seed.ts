@@ -10,6 +10,11 @@ async function main() {
   console.log('🗑️  Cleaning existing data...')
   await prisma.notification.deleteMany()
   await prisma.photo.deleteMany()
+  await prisma.releveCompteurEngin.deleteMany()
+  await prisma.bonAchatCarburant.deleteMany()
+  await prisma.sortieCarburant.deleteMany()
+  await prisma.entreeCarburant.deleteMany()
+  await prisma.stockCarburant.deleteMany()
   await prisma.salaireMensuel.deleteMany()
   await prisma.sortieStock.deleteMany()
   await prisma.entreeStock.deleteMany()
@@ -109,6 +114,7 @@ async function main() {
       statut: 'EN_COURS',
       description: 'Construction d\'une résidence de 24 appartements T3/T4 sur 4 étages avec parking souterrain.',
       entrepriseId: entreprise.id,
+      modeCarburant: 'STOCK_PHYSIQUE',
     },
   })
 
@@ -123,6 +129,7 @@ async function main() {
       statut: 'EN_PREPARATION',
       description: 'Centre commercial de 3 niveaux avec 45 boutiques, espace alimentaire et parking de 200 places.',
       entrepriseId: entreprise.id,
+      modeCarburant: 'ACHAT_DIRECT',
     },
   })
 
@@ -778,6 +785,189 @@ async function main() {
       observations: 'Transport matériaux et évacuation déblais',
     },
   })
+
+  // 18. Create fuel management data (Carburant)
+  console.log('⛽ Creating Fuel Management data...')
+
+  // --- Chantier 1: STOCK_PHYSIQUE mode ---
+  // Create fuel stock tanks
+  const stockGasoil1 = await prisma.stockCarburant.create({
+    data: {
+      chantierId: chantier1.id,
+      typeCarburant: 'GASOIL',
+      capacite: 5000,
+      seuilAlerte: 500,
+    },
+  })
+  const stockEssence1 = await prisma.stockCarburant.create({
+    data: {
+      chantierId: chantier1.id,
+      typeCarburant: 'ESSENCE',
+      capacite: 500,
+      seuilAlerte: 100,
+    },
+  })
+
+  // Fuel entries (réapprovisionnement cuves)
+  await prisma.entreeCarburant.create({
+    data: {
+      stockCarburantId: stockGasoil1.id,
+      chantierId: chantier1.id,
+      dateEntree: new Date('2026-01-05'),
+      quantite: 3000,
+      prixUnitaire: 650,
+      prixTotal: 1950000,
+      fournisseur: 'Total Énergies Sénégal',
+      numeroBL: 'BL-CARB-2026-001',
+      observation: 'Livraison initiale cuve gasoil',
+    },
+  })
+  await prisma.entreeCarburant.create({
+    data: {
+      stockCarburantId: stockGasoil1.id,
+      chantierId: chantier1.id,
+      dateEntree: new Date('2026-01-20'),
+      quantite: 2000,
+      prixUnitaire: 655,
+      prixTotal: 1310000,
+      fournisseur: 'Shell Sénégal',
+      numeroBL: 'BL-CARB-2026-002',
+      observation: '2ème livraison gasoil',
+    },
+  })
+  await prisma.entreeCarburant.create({
+    data: {
+      stockCarburantId: stockGasoil1.id,
+      chantierId: chantier1.id,
+      dateEntree: new Date('2026-02-10'),
+      quantite: 1500,
+      prixUnitaire: 660,
+      prixTotal: 990000,
+      fournisseur: 'Total Énergies Sénégal',
+      numeroBL: 'BL-CARB-2026-003',
+    },
+  })
+  await prisma.entreeCarburant.create({
+    data: {
+      stockCarburantId: stockEssence1.id,
+      chantierId: chantier1.id,
+      dateEntree: new Date('2026-01-10'),
+      quantite: 300,
+      prixUnitaire: 750,
+      prixTotal: 225000,
+      fournisseur: 'PétroSA',
+      numeroBL: 'BL-CARB-2026-004',
+    },
+  })
+
+  // Fuel distributions (sorties vers engins)
+  await prisma.sortieCarburant.create({
+    data: {
+      stockCarburantId: stockGasoil1.id,
+      chantierId: chantier1.id,
+      equipementId: engin1.id,
+      dateSortie: new Date('2026-01-08'),
+      quantite: 120,
+      operateur: 'Kane Boubacar',
+      compteurHeuresAvant: 2450,
+      compteurHeuresApres: 2478,
+    },
+  })
+  await prisma.sortieCarburant.create({
+    data: {
+      stockCarburantId: stockGasoil1.id,
+      chantierId: chantier1.id,
+      equipementId: engin1.id,
+      dateSortie: new Date('2026-01-15'),
+      quantite: 130,
+      operateur: 'Kane Boubacar',
+      compteurHeuresAvant: 2478,
+      compteurHeuresApres: 2508,
+    },
+  })
+  await prisma.sortieCarburant.create({
+    data: {
+      stockCarburantId: stockGasoil1.id,
+      chantierId: chantier1.id,
+      equipementId: engin5.id,
+      dateSortie: new Date('2026-01-10'),
+      quantite: 180,
+      operateur: 'Diallo Amadou',
+      compteurHeuresAvant: 5800,
+      compteurHeuresApres: 5835,
+    },
+  })
+  await prisma.sortieCarburant.create({
+    data: {
+      stockCarburantId: stockGasoil1.id,
+      chantierId: chantier1.id,
+      equipementId: engin4.id,
+      dateSortie: new Date('2026-01-12'),
+      quantite: 80,
+      operateur: 'Diop Ibrahima',
+      compteurHeuresAvant: 12400,
+      compteurHeuresApres: 12430,
+    },
+  })
+  await prisma.sortieCarburant.create({
+    data: {
+      stockCarburantId: stockGasoil1.id,
+      chantierId: chantier1.id,
+      equipementId: engin5.id,
+      dateSortie: new Date('2026-01-20'),
+      quantite: 200,
+      operateur: 'Diallo Amadou',
+      compteurHeuresAvant: 5835,
+      compteurHeuresApres: 5875,
+    },
+  })
+  await prisma.sortieCarburant.create({
+    data: {
+      stockCarburantId: stockEssence1.id,
+      chantierId: chantier1.id,
+      equipementId: engin6.id,
+      dateSortie: new Date('2026-01-12'),
+      quantite: 45,
+      operateur: 'Ndiaye Ousmane',
+      compteurHeuresAvant: 890,
+      compteurHeuresApres: 920,
+    },
+  })
+
+  // Update equipment hour meters
+  await prisma.equipement.update({
+    where: { id: engin1.id },
+    data: { compteurHeuresActuel: 2508 },
+  })
+  await prisma.equipement.update({
+    where: { id: engin4.id },
+    data: { compteurHeuresActuel: 12430 },
+  })
+  await prisma.equipement.update({
+    where: { id: engin5.id },
+    data: { compteurHeuresActuel: 5875 },
+  })
+  await prisma.equipement.update({
+    where: { id: engin6.id },
+    data: { compteurHeuresActuel: 920 },
+  })
+
+  // Hour meter readings
+  await prisma.releveCompteurEngin.createMany({
+    data: [
+      { equipementId: engin1.id, chantierId: chantier1.id, dateReleve: new Date('2026-01-01'), heuresKm: 2400, observation: 'Relevé début janvier' },
+      { equipementId: engin1.id, chantierId: chantier1.id, dateReleve: new Date('2026-01-15'), heuresKm: 2478, observation: 'Relevé milieu janvier' },
+      { equipementId: engin1.id, chantierId: chantier1.id, dateReleve: new Date('2026-02-01'), heuresKm: 2508, observation: 'Relevé début février' },
+      { equipementId: engin5.id, chantierId: chantier1.id, dateReleve: new Date('2026-01-01'), heuresKm: 5750, observation: 'Bulldozer début janvier' },
+      { equipementId: engin5.id, chantierId: chantier1.id, dateReleve: new Date('2026-02-01'), heuresKm: 5875, observation: 'Bulldozer début février' },
+      { equipementId: engin4.id, chantierId: chantier1.id, dateReleve: new Date('2026-01-01'), heuresKm: 12300, observation: 'Camion début janvier' },
+      { equipementId: engin4.id, chantierId: chantier1.id, dateReleve: new Date('2026-02-01'), heuresKm: 12430, observation: 'Camion début février' },
+    ],
+  })
+
+  // --- Chantier 2: ACHAT_DIRECT mode (future, but create a couple entries) ---
+  // (when chantier 2 starts, they'll buy directly from stations)
+  // No data yet since chantier2 is EN_PREPARATION
 
   console.log('✅ Seeding completed successfully!')
   console.log('')

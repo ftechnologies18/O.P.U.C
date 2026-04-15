@@ -29,6 +29,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Truck,
+  Fuel,
 } from 'lucide-react'
 import { SearchCommand } from './search-command'
 import { UserMenu } from './user-menu'
@@ -67,6 +68,7 @@ const navSections = [
       { id: 'budget', label: 'Budget', icon: PieChart },
       { id: 'stocks', label: 'Stocks', icon: Package },
       { id: 'engins', label: 'Parc Engins', icon: Truck },
+      { id: 'carburant', label: 'Carburant', icon: Fuel },
     ],
   },
   {
