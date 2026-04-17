@@ -1,0 +1,40 @@
+{
+  "name": "O.P.U.C. — Outil de Pilotage Unifié de Chantier",
+  "short_name": "O.P.U.C",
+  "description": "Plateforme de gestion et de pilotage intelligent de chantiers de construction BTP",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#059669",
+  "orientation": "any",
+  "scope": "/",
+  "lang": "fr",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pwa-icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Pointage",
+      "url": "/?view=pointage",
+      "description": "Accéder au pointage journalier"
+    },
+    {
+      "name": "Rapport du jour",
+      "url": "/?view=rapports",
+      "description": "Rédiger un rapport journalier"
+    }
+  ]
+}

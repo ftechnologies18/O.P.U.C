@@ -1,7 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
+import { OfflineStatusIndicator } from "@/components/pwa/offline-status-indicator";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,13 +15,34 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: '#059669',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  display: 'standalone',
+};
+
 export const metadata: Metadata = {
   title: "O.P.U.C. — Outil de Pilotage Unifié de Chantier",
   description: "Plateforme de gestion et de pilotage intelligent de chantiers de construction. Gérez vos chantiers, le personnel, les stocks et les budgets en un seul endroit.",
   keywords: ["OPUC", "gestion chantier", "construction", "pilotage", "BTP", "Sénégal"],
   authors: [{ name: "OPUC Team" }],
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'O.P.U.C.',
+  },
   icons: {
-    icon: '/icon.svg',
+    icon: [
+      { url: '/pwa-icon-512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icon.svg', sizes: 'any', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/pwa-icon-512.png', sizes: '512x512' },
+    ],
   },
 };
 
@@ -30,11 +53,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" suppressHydrationWarning>
+      <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="O.P.U.C." />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="format-detection" content="telephone=no" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
+        <ServiceWorkerRegistration />
         {children}
         <Toaster />
+        <OfflineStatusIndicator />
       </body>
     </html>
   );
