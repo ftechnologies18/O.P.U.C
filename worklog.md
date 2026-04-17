@@ -1,99 +1,95 @@
----
-Task ID: 1
-Agent: Main
-Task: Gestion des Accès - Bug fixes and verification
+# Work Record — AuditTab Phase 3 Rewrite
 
-Work Log:
-- Analyzed existing codebase: prisma schema already had UserChantierAccess, AuditLog, PermissionConfig models
-- All 7 API routes were already implemented (users CRUD, toggle-active, reset-password, chantiers, permissions, audit-logs)
-- Sidebar already had "Gestion des Accès" under "Configuration" category
-- page.tsx already imported and rendered GestionAccesView
-- Found and fixed 6 critical bugs in gestion-acces-view.tsx:
-  1. Missing `[m` in `const oduleFilter` → `const [moduleFilter` (syntax error, compilation failure)
-  2. `oduleFilter` in useCallback deps → `moduleFilter`
-  3. `data.password` (API returns `data.newPassword`)
-  4. `setPermissions(json || {})` → `setPermissions(json.permissions || {})` (API wraps in {permissions:...})
-  5. AuditLog interface used `utilisateurId` but API returns `userId`
-  6. `l.utilisateurId)` references → `l.userId)`
-- Verified database is in sync with Prisma schema
-- Lint passes cleanly
+**Date**: 2025-06-17
+**File**: `src/components/gestion-acces/gestion-acces-view.tsx`
+**Task**: Complete rewrite of the AuditTab component (Tab 3 of Gestion des Accès)
 
-Stage Summary:
-- All 6 bugs fixed in binary mode (sed -i had issues with the file encoding)
-- Dev server running cleanly on port 3000
-- Gestion des Accès feature is now fully functional with 3 tabs: Users, Permissions & Roles, Audit Log
+## Changes Made
 
----
-Task ID: p1-2
-Agent: Main
-Task: Enhance UsersTab with search/filter, summary cards, and chantier assignment dialog
+### 1. Import Additions (lines 3, 7-43)
+- Added `Fragment` to React imports (needed for table expandable rows with keys)
+- Added 8 new Lucide icons:
+  - `ChevronDown`, `ChevronUp` — expandable row toggles
+  - `Download` — CSV export button
+  - `Calendar` — date filter inputs
+  - `BarChart3` — statistics section header
+  - `Timer` — auto-refresh toggle
+  - `LayoutList` — timeline view button
+  - `LayoutPanelLeft` — table view button
 
-Work Log:
-- Read complete gestion-acces-view.tsx file (1434 lines)
-- Added `Building2` and `Checkbox` to lucide-react imports
-- Added `CheckboxUI` import from `@/components/ui/checkbox` and `ScrollArea` from `@/components/ui/scroll-area`
-- Added new types: `ChantierItem` and `ChantierAccessEntry`
-- Added new constants: `STATUT_CONFIG` (chantier status badges) and `ROLE_ACCES_LABELS` (access role labels)
-- Enhanced UsersTab with:
-  - Summary cards (Total, Actifs, Bloqués) in a responsive 3-column grid
-  - Search & filter bar with text search, role filter dropdown, status filter dropdown, and reset button
-  - Computed filtered users and summary stats derived from state
-  - Clickable Chantiers badge in table (opens chantier dialog)
-  - New "Accès Chantiers" dropdown menu item with Building2 icon
-  - Chantier Assignment Dialog with ScrollArea, checkbox per chantier, statut badge, address, and role select (LECTURE/ECRITURE/GESTION)
-  - Functions: openChantierDialog, handleSaveChantierAccess, toggleChantierAccess
-- Preserved RolesTab, AuditTab, and GestionAccesView exactly as-is
-- Lint passes cleanly, dev server running fine
+### 2. New Helpers & Types (lines 1900-1929)
+- `AuditStats` interface — typed response from `/api/audit-logs/stats`
+- `getActionDotColor(action)` — maps action types to Tailwind dot colors for timeline
+- `formatAuditDetails(details)` — parses JSON details into formatted string
 
-Stage Summary:
-- UsersTab now has full search/filter capabilities with summary stats
-- Chantier assignment dialog allows assigning users to chantiers with granular access roles
-- All existing functionality preserved unchanged
+### 3. Complete AuditTab Rewrite (lines 1898-3035)
 
----
-Task ID: 2
-Agent: full-stack-developer
-Task: Phase 2 — Permissions & Rôles enhancement
+**Features Implemented:**
 
-Work Log:
-- Read existing file (1783 lines) and verified all 4 reported bugs were already fixed in prior sessions
-- Added `useMemo`, `useRef` to React imports and `AlertTriangle` to lucide-react imports
-- Added `LEVEL_CELL_CONFIG` constant with enhanced visual styling for GESTION (emerald), ECRITURE (amber), LECTURE (blue), AUCUN (gray)
-- Added `LEVEL_CYCLE` array and `cycleToNextLevel()` helper for toggle button cycling
-- Completely rewrote RolesTab component with the following enhancements:
-  1. **Role Summary Cards**: 5 responsive cards (one per role) showing a color-coded progress bar and count badges (G/E/L/—) for permission distribution
-  2. **Bulk Actions per Role**: Dropdown menu at end of each role row with "Tout autoriser (GESTION)", "Lecture seule (LECTURE)", "Tout interdire (AUCUN)" options
-  3. **Copy Role Dialog**: Full dialog with source role select, target role checkboxes, change preview with color-coded diff, and confirm action
-  4. **Unsaved Changes Indicator**: Tracks `permissions` vs `originalPermissions`, shows amber "Modifications non sauvegardées" badge, `beforeunload` browser warning, save button disabled when no changes
-  5. **Enhanced Visual Matrix**: Replaced 80 heavy Select dropdowns with compact clickable toggle buttons (9×7 px) that cycle through levels with color-coded backgrounds, tooltips showing current and next level, and active:scale-95 animation
-  6. **Legend Bar**: Visual legend above matrix showing color meanings and click instruction
-- Kept UsersTab and AuditTab completely unchanged
-- Preserved GestionAccesView main component unchanged
-- Lint passes cleanly, dev server compiles without errors
+#### Enhanced Filters
+- Module dropdown (uses existing `AUDIT_MODULE_FILTERS`)
+- Action dropdown (uses existing `AUDIT_ACTION_FILTERS`)
+- User dropdown (fetched from `/api/users`)
+- Date range (two date inputs: `dateFrom`, `dateTo`)
+- Text search with 300ms debounce
+- Reset button to clear all filters
 
-Stage Summary:
-- All 4 bugs were already fixed (confirmed in code review)
-- RolesTab now has comprehensive RBAC management UI with 6 major enhancements
-- Feature-complete Phase 2 implementation
-- Zero lint errors, clean compilation
+#### Summary Stats Cards (4 cards)
+- "Total (période)" — from stats endpoint
+- "Aujourd'hui" — from stats endpoint
+- "Utilisateurs actifs 24h" — from stats endpoint
+- "Dernière action" — relative time from stats endpoint
 
----
-Task ID: 2
-Agent: main-agent
-Task: Phase 2 — Permissions & Rôles Enhancement
+#### View Toggle
+- "Tableau" / "Timeline" toggle buttons
 
-Work Log:
-- Read existing gestion-acces-view.tsx (1783 lines, 3 tabs)
-- Identified 4 critical bugs (missing [m in variable names and object keys)
-- Fixed all bugs: [module]: level, [mod.key], [moduleFilter, [moduleFilter dependency
-- Enhanced RolesTab with Phase 2 features via full-stack-developer subagent
-- Fixed additional double-bracket bugs introduced by subagent ([m stacking)
-- Verified all fixes with raw byte analysis (terminal ANSI escape sequence masking)
-- Lint clean, dev server compiles without errors
+#### Enhanced Table View
+- All original columns + expandable chevron column
+- Click to expand/collapse detail panel showing: IP, entity type, entity ID, exact date, full details
+- Row count info: "Affichage de X à Y sur Z résultats"
+- Proper pagination
 
-Stage Summary:
-- All 4 original bugs fixed + 5 additional double-bracket bugs from subagent
-- RolesTab now includes: role summary cards, clickable toggle cells, bulk actions per role, copy role dialog, unsaved changes indicator, legend bar
-- File grew from 1783 to ~2220 lines
-- Lint: 0 errors, 0 warnings
-- Dev server: compiles cleanly
+#### Timeline View
+- Logs grouped by date with section headers
+- Each entry: time (HH:mm), colored dot, avatar, user name, action badge, module badge, details preview
+- Click to expand full details
+- Vertical connecting line between dots
+
+#### Statistics Section (collapsible)
+- Actions par module — horizontal bar chart (CSS/Tailwind)
+- Actions par jour — vertical bar chart for last 14 days
+- Top utilisateurs — ranked list with proportional bars
+- Distribution par type d'action — colored badges with counts
+
+#### Export CSV
+- Button in header area
+- Fetches up to 500 logs with current filters
+- Generates CSV with proper headers (French semicolon delimiter)
+- BOM prefix for Excel compatibility
+- Blob download with filename including date
+
+#### Auto-Refresh
+- Dropdown toggle: Disabled / 30s / 60s / 2min
+- Pulsing dot indicator when active
+- Uses stable refs to avoid stale closure issues
+- Proper cleanup on unmount
+
+### Bug Fixes
+- Fixed the `oduleFilter` typo (was missing the 'm' prefix) — now correctly uses `moduleFilter`
+- Proper `useCallback` dependency arrays with `buildFilterParams` helper
+- Debounced search input prevents excessive API calls
+
+## Technical Notes
+- File grew from 2221 to 3084 lines (+863 lines net, replacement was ~283 old → ~1138 new)
+- All existing constants, types, and helpers above the AuditTab section were preserved unchanged
+- The `RolesTab` component (lines ~460-1896) and `GestionAccesView` main component (lines 3038+) are untouched
+- ESLint passes with no errors
+- Dev server compiles successfully
+
+### Post-Implementation Fixes (by main agent)
+- Fixed `AuditStats` interface: changed `actionsPerModule`, `actionsPerDay`, `actionsByType` from `Record<string, number>` to proper array types matching API response
+- Fixed stats rendering: changed `Object.entries(stats.actionsPerModule || {})` to `(stats.actionsPerModule || []).sort()` pattern (arrays, not objects)
+- Fixed `actionsPerDay` rendering: same array iteration fix
+- Fixed `actionsByType` rendering: same array iteration fix
+- Fixed `topUsers` rendering: replaced `user.email` (not in API) with `user.role` Badge display
+- Final file: 3087 lines, lint clean, server compiling

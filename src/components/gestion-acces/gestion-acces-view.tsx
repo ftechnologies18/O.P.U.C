@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { Fragment, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
@@ -26,12 +26,20 @@ import {
   FilterX,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Loader2,
   Save,
   RefreshCw,
   Building2,
   Checkbox,
   AlertTriangle,
+  Download,
+  Calendar,
+  BarChart3,
+  Timer,
+  LayoutList,
+  LayoutPanelLeft,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -1889,87 +1897,450 @@ function RolesTab({ session }: { session: any }) {
 
 // ─── Tab 3: AuditTab ────────────────────────────────────────────────────────
 
+interface AuditStats {
+  totalLogs: number
+  todayLogs: number
+  activeUsers24h: number
+  lastAction: string | null
+  lastActionInfo: { action: string; module: string; userId: string } | null
+  actionsPerModule: { module: string; count: number }[]
+  actionsPerDay: { date: string; count: number }[]
+  topUsers: { userId: string; name: string; role: string | null; count: number }[]
+  actionsByType: { action: string; count: number }[]
+}
+
+function getActionDotColor(action: string): string {
+  const c = ACTION_CONFIG[action]?.className || ''
+  if (c.includes('emerald')) return 'bg-emerald-500'
+  if (c.includes('red')) return 'bg-red-500'
+  if (c.includes('amber')) return 'bg-amber-500'
+  if (c.includes('violet')) return 'bg-violet-500'
+  if (c.includes('blue')) return 'bg-blue-500'
+  if (c.includes('slate')) return 'bg-slate-400'
+  return 'bg-gray-400'
+}
+
+function formatAuditDetails(details: string | null): string {
+  if (!details) return '—'
+  try {
+    const parsed = JSON.parse(details)
+    return typeof parsed === 'object' ? JSON.stringify(parsed, null, 2) : String(parsed)
+  } catch {
+    return details
+  }
+}
+
 function AuditTab() {
+  /* ── State ──────────────────────────────────────────────────────────────── */
   const [logs, setLogs] = useState<AuditLog[]>([])
-  const [pagination, setPagination] = useState<PaginationInfo>({ page: 1, limit: 20, total: 0, totalPages: 0 })
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+  })
   const [loading, setLoading] = useState(true)
 
   // Filters
-  const [oduleFilter, setModuleFilter] = useState('')
+  const [moduleFilter, setModuleFilter] = useState('')
   const [actionFilter, setActionFilter] = useState('')
+  const [userFilter, setUserFilter] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
-  // Summary stats
-  const [todayCount, setTodayCount] = useState(0)
-  const [activeUsers24h, setActiveUsers24h] = useState(0)
-  const [lastActionTime, setLastActionTime] = useState<string | null>(null)
+  // View
+  const [viewMode, setViewMode] = useState<'table' | 'timeline'>('table')
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [showStats, setShowStats] = useState(false)
 
-  const fetchLogs = useCallback(async (page: number = 1) => {
-    setLoading(true)
+  // Auto-refresh
+  const [autoRefresh, setAutoRefresh] = useState(false)
+  const [refreshInterval, setRefreshInterval] = useState(30)
+
+  // Data
+  const [allUsers, setAllUsers] = useState<User[]>([])
+  const [stats, setStats] = useState<AuditStats | null>(null)
+  const [exporting, setExporting] = useState(false)
+
+  // Refs
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fetchLogsRef = useRef<(page?: number) => Promise<void>>(() => Promise.resolve())
+  const fetchStatsRef = useRef<() => Promise<void>>(() => Promise.resolve())
+
+  /* ── Helpers ────────────────────────────────────────────────────────────── */
+  const buildFilterParams = useCallback((): URLSearchParams => {
+    const params = new URLSearchParams()
+    if (moduleFilter) params.set('module', moduleFilter)
+    if (actionFilter) params.set('action', actionFilter)
+    if (userFilter) params.set('userId', userFilter)
+    if (searchQuery) params.set('search', searchQuery)
+    if (dateFrom) params.set('dateFrom', dateFrom)
+    if (dateTo) params.set('dateTo', dateTo)
+    return params
+  }, [moduleFilter, actionFilter, userFilter, searchQuery, dateFrom, dateTo])
+
+  const hasActiveFilters = !!(
+    moduleFilter || actionFilter || userFilter || searchQuery || dateFrom || dateTo
+  )
+
+  /* ── Fetch Functions ────────────────────────────────────────────────────── */
+  const fetchLogs = useCallback(
+    async (page: number = 1) => {
+      setLoading(true)
+      try {
+        const params = buildFilterParams()
+        params.set('page', String(page))
+        params.set('limit', '20')
+        const res = await fetch(`/api/audit-logs?${params.toString()}`)
+        if (res.ok) {
+          const json = await res.json()
+          setLogs(json.logs || [])
+          setPagination(
+            json.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 }
+          )
+        } else {
+          toast.error("Erreur lors du chargement du journal d'audit")
+        }
+      } catch {
+        toast.error('Erreur de connexion')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [buildFilterParams]
+  )
+
+  const fetchStats = useCallback(async () => {
     try {
-      const params = new URLSearchParams()
-      params.set('page', String(page))
-      params.set('limit', '20')
-      if (moduleFilter) params.set('module', moduleFilter)
-      if (actionFilter) params.set('action', actionFilter)
-
-      const res = await fetch(`/api/audit-logs?${params.toString()}`)
+      const params = buildFilterParams()
+      params.set('days', '30')
+      const res = await fetch(`/api/audit-logs/stats?${params.toString()}`)
       if (res.ok) {
-        const json = await res.json()
-        setLogs(json.logs || [])
-        setPagination(json.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 })
-
-        // Compute summary from all logs
-        const now = new Date()
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-        const h24ago = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-
-        const allLogs: AuditLog[] = json.logs || []
-        setTodayCount(allLogs.filter((l) => new Date(l.createdAt) >= todayStart).length)
-        const activeUsers = new Set(
-          allLogs
-            .filter((l) => new Date(l.createdAt) >= h24ago && l.userId)
-            .map((l) => l.userId)
-        )
-        setActiveUsers24h(activeUsers.size)
-        setLastActionTime(allLogs.length > 0 ? allLogs[0].createdAt : null)
-      } else {
-        toast.error("Erreur lors du chargement du journal d'audit")
+        setStats(await res.json())
       }
     } catch {
-      toast.error('Erreur de connexion')
-    } finally {
-      setLoading(false)
+      /* silent — stats are supplementary */
     }
-  }, [moduleFilter, actionFilter])
+  }, [buildFilterParams])
 
-  useEffect(() => {
-    fetchLogs(1)
-  }, [fetchLogs])
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/users')
+      if (res.ok) {
+        const json = await res.json()
+        setAllUsers(json.users || [])
+      }
+    } catch {
+      /* silent */
+    }
+  }, [])
 
-  const resetFilters = () => {
+  /* ── Actions ────────────────────────────────────────────────────────────── */
+  const resetFilters = useCallback(() => {
     setModuleFilter('')
     setActionFilter('')
-  }
+    setUserFilter('')
+    setSearchInput('')
+    setSearchQuery('')
+    setDateFrom('')
+    setDateTo('')
+  }, [])
 
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Header */}
+  const toggleExpanded = useCallback((id: string) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const handleExportCSV = useCallback(async () => {
+    setExporting(true)
+    try {
+      const params = buildFilterParams()
+      params.set('export', 'csv')
+      params.set('limit', '500')
+      const res = await fetch(`/api/audit-logs?${params.toString()}`)
+      if (!res.ok) {
+        toast.error("Erreur lors de l'export")
+        return
+      }
+      const json = await res.json()
+      const exportLogs: AuditLog[] = json.logs || []
+
+      const headers = [
+        'Date',
+        'Utilisateur',
+        'Email',
+        'Module',
+        'Action',
+        'Type Entité',
+        'ID Entité',
+        'Détails',
+        'Adresse IP',
+      ]
+      const rows = exportLogs.map((log) => [
+        formatExactTime(log.createdAt),
+        log.utilisateur?.name || 'Utilisateur supprimé',
+        log.utilisateur?.email || '',
+        getModuleLabel(log.module),
+        getActionBadge(log.action).label,
+        log.entityType || '',
+        log.entityId || '',
+        log.details || '',
+        log.adresseIp || '',
+      ])
+      const csvContent = [
+        headers.join(';'),
+        ...rows.map((row) =>
+          row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(';')
+        ),
+      ].join('\n')
+
+      const blob = new Blob(['\ufeff' + csvContent], {
+        type: 'text/csv;charset=utf-8;',
+      })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      toast.success(`${exportLogs.length} entrées exportées en CSV`)
+    } catch {
+      toast.error("Erreur lors de l'export")
+    } finally {
+      setExporting(false)
+    }
+  }, [buildFilterParams])
+
+  /* ── Refs for auto-refresh (stable references) ──────────────────────────── */
+  fetchLogsRef.current = fetchLogs
+  fetchStatsRef.current = fetchStats
+
+  /* ── Effects ────────────────────────────────────────────────────────────── */
+  // Fetch users list once on mount
+  useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
+
+  // Refetch logs + stats when filters change
+  useEffect(() => {
+    fetchLogs(1)
+    fetchStats()
+  }, [fetchLogs, fetchStats])
+
+  // Debounce search input
+  useEffect(() => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    searchTimeoutRef.current = setTimeout(() => {
+      setSearchQuery(searchInput)
+    }, 300)
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    }
+  }, [searchInput])
+
+  // Auto-refresh interval
+  useEffect(() => {
+    if (!autoRefresh) return
+    const id = setInterval(() => {
+      fetchLogsRef.current(pagination.page)
+      fetchStatsRef.current()
+    }, refreshInterval * 1000)
+    return () => clearInterval(id)
+  }, [autoRefresh, refreshInterval, pagination.page])
+
+  /* ── Memos ──────────────────────────────────────────────────────────────── */
+  const groupedLogsByDate = useMemo(() => {
+    const groups: Record<string, AuditLog[]> = {}
+    for (const log of logs) {
+      const dateKey = new Date(log.createdAt).toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+      if (!groups[dateKey]) groups[dateKey] = []
+      groups[dateKey].push(log)
+    }
+    return Object.entries(groups).map(([date, items]) => ({ date, items }))
+  }, [logs])
+
+  const startIdx =
+    pagination.total > 0 ? (pagination.page - 1) * pagination.limit + 1 : 0
+  const endIdx = Math.min(pagination.page * pagination.limit, pagination.total)
+
+  /* ── Shared Detail Panel ────────────────────────────────────────────────── */
+  const renderDetailPanel = (log: AuditLog) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm pt-3 border-t mt-3">
       <div>
-        <h2 className="text-xl font-bold text-foreground">Journal d&apos;Audit</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Historique de toutes les actions
-        </p>
+        <span className="text-muted-foreground text-xs">Adresse IP</span>
+        <p className="font-mono mt-0.5">{log.adresseIp || '—'}</p>
+      </div>
+      <div>
+        <span className="text-muted-foreground text-xs">Type d&apos;entité</span>
+        <p className="mt-0.5">{log.entityType || '—'}</p>
+      </div>
+      <div>
+        <span className="text-muted-foreground text-xs">ID entité</span>
+        <p className="font-mono mt-0.5 text-xs">{log.entityId || '—'}</p>
+      </div>
+      <div>
+        <span className="text-muted-foreground text-xs">Date exacte</span>
+        <p className="mt-0.5">{formatExactTime(log.createdAt)}</p>
+      </div>
+      {log.details && (
+        <div className="sm:col-span-2 lg:col-span-3">
+          <span className="text-muted-foreground text-xs">Détails complets</span>
+          <pre className="mt-1 p-3 bg-muted rounded-md text-xs overflow-x-auto whitespace-pre-wrap max-h-48 overflow-y-auto">
+            {formatAuditDetails(log.details)}
+          </pre>
+        </div>
+      )}
+    </div>
+  )
+
+  /* ── JSX ────────────────────────────────────────────────────────────────── */
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6"
+    >
+      {/* ── Header ────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">
+            Journal d&apos;Audit
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Historique complet de toutes les actions
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Auto-refresh toggle */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant={autoRefresh ? 'default' : 'outline'}
+                size="sm"
+                className="gap-1.5"
+              >
+                <Timer className="w-4 h-4" />
+                {autoRefresh && (
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                )}
+                <span className="hidden sm:inline">
+                  {autoRefresh ? `${refreshInterval}s` : 'Auto'}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setAutoRefresh(false)}>
+                Désactivée
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  setAutoRefresh(true)
+                  setRefreshInterval(30)
+                }}
+              >
+                <span className="flex-1">Toutes les 30s</span>
+                {autoRefresh && refreshInterval === 30 && (
+                  <Check className="w-3 h-3 text-emerald-600" />
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setAutoRefresh(true)
+                  setRefreshInterval(60)
+                }}
+              >
+                <span className="flex-1">Toutes les 60s</span>
+                {autoRefresh && refreshInterval === 60 && (
+                  <Check className="w-3 h-3 text-emerald-600" />
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setAutoRefresh(true)
+                  setRefreshInterval(120)
+                }}
+              >
+                <span className="flex-1">Toutes les 2 min</span>
+                {autoRefresh && refreshInterval === 120 && (
+                  <Check className="w-3 h-3 text-emerald-600" />
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Export CSV */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+            disabled={exporting}
+            className="gap-1.5"
+          >
+            {exporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            <span className="hidden sm:inline">Exporter CSV</span>
+          </Button>
+        </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      {/* ── Summary Stats Cards ──────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
           <Card className="border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground font-medium">Actions aujourd&apos;hui</p>
-                  <p className="text-2xl font-bold mt-1 text-foreground">{todayCount}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+                    Total (période)
+                  </p>
+                  <p className="text-xl sm:text-2xl font-bold mt-1 text-foreground">
+                    {stats?.totalLogs ?? '—'}
+                  </p>
+                </div>
+                <div className="p-2 rounded-lg border bg-gray-50 border-gray-200">
+                  <ScrollText className="w-4 h-4 text-gray-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.05 }}
+        >
+          <Card className="border shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+                    Aujourd&apos;hui
+                  </p>
+                  <p className="text-xl sm:text-2xl font-bold mt-1 text-foreground">
+                    {stats?.todayLogs ?? '—'}
+                  </p>
                 </div>
                 <div className="p-2 rounded-lg border bg-emerald-50 border-emerald-200">
                   <Activity className="w-4 h-4 text-emerald-600" />
@@ -1978,33 +2349,51 @@ function AuditTab() {
             </CardContent>
           </Card>
         </motion.div>
-        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
+
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
           <Card className="border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground font-medium">Utilisateurs actifs 24h</p>
-                  <p className="text-2xl font-bold mt-1 text-foreground">{activeUsers24h}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+                    Utilisateurs actifs 24h
+                  </p>
+                  <p className="text-xl sm:text-2xl font-bold mt-1 text-foreground">
+                    {stats?.activeUsers24h ?? '—'}
+                  </p>
                 </div>
-                <div className="p-2 rounded-lg border bg-blue-50 border-blue-200">
-                  <Users className="w-4 h-4 text-blue-600" />
+                <div className="p-2 rounded-lg border bg-amber-50 border-amber-200">
+                  <Users className="w-4 h-4 text-amber-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
-        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.2 }}>
+
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.15 }}
+        >
           <Card className="border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground font-medium">Dernière action</p>
-                  <p className="text-lg font-bold mt-1 text-foreground">
-                    {lastActionTime ? formatRelativeTime(lastActionTime) : '—'}
+                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+                    Dernière action
+                  </p>
+                  <p className="text-base sm:text-lg font-bold mt-1 text-foreground">
+                    {stats?.lastAction
+                      ? formatRelativeTime(stats.lastAction)
+                      : '—'}
                   </p>
                 </div>
-                <div className="p-2 rounded-lg border bg-amber-50 border-amber-200">
-                  <Clock className="w-4 h-4 text-amber-600" />
+                <div className="p-2 rounded-lg border bg-violet-50 border-violet-200">
+                  <Clock className="w-4 h-4 text-violet-600" />
                 </div>
               </div>
             </CardContent>
@@ -2012,13 +2401,17 @@ function AuditTab() {
         </motion.div>
       </div>
 
-      {/* Filters */}
+      {/* ── Filters ──────────────────────────────────────────────────────── */}
       <Card className="border shadow-sm">
         <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Select value={moduleFilter || '__all__'} onValueChange={(v) => setModuleFilter(v === '__all__' ? '' : v)}>
-              <SelectTrigger className="sm:w-[200px]">
-                <SelectValue placeholder="Module" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Module */}
+            <Select
+              value={moduleFilter || '__all__'}
+              onValueChange={(v) => setModuleFilter(v === '__all__' ? '' : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Tous les modules" />
               </SelectTrigger>
               <SelectContent>
                 {AUDIT_MODULE_FILTERS.map((f) => (
@@ -2028,9 +2421,14 @@ function AuditTab() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={actionFilter || '__all__'} onValueChange={(v) => setActionFilter(v === '__all__' ? '' : v)}>
-              <SelectTrigger className="sm:w-[200px]">
-                <SelectValue placeholder="Action" />
+
+            {/* Action */}
+            <Select
+              value={actionFilter || '__all__'}
+              onValueChange={(v) => setActionFilter(v === '__all__' ? '' : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Toutes les actions" />
               </SelectTrigger>
               <SelectContent>
                 {AUDIT_ACTION_FILTERS.map((f) => (
@@ -2040,8 +2438,66 @@ function AuditTab() {
                 ))}
               </SelectContent>
             </Select>
-            {(moduleFilter || actionFilter) && (
-              <Button variant="outline" onClick={resetFilters} className="gap-2">
+
+            {/* User */}
+            <Select
+              value={userFilter || '__all__'}
+              onValueChange={(v) => setUserFilter(v === '__all__' ? '' : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Tous les utilisateurs" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Tous les utilisateurs</SelectItem>
+                {allUsers.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Rechercher dans les détails…"
+                className="pl-9"
+              />
+            </div>
+          </div>
+
+          {/* Date range + Reset */}
+          <div className="flex flex-col sm:flex-row gap-3 mt-3">
+            <div className="relative flex-1 max-w-[200px]">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                placeholder="Du"
+                className="pl-9"
+              />
+            </div>
+            <div className="relative flex-1 max-w-[200px]">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                placeholder="Au"
+                className="pl-9"
+              />
+            </div>
+            <div className="flex-1" />
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                onClick={resetFilters}
+                className="gap-2 shrink-0"
+              >
                 <FilterX className="w-4 h-4" />
                 Réinitialiser
               </Button>
@@ -2050,7 +2506,36 @@ function AuditTab() {
         </CardContent>
       </Card>
 
-      {/* Audit Table */}
+      {/* ── View Toggle + Row Count ──────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={viewMode === 'table' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('table')}
+            className="gap-1.5"
+          >
+            <LayoutPanelLeft className="w-4 h-4" />
+            Tableau
+          </Button>
+          <Button
+            variant={viewMode === 'timeline' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('timeline')}
+            className="gap-1.5"
+          >
+            <LayoutList className="w-4 h-4" />
+            Timeline
+          </Button>
+        </div>
+        {!loading && pagination.total > 0 && (
+          <p className="text-sm text-muted-foreground">
+            Affichage de {startIdx} à {endIdx} sur {pagination.total} résultats
+          </p>
+        )}
+      </div>
+
+      {/* ── Main Content ─────────────────────────────────────────────────── */}
       {loading ? (
         <AuditTableSkeleton />
       ) : logs.length === 0 ? (
@@ -2059,13 +2544,28 @@ function AuditTab() {
             <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
               <ScrollText className="w-8 h-8 text-amber-600" />
             </div>
-            <h3 className="text-lg font-semibold text-foreground">Aucune action trouvée</h3>
+            <h3 className="text-lg font-semibold text-foreground">
+              Aucune action trouvée
+            </h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Aucune entrée ne correspond à vos filtres.
+              {hasActiveFilters
+                ? 'Aucune entrée ne correspond à vos filtres.'
+                : "Aucune action enregistrée."}
             </p>
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                onClick={resetFilters}
+                className="mt-4 gap-2"
+              >
+                <FilterX className="w-4 h-4" />
+                Réinitialiser les filtres
+              </Button>
+            )}
           </CardContent>
         </Card>
-      ) : (
+      ) : viewMode === 'table' ? (
+        /* ── Table View ──────────────────────────────────────────────────── */
         <Card className="border shadow-sm">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -2074,60 +2574,103 @@ function AuditTab() {
                   <TableRow>
                     <TableHead className="pl-4">Date/Heure</TableHead>
                     <TableHead>Utilisateur</TableHead>
-                    <TableHead className="hidden sm:table-cell">Module</TableHead>
+                    <TableHead className="hidden sm:table-cell">
+                      Module
+                    </TableHead>
                     <TableHead>Action</TableHead>
-                    <TableHead className="hidden md:table-cell">Détails</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Détails
+                    </TableHead>
+                    <TableHead className="w-10 pr-4" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {logs.map((log, index) => {
                     const actionBadge = getActionBadge(log.action)
+                    const isExpanded = expandedRows.has(log.id)
                     return (
-                      <motion.tr
-                        key={log.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.2, delay: index * 0.02 }}
-                        className="border-b transition-colors hover:bg-muted/50"
-                      >
-                        <TableCell className="pl-4 py-3">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-sm text-muted-foreground cursor-default">
-                                {formatRelativeTime(log.createdAt)}
+                      <Fragment key={log.id}>
+                        <motion.tr
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{
+                            duration: 0.15,
+                            delay: index * 0.015,
+                          }}
+                          className="border-b transition-colors hover:bg-muted/50"
+                        >
+                          <TableCell className="pl-4 py-3">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-sm text-muted-foreground cursor-default">
+                                  {formatRelativeTime(log.createdAt)}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {formatExactTime(log.createdAt)}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center text-[10px] font-bold text-amber-700 shrink-0">
+                                {log.utilisateur
+                                  ? getInitials(log.utilisateur.name)
+                                  : '?'}
+                              </div>
+                              <span className="text-sm font-medium text-foreground truncate max-w-[140px]">
+                                {log.utilisateur?.name ||
+                                  'Utilisateur supprimé'}
                               </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {formatExactTime(log.createdAt)}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center text-[10px] font-bold text-amber-700 shrink-0">
-                              {log.utilisateur ? getInitials(log.utilisateur.name) : '?'}
                             </div>
-                            <span className="text-sm font-medium text-foreground truncate max-w-[140px]">
-                              {log.utilisateur?.name || 'Utilisateur supprimé'}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-gray-50 text-gray-700 border-gray-200"
+                            >
+                              {getModuleLabel(log.module)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={cn('text-xs', actionBadge.className)}
+                            >
+                              {actionBadge.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <span className="text-xs text-muted-foreground truncate block max-w-[250px]">
+                              {log.details || '—'}
                             </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">
-                            {getModuleLabel(log.module)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={cn('text-xs', actionBadge.className)}>
-                            {actionBadge.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <span className="text-xs text-muted-foreground truncate block max-w-[250px]">
-                            {log.details || '—'}
-                          </span>
-                        </TableCell>
-                      </motion.tr>
+                          </TableCell>
+                          <TableCell className="pr-4">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => toggleExpanded(log.id)}
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="w-4 h-4" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </TableCell>
+                        </motion.tr>
+                        {isExpanded && (
+                          <TableRow className="bg-muted/30 hover:bg-muted/30">
+                            <TableCell
+                              colSpan={6}
+                              className="px-4 sm:px-6 py-4"
+                            >
+                              {renderDetailPanel(log)}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
                     )
                   })}
                 </TableBody>
@@ -2135,11 +2678,124 @@ function AuditTab() {
             </div>
           </CardContent>
         </Card>
+      ) : (
+        /* ── Timeline View ──────────────────────────────────────────────── */
+        <div className="relative pl-8">
+          {/* Vertical connecting line */}
+          <div className="absolute left-3 top-2 bottom-2 w-px bg-gray-200" />
+
+          {groupedLogsByDate.map(({ date, items }) => (
+            <div key={date} className="mb-6 last:mb-0">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3 capitalize">
+                {date}
+              </h3>
+              <div className="space-y-3">
+                {items.map((log) => {
+                  const actionBadge = getActionBadge(log.action)
+                  const isExpanded = expandedRows.has(log.id)
+                  return (
+                    <motion.div
+                      key={log.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="relative"
+                    >
+                      {/* Colored dot */}
+                      <div
+                        className={cn(
+                          'absolute -left-5 top-4 w-3 h-3 rounded-full border-2 border-background z-10',
+                          getActionDotColor(log.action)
+                        )}
+                      />
+
+                      <Card
+                        className="shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() => toggleExpanded(log.id)}
+                      >
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="flex items-start gap-3">
+                            {/* Time */}
+                            <span className="text-xs text-muted-foreground font-mono whitespace-nowrap mt-0.5">
+                              {new Date(
+                                log.createdAt
+                              ).toLocaleTimeString('fr-FR', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+
+                            {/* Avatar */}
+                            <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center text-[10px] font-bold text-amber-700 shrink-0">
+                              {log.utilisateur
+                                ? getInitials(log.utilisateur.name)
+                                : '?'}
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-medium truncate">
+                                  {log.utilisateur?.name ||
+                                    'Utilisateur supprimé'}
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    'text-xs',
+                                    actionBadge.className
+                                  )}
+                                >
+                                  {actionBadge.label}
+                                </Badge>
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs bg-gray-50 text-gray-700 border-gray-200"
+                                >
+                                  {getModuleLabel(log.module)}
+                                </Badge>
+                              </div>
+                              {log.details && (
+                                <p className="text-xs text-muted-foreground mt-1 truncate">
+                                  {log.details}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Expand icon */}
+                            <div className="shrink-0 mt-0.5">
+                              {isExpanded ? (
+                                <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Expanded details */}
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              className="overflow-hidden"
+                            >
+                              {renderDetailPanel(log)}
+                            </motion.div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
-      {/* Pagination */}
+      {/* ── Pagination ───────────────────────────────────────────────────── */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
             Page {pagination.page} sur {pagination.totalPages}
           </p>
@@ -2167,9 +2823,220 @@ function AuditTab() {
           </div>
         </div>
       )}
+
+      {/* ── Statistics Section (collapsible) ─────────────────────────────── */}
+      <Card className="border shadow-sm">
+        <CardContent className="p-4">
+          <button
+            onClick={() => setShowStats(!showStats)}
+            className="flex items-center gap-2 w-full text-left hover:opacity-80 transition-opacity"
+          >
+            <BarChart3 className="w-5 h-5 text-muted-foreground" />
+            <span className="font-semibold text-foreground">Statistiques</span>
+            {showStats ? (
+              <ChevronUp className="w-4 h-4 ml-auto text-muted-foreground" />
+            ) : (
+              <ChevronDown className="w-4 h-4 ml-auto text-muted-foreground" />
+            )}
+          </button>
+
+          {showStats && stats && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-6 space-y-8"
+            >
+              {/* Actions par module */}
+              <div>
+                <h4 className="text-sm font-semibold mb-3">
+                  Actions par module
+                </h4>
+                <div className="space-y-2.5">
+                  {(stats.actionsPerModule || [])
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 8)
+                    .map((item) => {
+                      const maxVal = Math.max(
+                        ...(stats.actionsPerModule || []).map((m) => m.count),
+                        1
+                      )
+                      return (
+                        <div key={item.module} className="flex items-center gap-3">
+                          <span className="text-xs text-muted-foreground w-28 sm:w-36 truncate shrink-0">
+                            {getModuleLabel(item.module)}
+                          </span>
+                          <div className="flex-1 bg-gray-100 rounded-full h-5 relative overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{
+                                width: `${(item.count / maxVal) * 100}%`,
+                              }}
+                              transition={{ duration: 0.6, delay: 0.1 }}
+                              className="h-full bg-emerald-500 rounded-full"
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-white">
+                              {item.count}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              </div>
+
+              {/* Actions par jour */}
+              <div>
+                <h4 className="text-sm font-semibold mb-3">
+                  Actions par jour (14 derniers jours)
+                </h4>
+                {(() => {
+                  const days = (stats.actionsPerDay || [])
+                    .sort((a, b) => a.date.localeCompare(b.date))
+                    .slice(-14)
+                  const maxVal = Math.max(...days.map((d) => d.count), 1)
+                  return days.length > 0 ? (
+                    <div className="flex items-end gap-1 sm:gap-1.5 h-36">
+                      {days.map((item) => {
+                        const height = Math.max(
+                          (item.count / maxVal) * 100,
+                          3
+                        )
+                        const label = new Date(item.date).toLocaleDateString(
+                          'fr-FR',
+                          { day: '2-digit', month: '2-digit' }
+                        )
+                        return (
+                          <div
+                            key={item.date}
+                            className="flex-1 flex flex-col items-center gap-1 min-w-0"
+                          >
+                            <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">
+                              {item.count}
+                            </span>
+                            <motion.div
+                              initial={{ height: 0 }}
+                              animate={{ height: `${height}%` }}
+                              transition={{ duration: 0.4 }}
+                              className="w-full bg-emerald-400 rounded-t min-h-[3px]"
+                            />
+                            <span className="text-[8px] sm:text-[10px] text-muted-foreground leading-tight">
+                              {label}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Aucune donnée disponible
+                    </p>
+                  )
+                })()}
+              </div>
+
+              {/* Top utilisateurs */}
+              <div>
+                <h4 className="text-sm font-semibold mb-3">
+                  Top utilisateurs
+                </h4>
+                <div className="space-y-2.5">
+                  {(stats.topUsers || []).slice(0, 10).map((user, idx) => {
+                    const maxVal = stats.topUsers?.[0]?.count || 1
+                    return (
+                      <div key={user.userId} className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground w-5 text-right font-mono">
+                          {idx + 1}
+                        </span>
+                        <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-[9px] font-bold text-amber-700 shrink-0">
+                          {getInitials(user.name)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm truncate">
+                              {user.name}
+                            </span>
+                            {user.role && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                {ROLE_CONFIG[user.role]?.label || user.role}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{
+                                  width: `${(user.count / maxVal) * 100}%`,
+                                }}
+                                transition={{ duration: 0.4 }}
+                                className="h-full bg-amber-500 rounded-full"
+                              />
+                            </div>
+                            <span className="text-xs font-semibold text-muted-foreground shrink-0">
+                              {user.count}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {(!stats.topUsers || stats.topUsers.length === 0) && (
+                    <p className="text-sm text-muted-foreground">
+                      Aucune donnée disponible
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Distribution par type d'action */}
+              <div>
+                <h4 className="text-sm font-semibold mb-3">
+                  Distribution par type d&apos;action
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {(stats.actionsByType || [])
+                    .sort((a, b) => b.count - a.count)
+                    .map((item) => {
+                      const badge = getActionBadge(item.action)
+                      return (
+                        <Badge
+                          key={item.action}
+                          variant="outline"
+                          className={cn(
+                            'text-xs gap-1.5 px-2.5 py-1',
+                            badge.className
+                          )}
+                        >
+                          {badge.label}
+                          <span className="font-bold">{item.count}</span>
+                        </Badge>
+                      )
+                    })}
+                  {(!stats.actionsByType ||
+                    stats.actionsByType.length === 0) && (
+                    <p className="text-sm text-muted-foreground">
+                      Aucune donnée disponible
+                    </p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {showStats && !stats && (
+            <div className="mt-6 flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground mr-2" />
+              <span className="text-sm text-muted-foreground">
+                Chargement des statistiques…
+              </span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </motion.div>
   )
 }
+
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
