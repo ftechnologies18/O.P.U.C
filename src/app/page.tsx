@@ -27,6 +27,7 @@ import { DocumentsView } from '@/components/documents/documents-view'
 import { ParametresView } from '@/components/parametres/parametres-view'
 import { PhotosView } from '@/components/photos/photos-view'
 import { GestionAccesView } from '@/components/gestion-acces/gestion-acces-view'
+import { AdminPlateformeView } from '@/components/admin-plateforme/admin-plateforme-view'
 import { useAppStore } from '@/store/app-store'
 import { Loader2 } from 'lucide-react'
 
@@ -151,6 +152,8 @@ function AppContent() {
         return <ParametresView />
       case 'gestion-acces':
         return <GestionAccesView />
+      case 'admin-plateforme':
+        return <AdminPlateformeView />
       default:
         return <PlaceholderView viewId={currentView} />
     }

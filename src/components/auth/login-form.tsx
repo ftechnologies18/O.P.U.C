@@ -152,16 +152,20 @@ export function LoginForm({ onForgotPassword }: { onForgotPassword?: () => void 
               </p>
               <div className="space-y-1.5 text-sm text-amber-700">
                 <div className="flex justify-between">
-                  <span className="font-medium">Admin</span>
-                  <span className="font-mono">admin@opuc.demo</span>
+                  <span className="font-medium">Super Admin</span>
+                  <span className="font-mono text-xs">superadmin@opuc.demo</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-medium">Chef d&apos;entreprise</span>
+                  <span className="font-medium">Gérant</span>
                   <span className="font-mono text-xs">chef-entreprise@opuc.demo</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="font-medium">Admin Entreprise</span>
+                  <span className="font-mono text-xs">admin@opuc.demo</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="font-medium">Conducteur</span>
-                  <span className="font-mono">conducteur@opuc.demo</span>
+                  <span className="font-mono text-xs">conducteur@opuc.demo</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium">Chef de chantier</span>
@@ -169,6 +173,9 @@ export function LoginForm({ onForgotPassword }: { onForgotPassword?: () => void 
                 </div>
                 <p className="text-center pt-1 border-t border-amber-200/50 text-amber-600">
                   Mot de passe : <code className="font-mono bg-amber-100 px-1 rounded">demo123</code>
+                </p>
+                <p className="text-center text-amber-600">
+                  SA : <code className="font-mono bg-amber-100 px-1 rounded">Admin@123456</code>
                 </p>
               </div>
             </div>
