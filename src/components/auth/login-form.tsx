@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { OpucLogo } from '@/components/layout/opuc-logo'
 
-export function LoginForm({ onForgotPassword }: { onForgotPassword?: () => void }) {
+export function LoginForm({ onForgotPassword, onBack }: { onForgotPassword?: () => void; onBack?: () => void }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -54,6 +54,19 @@ export function LoginForm({ onForgotPassword }: { onForgotPassword?: () => void 
       </div>
 
       <div className="w-full max-w-md relative">
+        {/* Back to landing link */}
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6 group"
+          >
+            <svg className="size-4 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            Retour à l'accueil
+          </button>
+        )}
+
         {/* Logo & Title */}
         <div className="text-center mb-8">
           <OpucLogo size={64} className="mb-4" />

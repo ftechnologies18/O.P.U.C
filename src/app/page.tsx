@@ -10,6 +10,7 @@ import { LoginForm } from '@/components/auth/login-form'
 import { ForgotPasswordForm } from '@/components/auth/forgot-password-form'
 import { TwoFactorVerify } from '@/components/auth/two-factor-verify'
 import { ForcePasswordChange } from '@/components/auth/force-password-change'
+import { LandingPage } from '@/components/landing/landing-page'
 import { useAppStore } from '@/store/app-store'
 import { Loader2 } from 'lucide-react'
 
@@ -44,14 +45,14 @@ function ViewLoader() {
 }
 
 // ─── Auth Flow States ──────────────────────────────────────────────
-type AuthStep = 'login' | 'forgot-password' | 'two-factor' | 'force-password'
+type AuthStep = 'landing' | 'login' | 'forgot-password' | 'two-factor' | 'force-password'
 
 function AppContent() {
   const { data: session, status } = useSession()
   const { currentView } = useAppStore()
 
   // Auth flow state
-  const [authStep, setAuthStep] = useState<AuthStep>('login')
+  const [authStep, setAuthStep] = useState<AuthStep>('landing')
   const [pendingUserId, setPendingUserId] = useState<string | null>(null)
 
   // Auth step resets when session appears (derived, no effect needed)
@@ -69,8 +70,17 @@ function AppContent() {
     )
   }
 
-  // ─── Not authenticated: show auth flow ──────────────────────────────────
+  // ─── Not authenticated: show landing page or auth flow ───────────────────
   if (!session) {
+    // Step: Landing page (default)
+    if (effectiveAuthStep === 'landing') {
+      return (
+        <LandingPage
+          onLoginClick={() => setAuthStep('login')}
+        />
+      )
+    }
+
     // Step: Forgot password
     if (effectiveAuthStep === 'forgot-password') {
       return <ForgotPasswordForm onBack={() => setAuthStep('login')} />
@@ -110,8 +120,8 @@ function AppContent() {
       )
     }
 
-    // Step: Login form (default)
-    return <LoginForm onForgotPassword={() => setAuthStep('forgot-password')} />
+    // Step: Login form
+    return <LoginForm onForgotPassword={() => setAuthStep('forgot-password')} onBack={() => setAuthStep('landing')} />
   }
 
   // ─── Authenticated: show forced password change if premiereConnexion ─────

@@ -26,8 +26,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "O.P.U.C. — Outil de Pilotage Unifié de Chantier",
-  description: "Plateforme de gestion et de pilotage intelligent de chantiers de construction. Gérez vos chantiers, le personnel, les stocks et les budgets en un seul endroit.",
-  keywords: ["OPUC", "gestion chantier", "construction", "pilotage", "BTP", "Sénégal"],
+  description: "O.P.U.C. — Plateforme SaaS de gestion et pilotage de chantiers BTP en Côte d'Ivoire. Pointage mobile, budgets, stocks, documents. Essai gratuit 14 jours.",
+  keywords: ["OPUC", "gestion chantier", "construction", "pilotage BTP", "Côte d'Ivoire", "pointage mobile", "logiciel chantier", "SaaS BTP", "Abidjan"],
   authors: [{ name: "OPUC Team" }],
   manifest: '/manifest.json',
   appleWebApp: {

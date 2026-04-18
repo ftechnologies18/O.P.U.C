@@ -52,3 +52,34 @@ Stage Summary:
 - Kill Switch pour suspendre des entreprises (désactive tous les utilisateurs)
 - Admin Plateforme: dashboard complet pour gestion multi-tenant
 - Seed: 6 comptes démo + 1 entreprise + 1 chantier + 4 phases + 5 journaliers
+
+---
+Task ID: 3
+Agent: Tech Lead (Main)
+Task: Conception et implémentation de la Landing Page O.P.U.C (marché Côte d'Ivoire)
+
+Work Log:
+- Généré 3 images AI pour la landing page (hero, mobile, features) via z-ai CLI
+- Créé `src/components/landing/landing-page.tsx` (1142 lignes) avec 11 sections complètes
+- Intégré LandingPage dans `src/app/page.tsx` avec flux landing → login → forgot-password → 2FA → force-password
+- Ajouté bouton "Retour à l'accueil" sur LoginForm (prop `onBack`)
+- Mis à jour SEO metadata (layout.tsx): Côte d'Ivoire, mots-clés BTP, description optimisée
+- Lint: 0 erreurs
+
+Stage Summary:
+- Landing page professionnelle complète avec:
+  1. Navigation sticky (transparente → solide au scroll, menu mobile Sheet)
+  2. Hero section (badge, headline, 2 CTA, image hero, stats: 150+ entreprises, 5000+ chantiers)
+  3. Trust bar (6 entreprises partenaires fictives)
+  4. Problème → Solution (4 points chaos vs 4 points O.P.U.C.)
+  5. Fonctionnalités (6 cards: Chantiers, Personnel, Budget, Stocks, Documents, Sécurité)
+  6. Section Mobile/PWA (image, 4 avantages hors-ligne)
+  7. Tarification en FCFA (3 plans: Starter 17 500, Pro 47 500, Entreprise sur devis, toggle annuel -20%)
+  8. Témoignages (3 clients CI avec étoiles et avatars)
+  9. FAQ (6 questions, shadcn Accordion)
+  10. CTA Final (gradient amber, 2 boutons)
+  11. Footer (4 colonnes, réseaux sociaux, contact, mentions légales)
+- Accessibilité: skip-to-content, ARIA labels, prefers-reduced-motion
+- Scroll reveal animations (IntersectionObserver)
+- Monnaie: FCFA (Côte d'Ivoire)
+- Images: /public/landing-hero.png, /public/landing-mobile.png, /public/landing-features.png
