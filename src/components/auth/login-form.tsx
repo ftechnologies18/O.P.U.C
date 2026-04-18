@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { OpucLogo } from '@/components/layout/opuc-logo'
 
-export function LoginForm() {
+export function LoginForm({ onForgotPassword }: { onForgotPassword?: () => void }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -131,6 +131,18 @@ export function LoginForm() {
                   'Se connecter'
                 )}
               </Button>
+
+              {onForgotPassword && (
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={onForgotPassword}
+                    className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
+                  >
+                    Mot de passe oublié ?
+                  </button>
+                </div>
+              )}
             </form>
 
             {/* Demo credentials */}

@@ -21,6 +21,8 @@ model Entreprise {
   journaliers Journalier[]
   equipements Equipement[]
   sousTraitants SousTraitant[]
+  systemSettings  SystemSetting[]
+  invitationTokens InvitationToken[]
 }
 
 // User with RBAC roles
@@ -33,6 +35,24 @@ model User {
   telephone     String?
   active        Boolean   @default(true)
   entrepriseId String?
+
+  // 2FA fields
+  twoFactorEnabled  Boolean   @default(false)
+  twoFactorSecret   String?               // encrypted TOTP secret
+  twoFactorBackupCodes String?            // JSON array of backup codes (encrypted)
+
+  // Security
+  loginAttempts     Int       @default(0)
+  lockedUntil       DateTime?              // auto-unlock timestamp
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
+  passwordChangedAt DateTime  @default(now())
+  premiereConnexion Boolean   @default(true) // force password change on first login
+
+  // Invitation
+  invitedById       String?               // who invited this user
+  invitationAcceptedAt DateTime?
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   entreprise    Entreprise? @relation(fields: [entrepriseId], references: [id])
@@ -43,6 +63,10 @@ model User {
   documents     DocumentChantier[]
   paiementsValides PaiementHebdo[] @relation("PaiementValidateur")
   salairesValides    SalaireMensuel[] @relation("SalaireValidateur")
+
+  passwordResetTokens    PasswordResetToken[]
+  invitationTokens      InvitationToken[]
+  loginAttemptLogs       LoginAttemptLog[]
 
   // Accounts and sessions for NextAuth
   accounts      Account[]
@@ -620,4 +644,62 @@ model DocumentChantier {
   chantier        Chantier  @relation(fields: [chantierId], references: [id])
   phase           Phase?    @relation(fields: [phaseId], references: [id])
   auteur          User      @relation(fields: [auteurId], references: [id])
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SECURITY & AUTH INFRASTRUCTURE (SaaS Multi-Tenant)
+// ═══════════════════════════════════════════════════════════
+
+// Password reset tokens
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  utilisateur User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+}
+
+// Email invitation tokens for onboarding
+model InvitationToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  email       String
+  role        String   @default("CHEF_CHANTIER")
+  nom         String?
+  prenom      String?
+  entrepriseId String?
+  invitedBy   String?
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime @default(now())
+  utilisateur User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String?  @unique // nullable until accepted
+  entreprise  Entreprise? @relation(fields: [entrepriseId], references: [id])
+}
+
+// Login attempt logging for lockout tracking
+model LoginAttemptLog {
+  id        String   @id @default(cuid())
+  userId    String
+  email     String
+  ipAddress String?
+  success   Boolean
+  reason    String?  // "invalid_password", "account_locked", "2fa_required", "inactive"
+  createdAt DateTime @default(now())
+  utilisateur User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Per-tenant system settings (key-value store)
+model SystemSetting {
+  id           String   @id @default(cuid())
+  entrepriseId String
+  cle          String   // e.g. "security.maxLoginAttempts", "security.passwordMinLength"
+  valeur       String   // JSON string for complex values
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  entreprise  Entreprise @relation(fields: [entrepriseId], references: [id])
+  @@unique([entrepriseId, cle])
 }
