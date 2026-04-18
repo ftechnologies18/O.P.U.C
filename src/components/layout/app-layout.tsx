@@ -33,6 +33,9 @@ import {
   ShieldCheck,
   Shield,
 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { canAccessPage } from '@/lib/rbac'
+import type { UserRole, AppPage } from '@/lib/rbac'
 import { SearchCommand } from './search-command'
 import { UserMenu } from './user-menu'
 import { NotificationBell } from './notification-bell'
@@ -109,7 +112,19 @@ function SidebarContent({
   onNavigate: () => void
 }) {
   const { currentView, setCurrentView } = useAppStore()
+  const { data: session } = useSession()
+  const userRole = (session?.user as any)?.role as UserRole | undefined
   const compact = mode === 'compact'
+
+  // Filter nav sections based on user's RBAC permissions
+  const filteredSections = navSections
+    .map(section => ({
+      ...section,
+      items: section.items.filter(item =>
+        !userRole || canAccessPage(userRole, item.id as AppPage)
+      )
+    }))
+    .filter(section => section.items.length > 0)
 
   return (
     <div className="flex flex-col h-full">
@@ -129,10 +144,10 @@ function SidebarContent({
 
       <Separator className="bg-sidebar-border" />
 
-      {/* Navigation — grouped by category */}
+      {/* Navigation — grouped by category (RBAC-filtered) */}
       <ScrollArea className="flex-1 overflow-hidden px-2">
         <nav className="py-1">
-          {navSections.map((section, sIdx) => (
+          {filteredSections.map((section, sIdx) => (
             <div key={section.group} className={cn(sIdx > 0 && 'mt-1.5')}>
               {/* Category header — expanded mode */}
               {!compact && (
@@ -156,7 +171,7 @@ function SidebarContent({
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => {
-                            setCurrentView(item.id)
+                            setCurrentView(item.id as AppPage)
                             onNavigate()
                           }}
                           className={cn(

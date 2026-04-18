@@ -75,6 +75,8 @@ model User {
   notifications Notification[]
   auditLogs     AuditLog[]
   chantierAccess UserChantierAccess[]
+  @@index([entrepriseId])
+  @@index([role])
 }
 
 // User → Chantier access mapping
@@ -112,6 +114,7 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
 }
 
 model VerificationToken {
@@ -155,6 +158,8 @@ model Chantier {
   achatsCarburant     BonAchatCarburant[]
   relevesCompteur    ReleveCompteurEngin[]
   userAccess         UserChantierAccess[]
+  @@index([entrepriseId])
+  @@index([statut])
 }
 
 // Workers / Personnel (Journaliers + Salariés sous contrat)
@@ -182,6 +187,8 @@ model Journalier {
   affectations      JournalierAffectation[]
   pointages         Pointage[]
   salaires          SalaireMensuel[]
+  @@index([entrepriseId])
+  @@index([statutContrat])
 }
 
 // Journalier assignment to a site
@@ -214,6 +221,8 @@ model Pointage {
   chantier        Chantier   @relation(fields: [chantierId], references: [id])
   chef            User       @relation("PointageChef", fields: [chefChantierId], references: [id])
   @@unique([journalierId, chantierId, dateTravail])
+  @@index([chantierId, dateTravail])
+  @@index([journalierId, dateTravail])
 }
 
 // Weekly payments (PaiementHebdo)
@@ -596,6 +605,9 @@ model AuditLog {
   details      String?  // Description / old values JSON
   adresseIp    String?
   createdAt    DateTime @default(now())
+  @@index([createdAt])
+  @@index([userId])
+  @@index([entrepriseId])
 }
 
 // Permission Configuration — RBAC matrix stored as JSON
@@ -619,6 +631,7 @@ model Notification {
   lien          String?  // optional link to related resource
   createdAt     DateTime @default(now())
   user          User     @relation(fields: [userId], references: [id])
+  @@index([userId, lu])
 }
 
 // Project Documents

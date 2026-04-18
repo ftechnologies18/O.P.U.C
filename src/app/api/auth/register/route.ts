@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { hashPassword, validatePasswordStrength } from '@/lib/password'
+import { rateLimitByRequest } from '@/lib/rate-limiter'
 
 // ═══════════════════════════════════════════════════════════
 // POST /api/auth/register — Self-registration (onboarding)
@@ -17,6 +18,25 @@ import { hashPassword, validatePasswordStrength } from '@/lib/password'
 // }
 // ═══════════════════════════════════════════════════════════
 export async function POST(request: NextRequest) {
+  // ── Rate limiting: 3 registrations per hour per IP ──
+  const rateResult = rateLimitByRequest(request, 'register', {
+    maxRequests: 3,
+    windowMs: 60 * 60 * 1000,
+  })
+
+  if (!rateResult.success) {
+    const retryAfterSeconds = Math.ceil(rateResult.retryAfterMs / 1000)
+    return NextResponse.json(
+      { error: 'Trop de tentatives d\'inscription. Veuillez réessayer plus tard.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(retryAfterSeconds),
+        },
+      }
+    )
+  }
+
   try {
     const body = await request.json()
     const { entrepriseNom, name, email, password, telephone, adresse } = body

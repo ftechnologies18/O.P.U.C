@@ -1,37 +1,49 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { AuthProvider } from '@/providers/auth-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
+import { QueryProvider } from '@/providers/query-provider'
 import { AppLayout } from '@/components/layout/app-layout'
 import { LoginForm } from '@/components/auth/login-form'
 import { ForgotPasswordForm } from '@/components/auth/forgot-password-form'
 import { TwoFactorVerify } from '@/components/auth/two-factor-verify'
 import { ForcePasswordChange } from '@/components/auth/force-password-change'
-import { DashboardView } from '@/components/dashboard/dashboard-view'
-import { PlaceholderView } from '@/components/dashboard/placeholder-view'
-import { ChantiersView } from '@/components/chantiers/chantiers-view'
-import { ChantierDetailView } from '@/components/chantiers/chantier-detail-view'
-import { PersonnelView } from '@/components/personnel/personnel-view'
-import { PointageView } from '@/components/pointage/pointage-view'
-import { PaieView } from '@/components/paie/paie-view'
-import { StocksView } from '@/components/stocks/stocks-view'
-import { BudgetView } from '@/components/budget/budget-view'
-import { RapportsView } from '@/components/rapports/rapports-view'
-import { PlanningView } from '@/components/planning/planning-view'
-import { SousTraitantsView } from '@/components/sous-traitants/sous-traitants-view'
-import { EnginsView } from '@/components/engins/engins-view'
-import { CarburantView } from '@/components/carburant/carburant-view'
-import { DocumentsView } from '@/components/documents/documents-view'
-import { ParametresView } from '@/components/parametres/parametres-view'
-import { PhotosView } from '@/components/photos/photos-view'
-import { GestionAccesView } from '@/components/gestion-acces/gestion-acces-view'
-import { AdminPlateformeView } from '@/components/admin-plateforme/admin-plateforme-view'
 import { useAppStore } from '@/store/app-store'
 import { Loader2 } from 'lucide-react'
 
-// ─── Auth Flow States ──────────────────────────────────────────────────────
+// ─── Lazy-loaded view components (code-split) ────────────────────────
+const DashboardView = lazy(() => import('@/components/dashboard/dashboard-view').then(m => ({ default: m.DashboardView })))
+const PlaceholderView = lazy(() => import('@/components/dashboard/placeholder-view').then(m => ({ default: m.PlaceholderView })))
+const ChantiersView = lazy(() => import('@/components/chantiers/chantiers-view').then(m => ({ default: m.ChantiersView })))
+const ChantierDetailView = lazy(() => import('@/components/chantiers/chantier-detail-view').then(m => ({ default: m.ChantierDetailView })))
+const PersonnelView = lazy(() => import('@/components/personnel/personnel-view').then(m => ({ default: m.PersonnelView })))
+const PointageView = lazy(() => import('@/components/pointage/pointage-view').then(m => ({ default: m.PointageView })))
+const PaieView = lazy(() => import('@/components/paie/paie-view').then(m => ({ default: m.PaieView })))
+const StocksView = lazy(() => import('@/components/stocks/stocks-view').then(m => ({ default: m.StocksView })))
+const BudgetView = lazy(() => import('@/components/budget/budget-view').then(m => ({ default: m.BudgetView })))
+const RapportsView = lazy(() => import('@/components/rapports/rapports-view').then(m => ({ default: m.RapportsView })))
+const PlanningView = lazy(() => import('@/components/planning/planning-view').then(m => ({ default: m.PlanningView })))
+const SousTraitantsView = lazy(() => import('@/components/sous-traitants/sous-traitants-view').then(m => ({ default: m.SousTraitantsView })))
+const EnginsView = lazy(() => import('@/components/engins/engins-view').then(m => ({ default: m.EnginsView })))
+const CarburantView = lazy(() => import('@/components/carburant/carburant-view').then(m => ({ default: m.CarburantView })))
+const DocumentsView = lazy(() => import('@/components/documents/documents-view').then(m => ({ default: m.DocumentsView })))
+const ParametresView = lazy(() => import('@/components/parametres/parametres-view').then(m => ({ default: m.ParametresView })))
+const PhotosView = lazy(() => import('@/components/photos/photos-view').then(m => ({ default: m.PhotosView })))
+const GestionAccesView = lazy(() => import('@/components/gestion-acces/gestion-acces-view').then(m => ({ default: m.GestionAccesView })))
+const AdminPlateformeView = lazy(() => import('@/components/admin-plateforme/admin-plateforme-view').then(m => ({ default: m.AdminPlateformeView })))
+
+// ─── Suspense Fallback ──────────────────────────────────────────────
+function ViewLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+    </div>
+  )
+}
+
+// ─── Auth Flow States ──────────────────────────────────────────────
 type AuthStep = 'login' | 'forgot-password' | 'two-factor' | 'force-password'
 
 function AppContent() {
@@ -103,7 +115,7 @@ function AppContent() {
   }
 
   // ─── Authenticated: show forced password change if premiereConnexion ─────
-  const user = session.user as any
+  const user = session.user
   if (user?.premiereConnexion && user?.id) {
     return (
       <ForcePasswordChange
@@ -161,7 +173,9 @@ function AppContent() {
 
   return (
     <AppLayout>
-      {renderView()}
+      <Suspense fallback={<ViewLoader />}>
+        {renderView()}
+      </Suspense>
     </AppLayout>
   )
 }
@@ -169,9 +183,11 @@ function AppContent() {
 export default function Home() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <QueryProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </QueryProvider>
     </ThemeProvider>
   )
 }

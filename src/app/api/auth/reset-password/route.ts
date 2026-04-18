@@ -5,8 +5,28 @@ import {
   validatePasswordStrength,
   isResetTokenExpired,
 } from '@/lib/password'
+import { rateLimitByRequest } from '@/lib/rate-limiter'
 
 export async function POST(request: NextRequest) {
+  // ── Rate limiting: 5 requests per 15 minutes per IP ──
+  const rateResult = rateLimitByRequest(request, 'reset-password', {
+    maxRequests: 5,
+    windowMs: 15 * 60 * 1000,
+  })
+
+  if (!rateResult.success) {
+    const retryAfterSeconds = Math.ceil(rateResult.retryAfterMs / 1000)
+    return NextResponse.json(
+      { error: 'Trop de requêtes. Veuillez réessayer plus tard.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(retryAfterSeconds),
+        },
+      }
+    )
+  }
+
   try {
     const body = await request.json()
     const { token, password } = body

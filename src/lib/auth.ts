@@ -1,9 +1,33 @@
+// ─────────────────────────────────────────────────────────────
+// O.P.U.C — NextAuth Configuration
+// JWT-based session with type-safe extensions.
+// ─────────────────────────────────────────────────────────────
+
 import type { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { db } from '@/lib/db'
 import { verifyPassword, isAccountLocked, getLockoutExpiryDate } from '@/lib/password'
 
+// ═══════════════════════════════════════════════════════════
+// Note: NextAuth types are extended in src/types/next-auth.d.ts
+// ═══════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════
+
 const MAX_LOGIN_ATTEMPTS = 5
+const SESSION_MAX_AGE = 8 * 60 * 60 // 8 hours
+
+// ═══════════════════════════════════════════════════════════
+// AUTH OPTIONS
+// ═══════════════════════════════════════════════════════════
+
+const nextAuthSecret = process.env.NEXTAUTH_SECRET
+if (!nextAuthSecret) {
+  console.warn(
+    '[AUTH WARNING] NEXTAUTH_SECRET is not set. Using a fallback secret. ' +
+    'This is UNSAFE for production. Generate one with: openssl rand -base64 32'
+  )
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -76,31 +100,28 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: 'jwt',
+    maxAge: SESSION_MAX_AGE,
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = (user as { role: string }).role
+        token.role = user.role ?? 'CHEF_CHANTIER'
         token.userId = user.id
-        token.entrepriseId = (user as { entrepriseId?: string | null }).entrepriseId ?? null
+        token.entrepriseId = user.entrepriseId ?? null
         token.isSuperAdmin = token.role === 'SUPER_ADMIN'
-        token.twoFactorEnabled = (user as { twoFactorEnabled?: boolean }).twoFactorEnabled ?? false
-        token.premiereConnexion = (user as { premiereConnexion?: boolean }).premiereConnexion ?? false
+        token.twoFactorEnabled = user.twoFactorEnabled ?? false
+        token.premiereConnexion = user.premiereConnexion ?? false
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as { role: string }).role = (token as { role: string }).role
-        ;(session.user as { id: string }).id = (token as { userId: string }).userId
-        ;(session.user as { entrepriseId: string | null }).entrepriseId =
-          (token as { entrepriseId: string | null }).entrepriseId
-        ;(session.user as { isSuperAdmin: boolean }).isSuperAdmin =
-          (token as { isSuperAdmin: boolean }).isSuperAdmin
-        ;(session.user as { twoFactorEnabled: boolean }).twoFactorEnabled =
-          (token as { twoFactorEnabled: boolean }).twoFactorEnabled
-        ;(session.user as { premiereConnexion: boolean }).premiereConnexion =
-          (token as { premiereConnexion: boolean }).premiereConnexion
+        session.user.role = token.role
+        session.user.id = token.userId
+        session.user.entrepriseId = token.entrepriseId
+        session.user.isSuperAdmin = token.isSuperAdmin
+        session.user.twoFactorEnabled = token.twoFactorEnabled
+        session.user.premiereConnexion = token.premiereConnexion
       }
       return session
     },
@@ -122,5 +143,5 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/',
   },
-  secret: process.env.NEXTAUTH_SECRET || 'opuc-dev-secret-change-in-production',
+  secret: nextAuthSecret || 'opuc-dev-secret-change-in-production',
 }

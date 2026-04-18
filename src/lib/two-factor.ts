@@ -6,7 +6,7 @@
 // Server-side only (uses Node.js crypto module).
 // ─────────────────────────────────────────────────────────────
 
-import { createHmac, randomBytes } from 'crypto'
+import { createHmac, createHash, createCipheriv, createDecipheriv, randomBytes } from 'crypto'
 
 // ═══════════════════════════════════════════════════════════
 // CONSTANTS
@@ -107,56 +107,58 @@ function getCurrentCounter(): number {
 }
 
 // ═══════════════════════════════════════════════════════════
-// SIMPLE REVERSIBLE ENCRYPTION (XOR-based)
+// AES-256-GCM ENCRYPTION
 // For storing TOTP secrets in the database.
-// NOT intended for strong security — secrets should be
-// protected at the DB level as well.
+// Uses authenticated encryption with associated data (AEAD).
 // ═══════════════════════════════════════════════════════════
 
+/**
+ * Derive a 32-byte key from the configured encryption key using SHA-256.
+ */
 function deriveEncryptionKey(key: string): Buffer {
-  // Simple key derivation: SHA-256 hash of the key, take first 32 bytes
-  return createHmac('sha256', 'opuc-totp-key-derivation')
-    .update(key)
-    .digest()
+  return createHash('sha256').update(key).digest() // 32 bytes
 }
 
 /**
- * Encrypt a string using XOR with a derived key.
- * Returns a base64-encoded string (iv + ciphertext).
+ * Encrypt a string using AES-256-GCM.
+ * Returns a base64-encoded string (IV + ciphertext + authTag).
+ *
+ * - Generates a random 16-byte IV per encryption
+ * - Uses AES-256-GCM for authenticated encryption
+ * - Appends the 16-byte authTag to the output
  */
 export function encryptSecret(secret: string): string {
   const key = deriveEncryptionKey(ENCRYPTION_KEY)
   const iv = randomBytes(16)
-  const secretBuffer = Buffer.from(secret, 'utf-8')
 
-  // XOR cipher with cycling key
-  const encrypted = Buffer.alloc(secretBuffer.length)
-  for (let i = 0; i < secretBuffer.length; i++) {
-    encrypted[i] = secretBuffer[i] ^ key[i % key.length]
-  }
+  const cipher = createCipheriv('aes-256-gcm', key, iv)
+  const ciphertext = Buffer.concat([
+    cipher.update(secret, 'utf-8'),
+    cipher.final(),
+  ])
+  const authTag = cipher.getAuthTag() // 16 bytes
 
-  // Combine IV + encrypted data and encode as base64
-  return Buffer.concat([iv, encrypted]).toString('base64')
+  // Combine IV + ciphertext + authTag and encode as base64
+  return Buffer.concat([iv, ciphertext, authTag]).toString('base64')
 }
 
 /**
  * Decrypt a string that was encrypted with encryptSecret.
+ * Expects base64-encoded input in format: IV (16 bytes) + ciphertext + authTag (16 bytes).
  */
 export function decryptSecret(encrypted: string): string {
   const key = deriveEncryptionKey(ENCRYPTION_KEY)
   const data = Buffer.from(encrypted, 'base64')
 
-  // Extract IV (first 16 bytes) and ciphertext
+  // Extract IV (first 16 bytes), authTag (last 16 bytes), and ciphertext (middle)
   const iv = data.subarray(0, 16)
-  const ciphertext = data.subarray(16)
+  const authTag = data.subarray(data.length - 16)
+  const ciphertext = data.subarray(16, data.length - 16)
 
-  // XOR cipher with cycling key
-  const decrypted = Buffer.alloc(ciphertext.length)
-  for (let i = 0; i < ciphertext.length; i++) {
-    decrypted[i] = ciphertext[i] ^ key[i % key.length]
-  }
+  const decipher = createDecipheriv('aes-256-gcm', key, iv)
+  decipher.setAuthTag(authTag)
 
-  return decrypted.toString('utf-8')
+  return decipher.update(ciphertext) + decipher.final('utf-8')
 }
 
 // ═══════════════════════════════════════════════════════════
