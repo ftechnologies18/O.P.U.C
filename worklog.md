@@ -26,3 +26,32 @@ Stage Summary:
 - Legacy role mapping conservé dans tenant.ts pour compatibilité DB existante
 - Toutes les incohérences de noms de rôles résolues (3 sources → 1 seule source de vérité: rbac.ts)
 - Aucune erreur de lint ni de compilation
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Migrate Cloudflare adapter from @cloudflare/next-on-pages to @opennextjs/cloudflare
+
+Work Log:
+- Analyzed compatibility: @cloudflare/next-on-pages@1.13.16 only supports Next.js ≤15.5.2
+- Upgraded Next.js from 16.1.3 to 16.2.4 (required by @opennextjs/cloudflare@1.19.3)
+- Removed @cloudflare/next-on-pages (incompatible with Next.js 16)
+- Ran `opennextjs-cloudflare migrate` to generate proper config files
+- Created `open-next.config.ts` with defineCloudflareConfig()
+- Replaced `wrangler.toml` with `wrangler.jsonc` (new Cloudflare format)
+- Updated `wrangler.jsonc`: project name "opuc", nodejs_compat flag, assets binding
+- Fixed `next.config.ts`: removed standalone output, added initOpenNextCloudflareForDev()
+- Fixed `tsconfig.json`: added baseUrl ".", excluded .open-next/.vercel
+- Cleaned up `package.json` scripts (removed duplicates, consistent naming)
+- Configured `.dev.vars` with DATABASE_URL, NEXTAUTH_URL, NEXTAUTH_SECRET
+- Fixed `public/_headers` duplicate cache entry
+- Added `.dev.vars` to `.gitignore`
+- Full Cloudflare build succeeded (55 static pages + all API routes)
+- Committed and pushed to GitHub
+
+Stage Summary:
+- @opennextjs/cloudflare v1.19.3 is the ONLY Cloudflare adapter supporting Next.js 16.2.4
+- @cloudflare/next-on-pages maxes out at Next.js 15.5.2 (old adapter)
+- Build output: .open-next/worker.js + .open-next/assets/
+- All 85+ routes compiled successfully (static + dynamic)
+- One harmless warning: duplicate key in radix-ui component (non-blocking)
