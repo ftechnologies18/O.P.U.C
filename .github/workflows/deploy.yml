@@ -16,9 +16,15 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     name: Build & Deploy
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -28,15 +34,10 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build for Cloudflare Pages
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          NEXTAUTH_URL: https://opuc.pages.dev
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-          NODE_ENV: production
-        run: bun run build
+      - name: Generate Prisma Client
+        run: npx prisma generate
 
-      - name: Build Cloudflare Pages output
+      - name: Build & Bundle for Cloudflare Pages
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           NEXTAUTH_URL: https://opuc.pages.dev
