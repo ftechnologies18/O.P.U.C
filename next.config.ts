@@ -1,19 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Cloudflare Pages utilise le mode "standalone" natif via @cloudflare/next-on-pages
-  // On ne force pas d'output ici — le preset Cloudflare s'en charge
   typescript: {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
 
-  // Optimisations pour Cloudflare Pages / Edge
+  // Cloudflare Pages configuration
   experimental: {
-    // Permet l'utilisation de APIs Node.js (Buffer, process, etc.) sur Cloudflare Workers
-    serverActions: {
-      bodySizeLimit: "2mb",
-    },
+    // next-on-pages will set the edge runtime automatically
+    // when deployed to Cloudflare Pages
   },
 
   // Headers de sécurité
@@ -32,3 +28,5 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
+import('@opennextjs/cloudflare').then(m => m.initOpenNextCloudflareForDev());
