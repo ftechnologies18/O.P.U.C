@@ -1,0 +1,15 @@
+# ══════════════════════════════════════════════════════════════════
+# O.P.U.C — Cloudflare Workers / Pages Configuration
+# ══════════════════════════════════════════════════════════════════
+# Ce fichier configure le runtime Cloudflare pour le déploiement.
+# Les variables d'environnement sensibles (DATABASE_URL, etc.)
+# doivent être configurées via le Dashboard Cloudflare, pas ici.
+# ══════════════════════════════════════════════════════════════════
+
+name = "opuc"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Pages project configuration
+[observability]
+enabled = true
