@@ -6,13 +6,10 @@ const nextConfig: NextConfig = {
   },
   reactStrictMode: false,
 
-  // Cloudflare Pages configuration
-  experimental: {
-    // next-on-pages will set the edge runtime automatically
-    // when deployed to Cloudflare Pages
-  },
+  // Cloudflare Pages: no standalone output needed
+  // @opennextjs/cloudflare handles the build internally
 
-  // Headers de sécurité
+  // Security headers
   async headers() {
     return [
       {
