@@ -55,3 +55,30 @@ Stage Summary:
 - Build output: .open-next/worker.js + .open-next/assets/
 - All 85+ routes compiled successfully (static + dynamic)
 - One harmless warning: duplicate key in radix-ui component (non-blocking)
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Deploy O.P.U.C to Cloudflare Workers via API
+
+Work Log:
+- Retrieved Cloudflare Account ID: 319de93db5a99db76b4bf41f9d06b785
+- Deleted old "opuc" Pages project (Direct Upload mode, couldn't add GitHub source)
+- Recreated "opuc" Pages project (opuc.pages.dev)
+- Configured build settings: `npx opennextjs-cloudflare build`, output `.open-next/assets`
+- Set production + preview environment variables via API (DATABASE_URL, DIRECT_URL, NEXTAUTH_URL, NEXTAUTH_SECRET)
+- Attempted GitHub repo connection — blocked by missing OAuth installation
+- Deployed via `opennextjs-cloudflare deploy` (Workers mode, includes worker.js + assets)
+- Set 4 worker secrets via wrangler: DATABASE_URL, DIRECT_URL, NEXTAUTH_SECRET, NEXTAUTH_URL
+- Deployment verified: HTTP 200, 17KB HTML, API routes working (CSRF token generated)
+- Committed and pushed all changes to GitHub
+
+Stage Summary:
+- **Live URL**: https://opuc.freelancetechnologies-ci.workers.dev ✅
+- **Pages URL**: opuc.pages.dev (reserved but using Workers deployment)
+- **Deployment method**: Workers (not Pages) — `opennextjs-cloudflare deploy`
+- **Node.js compat**: enabled via wrangler.jsonc
+- **Secrets**: 4 env vars configured as Worker secrets
+- **Build size**: 12.68 MB total, 2.68 MB gzipped
+- **Worker startup**: 38ms
+- **Note**: GitHub auto-deploy requires OAuth setup in Cloudflare dashboard (manual step for user)
