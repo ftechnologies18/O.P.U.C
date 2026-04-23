@@ -159,7 +159,7 @@ export async function PUT(
         )
       }
 
-      const validRoles = ['CHEF_ENTREPRISE', 'ADMIN', 'ADMIN_ENTREPRISE', 'CONDUCTEUR', 'CHEF_CHANTIER', 'SOUS_TRAITANT']
+      const validRoles = ['GERANT', 'CHEF_PROJET', 'SOUS_TRAITANT']
       if (!validRoles.includes(role)) {
         return NextResponse.json(
           { error: `Rôle invalide. Valeurs acceptées : ${validRoles.join(', ')}` },

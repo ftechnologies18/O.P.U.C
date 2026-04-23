@@ -34,6 +34,11 @@ const ParametresView = lazy(() => import('@/components/parametres/parametres-vie
 const PhotosView = lazy(() => import('@/components/photos/photos-view').then(m => ({ default: m.PhotosView })))
 const GestionAccesView = lazy(() => import('@/components/gestion-acces/gestion-acces-view').then(m => ({ default: m.GestionAccesView })))
 const AdminPlateformeView = lazy(() => import('@/components/admin-plateforme/admin-plateforme-view').then(m => ({ default: m.AdminPlateformeView })))
+const ClientsView = lazy(() => import('@/components/clients/clients-view').then(m => ({ default: m.ClientsView })))
+const DevisView = lazy(() => import('@/components/devis/devis-view').then(m => ({ default: m.DevisView })))
+const ContratsView = lazy(() => import('@/components/contrats/contrats-view').then(m => ({ default: m.ContratsView })))
+const FacturationView = lazy(() => import('@/components/facturation/facturation-view').then(m => ({ default: m.FacturationView })))
+const SupportView = lazy(() => import('@/components/support/support-view').then(m => ({ default: m.SupportView })))
 
 // ─── Suspense Fallback ──────────────────────────────────────────────
 function ViewLoader() {
@@ -170,6 +175,16 @@ function AppContent() {
         return <PhotosView />
       case 'documents':
         return <DocumentsView />
+      case 'clients':
+        return <ClientsView />
+      case 'devis':
+        return <DevisView />
+      case 'contrats':
+        return <ContratsView />
+      case 'facturation':
+        return <FacturationView />
+      case 'support':
+        return <SupportView />
       case 'parametres':
         return <ParametresView />
       case 'gestion-acces':

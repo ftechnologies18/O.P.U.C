@@ -32,6 +32,11 @@ import {
   Fuel,
   ShieldCheck,
   Shield,
+  Contact,
+  FileSpreadsheet,
+  FileSignature,
+  Receipt,
+  Headphones,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { canAccessPage } from '@/lib/rbac'
@@ -77,11 +82,21 @@ const navSections = [
     ],
   },
   {
+    group: 'Gestion Commerciale',
+    items: [
+      { id: 'clients', label: 'Clients', icon: Contact },
+      { id: 'devis', label: 'Devis', icon: FileSpreadsheet },
+      { id: 'contrats', label: 'Contrats', icon: FileSignature },
+      { id: 'facturation', label: 'Facturation', icon: Receipt },
+    ],
+  },
+  {
     group: 'Documents & Médias',
     items: [
       { id: 'rapports', label: 'Rapports', icon: FileText },
       { id: 'photos', label: 'Photos', icon: Camera },
       { id: 'documents', label: 'Documents', icon: FileStack },
+      { id: 'support', label: 'Support', icon: Headphones },
     ],
   },
   {

@@ -186,11 +186,7 @@ interface EntrepriseFormData {
 const ROLE_CONFIG: Record<string, { label: string; className: string }> = {
   SUPER_ADMIN: { label: 'Super Admin', className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400' },
   GERANT: { label: 'Gérant', className: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400' },
-  ADMIN_ENTREPRISE: { label: 'Admin Entreprise', className: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400' },
-  ADMIN: { label: 'Administrateur', className: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-400' },
-  CHEF_ENTREPRISE: { label: "Chef d'Entreprise", className: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-400' },
-  CONDUCTEUR: { label: 'Conducteur', className: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-400' },
-  CHEF_CHANTIER: { label: 'Chef Chantier', className: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400' },
+  CHEF_PROJET: { label: 'Chef de Projet', className: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400' },
   SOUS_TRAITANT: { label: 'Sous-traitant', className: 'bg-stone-100 text-stone-700 border-stone-200 dark:bg-stone-900/30 dark:text-stone-400' },
 }
 

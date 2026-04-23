@@ -24,6 +24,11 @@ model Entreprise {
   sousTraitants SousTraitant[]
   systemSettings  SystemSetting[]
   invitationTokens InvitationToken[]
+  clients     Client[]
+  devis       Devis[]
+  contrats    Contrat[]
+  factures    Facture[]
+  tickets     TicketSupport[]
 }
 
 // User with RBAC roles
@@ -32,7 +37,7 @@ model User {
   email         String    @unique
   password      String?
   name          String
-  role          String    @default("CHEF_CHANTIER") // ADMIN, CHEF_ENTREPRISE, CONDUCTEUR, CHEF_CHANTIER, SOUS_TRAITANT
+  role          String    @default("CHEF_PROJET") // SUPER_ADMIN, GERANT, CHEF_PROJET, SOUS_TRAITANT
   telephone     String?
   active        Boolean   @default(true)
   entrepriseId String?
@@ -75,6 +80,9 @@ model User {
   notifications Notification[]
   auditLogs     AuditLog[]
   chantierAccess UserChantierAccess[]
+  ticketsAssigned     TicketSupport[] @relation("TicketAssignee")
+  ticketsResolved     TicketSupport[] @relation("TicketResolver")
+  ticketMessages      TicketMessage[]
   @@index([entrepriseId])
   @@index([role])
 }
@@ -158,8 +166,11 @@ model Chantier {
   achatsCarburant     BonAchatCarburant[]
   relevesCompteur    ReleveCompteurEngin[]
   userAccess         UserChantierAccess[]
+  clientId            String?
+  client              Client?            @relation(fields: [clientId], references: [id])
   @@index([entrepriseId])
   @@index([statut])
+  @@index([clientId])
 }
 
 // Workers / Personnel (Journaliers + Salariés sous contrat)
@@ -614,7 +625,7 @@ model AuditLog {
 model PermissionConfig {
   id           String   @id @default(cuid())
   entrepriseId String?
-  role         String   @unique // ADMIN, CHEF_ENTREPRISE, CONDUCTEUR, CHEF_CHANTIER, SOUS_TRAITANT
+  role         String   @unique // SUPER_ADMIN, GERANT, CHEF_PROJET, SOUS_TRAITANT
   permissions  String   @default("{}") // JSON: { "chantiers": "GESTION", "stocks": "ECRITURE", ... }
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -681,7 +692,7 @@ model InvitationToken {
   id          String   @id @default(cuid())
   token       String   @unique
   email       String
-  role        String   @default("CHEF_CHANTIER")
+  role        String   @default("CHEF_PROJET")
   nom         String?
   prenom      String?
   entrepriseId String?
@@ -704,6 +715,188 @@ model LoginAttemptLog {
   reason    String?  // "invalid_password", "account_locked", "2fa_required", "inactive"
   createdAt DateTime @default(now())
   utilisateur User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ═══════════════════════════════════════════════════════════
+//   CLIENT & CRM MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+
+// Clients (Maitres d'ouvrage)
+model Client {
+  id            String   @id @default(cuid())
+  raisonSociale String
+  nomContact    String?
+  telephone     String?
+  email         String?
+  adresse       String?
+  rccm          String?
+  nif           String?
+  type          String   @default("ENTREPRISE") // ENTREPRISE, PARTICULIER, INSTITUTION
+  statut        String   @default("ACTIF") // ACTIF, INACTIF, PROSPECT
+  notes         String?
+  entrepriseId  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  entreprise    Entreprise?  @relation(fields: [entrepriseId], references: [id])
+  chantiers     Chantier[]
+  devis         Devis[]
+  contrats      Contrat[]
+  factures      Facture[]
+  tickets       TicketSupport[]
+  @@index([entrepriseId])
+  @@index([statut])
+  @@index([type])
+}
+
+// Devis (Quotes/Estimates)
+model Devis {
+  id              String       @id @default(cuid())
+  numero          String
+  clientId        String
+  statut          String       @default("BROUILLON") // BROUILLON, ENVOYE, ACCEPTE, REFUSE, EXPIRE
+  dateEmission    DateTime     @default(now())
+  dateValidite    DateTime?
+  conditions      String?
+  remiseGlobale   Float        @default(0) // percentage
+  totalHT         Float        @default(0)
+  tauxTVA         Float        @default(18) // 18% in CI
+  montantTVA      Float        @default(0)
+  totalTTC        Float        @default(0)
+  notes           String?
+  entrepriseId    String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  client          Client       @relation(fields: [clientId], references: [id])
+  entreprise      Entreprise?  @relation(fields: [entrepriseId], references: [id])
+  lignes          LigneDevis[]
+  @@index([entrepriseId])
+  @@index([clientId])
+  @@index([statut])
+}
+
+// Lignes de devis
+model LigneDevis {
+  id            String   @id @default(cuid())
+  devisId       String
+  designation   String
+  description   String?
+  quantite      Float
+  unite         String
+  prixUnitaire  Float
+  totalHT       Float
+  ordre         Int      @default(0)
+  devis         Devis    @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  @@index([devisId])
+}
+
+// Contrats client
+model Contrat {
+  id              String       @id @default(cuid())
+  numero          String
+  clientId        String
+  objet           String
+  typeContrat     String       @default("TRAVAUX") // TRAVAUX, FOURNITURE, SERVICE, MIXTE
+  montantHT       Float        @default(0)
+  tauxTVA         Float        @default(18)
+  montantTTC      Float        @default(0)
+  dateDebut       DateTime?
+  dateFin         DateTime?
+  conditions      String?
+  statut          String       @default("EN_PREPARATION") // EN_PREPARATION, ACTIF, EXPIRE, RESILIE, TERMINE
+  penaltyRetard   Float        @default(0) // % penalty per day of delay
+  entrepriseId    String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  client          Client       @relation(fields: [clientId], references: [id])
+  entreprise      Entreprise?  @relation(fields: [entrepriseId], references: [id])
+  factures        Facture[]
+  @@index([entrepriseId])
+  @@index([clientId])
+  @@index([statut])
+}
+
+// Factures
+model Facture {
+  id              String       @id @default(cuid())
+  numero          String
+  clientId        String
+  contratId       String?
+  devisId         String?
+  typeFacture     String       @default("FACTURE") // FACTURE, ACOMPTE, SITUATION, SOLDE
+  statut          String       @default("BROUILLON") // BROUILLON, ENVOYE, PAYEE, PARTIELLEMENT_PAYEE, ANNULEE, EN_RETARD
+  dateEmission    DateTime     @default(now())
+  dateEcheance    DateTime?
+  datePaiement    DateTime?
+  montantHT       Float        @default(0)
+  tauxTVA         Float        @default(18)
+  montantTVA      Float        @default(0)
+  totalTTC        Float        @default(0)
+  montantPaye     Float        @default(0)
+  modePaiement    String?      // ESPECES, VIREMENT, MOBILE_MONEY, CHEQUE
+  notes           String?
+  entrepriseId    String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  client          Client       @relation(fields: [clientId], references: [id])
+  contrat         Contrat?     @relation(fields: [contratId], references: [id])
+  entreprise      Entreprise?  @relation(fields: [entrepriseId], references: [id])
+  paiements       PaiementFacture[]
+  @@index([entrepriseId])
+  @@index([clientId])
+  @@index([statut])
+}
+
+// Paiements de factures
+model PaiementFacture {
+  id              String   @id @default(cuid())
+  factureId       String
+  montant         Float
+  datePaiement    DateTime @default(now())
+  modePaiement    String   // ESPECES, VIREMENT, MOBILE_MONEY, CHEQUE
+  reference       String?  // reference du paiement
+  notes           String?
+  createdAt       DateTime @default(now())
+  facture         Facture  @relation(fields: [factureId], references: [id], onDelete: Cascade)
+  @@index([factureId])
+}
+
+// Tickets de support client
+model TicketSupport {
+  id              String       @id @default(cuid())
+  titre           String
+  description     String
+  priorite        String       @default("MOYENNE") // BASSE, MOYENNE, HAUTE, URGENTE
+  statut          String       @default("OUVERT") // OUVERT, EN_COURS, RESOLU, FERME
+  clientId        String?
+  categorie       String?      // TECHNIQUE, FACTURATION, PLANNING, AUTRE
+  assigneAId      String?
+  entrepriseId    String?
+  resoluLe        DateTime?
+  resoluParId     String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  client          Client?      @relation(fields: [clientId], references: [id])
+  assigneA        User?        @relation("TicketAssignee", fields: [assigneAId], references: [id])
+  resoluPar       User?        @relation("TicketResolver", fields: [resoluParId], references: [id])
+  entreprise      Entreprise?  @relation(fields: [entrepriseId], references: [id])
+  messages        TicketMessage[]
+  @@index([entrepriseId])
+  @@index([clientId])
+  @@index([statut])
+  @@index([priorite])
+}
+
+// Messages de ticket
+model TicketMessage {
+  id            String          @id @default(cuid())
+  ticketId      String
+  auteurId      String?
+  contenu       String
+  pieceJointe   String?
+  createdAt     DateTime        @default(now())
+  ticket        TicketSupport   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  auteur        User?           @relation(fields: [auteurId], references: [id])
+  @@index([ticketId])
 }
 
 // Per-tenant system settings (key-value store)

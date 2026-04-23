@@ -63,9 +63,9 @@ async function main() {
   const entreprise = await prisma.entreprise.create({
     data: {
       nom: 'SARL CONSTRUBAT',
-      adresse: 'Route de l\'Aéroport, Dakar, Sénégal',
-      telephone: '+221 33 800 00 00',
-      email: 'contact@construbat.sn',
+      adresse: 'Cocody Riviera Palmeraie, Abidjan, Côte d\'Ivoire',
+      telephone: '+225 01 02 03 04',
+      email: 'contact@construbat.ci',
     },
   })
   console.log(`   ✅ Entreprise: ${entreprise.nom} (ID: ${entreprise.id})\n`)
@@ -83,7 +83,7 @@ async function main() {
       active: true,
       twoFactorEnabled: false,
       premiereConnexion: false,
-      telephone: '+221 77 000 00 00',
+      telephone: '+225 07 00 00 00',
     },
   })
   console.log(`   ✅ SUPER_ADMIN: ${superAdmin.email}\n`)
@@ -93,7 +93,7 @@ async function main() {
   const gerantPassword = await hashPassword('demo123')
   const gerant = await prisma.user.create({
     data: {
-      email: 'chef-entreprise@opuc.demo',
+      email: 'gerant@opuc.demo',
       name: 'Moussa Diallo',
       password: gerantPassword,
       role: 'GERANT',
@@ -101,66 +101,30 @@ async function main() {
       active: true,
       twoFactorEnabled: false,
       premiereConnexion: false,
-      telephone: '+221 77 100 00 00',
+      telephone: '+225 07 10 00 00',
     },
   })
   console.log(`   ✅ GERANT: ${gerant.email}\n`)
 
-  // ─── 5. Create ADMIN_ENTREPRISE ─────────────────────────────
-  console.log('👤 Creating ADMIN_ENTREPRISE...')
-  const adminPassword = await hashPassword('demo123')
-  const admin = await prisma.user.create({
-    data: {
-      email: 'admin@opuc.demo',
-      name: 'Fatou Ndiaye',
-      password: adminPassword,
-      role: 'ADMIN_ENTREPRISE',
-      entrepriseId: entreprise.id,
-      active: true,
-      twoFactorEnabled: false,
-      premiereConnexion: false,
-      telephone: '+221 77 200 00 00',
-    },
-  })
-  console.log(`   ✅ ADMIN_ENTREPRISE: ${admin.email}\n`)
-
-  // ─── 6. Create CONDUCTEUR ───────────────────────────────────
-  console.log('👤 Creating CONDUCTEUR...')
-  const conducteurPassword = await hashPassword('demo123')
-  const conducteur = await prisma.user.create({
-    data: {
-      email: 'conducteur@opuc.demo',
-      name: 'Ibrahim Sow',
-      password: conducteurPassword,
-      role: 'CONDUCTEUR',
-      entrepriseId: entreprise.id,
-      active: true,
-      twoFactorEnabled: false,
-      premiereConnexion: false,
-      telephone: '+221 77 300 00 00',
-    },
-  })
-  console.log(`   ✅ CONDUCTEUR: ${conducteur.email}\n`)
-
-  // ─── 7. Create CHEF_CHANTIER ────────────────────────────────
-  console.log('👤 Creating CHEF_CHANTIER...')
+  // ─── 5. Create CHEF_PROJET ──────────────────────────────────
+  console.log('👤 Creating CHEF_PROJET...')
   const chefPassword = await hashPassword('demo123')
-  const chefChantier = await prisma.user.create({
+  const chefProjet = await prisma.user.create({
     data: {
-      email: 'chef-chantier@opuc.demo',
-      name: 'Omar Ba',
+      email: 'chef-projet@opuc.demo',
+      name: 'Ibrahim Sow',
       password: chefPassword,
-      role: 'CHEF_CHANTIER',
+      role: 'CHEF_PROJET',
       entrepriseId: entreprise.id,
       active: true,
       twoFactorEnabled: false,
       premiereConnexion: false,
-      telephone: '+221 77 400 00 00',
+      telephone: '+225 07 20 00 00',
     },
   })
-  console.log(`   ✅ CHEF_CHANTIER: ${chefChantier.email}\n`)
+  console.log(`   ✅ CHEF_PROJET: ${chefProjet.email}\n`)
 
-  // ─── 8. Create SOUS_TRAITANT ────────────────────────────────
+  // ─── 6. Create SOUS_TRAITANT ────────────────────────────────
   console.log('👤 Creating SOUS_TRAITANT...')
   const stPassword = await hashPassword('demo123')
   const sousTraitant = await prisma.user.create({
@@ -173,18 +137,18 @@ async function main() {
       active: true,
       twoFactorEnabled: false,
       premiereConnexion: false,
-      telephone: '+221 77 500 00 00',
+      telephone: '+225 07 30 00 00',
     },
   })
   console.log(`   ✅ SOUS_TRAITANT: ${sousTraitant.email}\n`)
 
-  // ─── 9. Create demo chantier ────────────────────────────────
+  // ─── 7. Create demo chantier ────────────────────────────────
   console.log('🏗️  Creating demo chantier...')
   const chantier = await prisma.chantier.create({
     data: {
-      nom: 'Centres Commerciaux Almadies',
-      adresse: 'Almadies, Dakar',
-      maitreOuvrage: 'Groupe IMF',
+      nom: 'Centres Commerciaux Cocody',
+      adresse: 'Cocody Riviera, Abidjan',
+      maitreOuvrage: 'Groupe SIFCA',
       dateDebut: new Date('2025-01-15'),
       dateFinPrevue: new Date('2025-12-31'),
       budgetPrevisionnel: 250000000,
@@ -195,7 +159,7 @@ async function main() {
   })
   console.log(`   ✅ Chantier: ${chantier.nom} (ID: ${chantier.id})\n`)
 
-  // ─── 10. Create demo phases ─────────────────────────────────
+  // ─── 8. Create demo phases ─────────────────────────────────
   console.log('📋 Creating demo phases...')
   const phases = [
     { nom: 'Gros Œuvre', ordre: 1, avancement: 65 },
@@ -215,7 +179,7 @@ async function main() {
   }
   console.log(`   ✅ ${phases.length} phases created\n`)
 
-  // ─── 11. Create demo journaliers ────────────────────────────
+  // ─── 9. Create demo journaliers ────────────────────────────
   console.log('👷 Creating demo journaliers...')
   const journaliers = [
     { nom: 'Fall', prenom: 'Mamadou', specialite: 'Maçon', tauxJournalier: 5000 },
@@ -237,9 +201,9 @@ async function main() {
   }
   console.log(`   ✅ ${journaliers.length} journaliers created\n`)
 
-  // ─── 12. Create default permission configs ──────────────────
+  // ─── 10. Create default permission configs ──────────────────
   console.log('🔐 Creating default permission configs...')
-  const roles = ['SUPER_ADMIN', 'GERANT', 'ADMIN_ENTREPRISE', 'CONDUCTEUR', 'CHEF_CHANTIER', 'SOUS_TRAITANT']
+  const roles = ['SUPER_ADMIN', 'GERANT', 'CHEF_PROJET', 'SOUS_TRAITANT']
   for (const role of roles) {
     await prisma.permissionConfig.upsert({
       where: { role },
@@ -249,7 +213,7 @@ async function main() {
   }
   console.log(`   ✅ ${roles.length} permission configs created\n`)
 
-  // ─── 13. Create default system settings ─────────────────────
+  // ─── 11. Create default system settings ─────────────────────
   console.log('⚙️  Creating default system settings...')
   const settings = [
     { cle: 'security.maxLoginAttempts', valeur: '5' },
@@ -284,16 +248,14 @@ async function main() {
   console.log('═══════════════════════════════════════════════')
   console.log('')
   console.log('📋 Demo Accounts:')
-  console.log('   ┌─────────────────────┬────────────────────────────┬────────────┐')
-  console.log('   │ Role                │ Email                       │ Password   │')
-  console.log('   ├─────────────────────┼────────────────────────────┼────────────┤')
-  console.log('   │ Super Admin         │ superadmin@opuc.demo         │ Admin@1234 │')
-  console.log('   │ Gérant              │ chef-entreprise@opuc.demo   │ demo123    │')
-  console.log('   │ Admin Entreprise    │ admin@opuc.demo             │ demo123    │')
-  console.log('   │ Conducteur          │ conducteur@opuc.demo        │ demo123    │')
-  console.log('   │ Chef Chantier       │ chef-chantier@opuc.demo     │ demo123    │')
-  console.log('   │ Sous-traitant       │ sous-traitant@opuc.demo     │ demo123    │')
-  console.log('   └─────────────────────┴────────────────────────────┴────────────┘')
+  console.log('   ┌─────────────────────┬───────────────────────────┬────────────┐')
+  console.log('   │ Role                │ Email                      │ Password   │')
+  console.log('   ├─────────────────────┼───────────────────────────┼────────────┤')
+  console.log('   │ Super Admin         │ superadmin@opuc.demo       │ Admin@1234 │')
+  console.log('   │ Gérant              │ gerant@opuc.demo           │ demo123    │')
+  console.log('   │ Chef de Projet      │ chef-projet@opuc.demo      │ demo123    │')
+  console.log('   │ Sous-traitant       │ sous-traitant@opuc.demo    │ demo123    │')
+  console.log('   └─────────────────────┴───────────────────────────┴────────────┘')
   console.log('')
   console.log(`🏢 Entreprise: ${entreprise.nom}`)
   console.log(`🏗️  Chantier: ${chantier.nom}`)

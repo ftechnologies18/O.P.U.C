@@ -27,9 +27,7 @@ export async function POST(request: NextRequest) {
     const validRoles = [
       'SUPER_ADMIN',
       'GERANT',
-      'ADMIN_ENTREPRISE',
-      'CONDUCTEUR',
-      'CHEF_CHANTIER',
+      'CHEF_PROJET',
       'SOUS_TRAITANT',
     ]
 

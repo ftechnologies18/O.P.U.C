@@ -206,10 +206,9 @@ export function DashboardView() {
   }
 
   const roleLabels: Record<string, string> = {
-    ADMIN: 'Administrateur',
-    CHEF_ENTREPRISE: "Chef d'entreprise",
-    CONDUCTEUR: 'Conducteur de travaux',
-    CHEF_CHANTIER: 'Chef de chantier',
+    SUPER_ADMIN: 'Super Administrateur',
+    GERANT: 'Gérant',
+    CHEF_PROJET: 'Chef de Projet',
     SOUS_TRAITANT: 'Sous-traitant',
   }
 

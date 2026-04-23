@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         email: normalizedEmail,
         password: hashedPassword,
-        role: 'CHEF_ENTREPRISE', // maps to GERANT via tenant.ts LEGACY_ROLE_MAP
+        role: 'GERANT', // Default role for self-registration
         telephone: telephone?.trim() || null,
         entrepriseId: entreprise.id,
         active: true,
