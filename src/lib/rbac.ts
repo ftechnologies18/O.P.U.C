@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // O.P.U.C — RBAC (Role-Based Access Control) Permission System
-// Inspired by CATS repository pattern
+// Simplified 4-role architecture for BTP/construction in Côte d'Ivoire
 // Pure logic — can be used on both server and client
 // ─────────────────────────────────────────────────────────────
 
@@ -11,9 +11,7 @@
 export type UserRole =
   | 'SUPER_ADMIN'
   | 'GERANT'
-  | 'ADMIN_ENTREPRISE'
-  | 'CONDUCTEUR'
-  | 'CHEF_CHANTIER'
+  | 'CHEF_PROJET'
   | 'SOUS_TRAITANT'
 
 export type PermissionLevel = 'AUCUN' | 'LECTURE' | 'ECRITURE' | 'GESTION'
@@ -33,6 +31,11 @@ export type AppPage =
   | 'rapports'
   | 'photos'
   | 'documents'
+  | 'clients'
+  | 'devis'
+  | 'contrats'
+  | 'facturation'
+  | 'support'
   | 'parametres'
   | 'gestion-acces'
   | 'admin-plateforme'
@@ -59,11 +62,9 @@ export type AppFeature =
 
 const ROLE_LEVELS: Record<UserRole, number> = {
   SOUS_TRAITANT: 1,
-  CHEF_CHANTIER: 2,
-  CONDUCTEUR: 3,
-  ADMIN_ENTREPRISE: 4,
-  GERANT: 5,
-  SUPER_ADMIN: 6,
+  CHEF_PROJET: 2,
+  GERANT: 3,
+  SUPER_ADMIN: 4,
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -77,18 +78,23 @@ const PAGE_ACCESS: Record<AppPage, number> = {
   planning: 1,           // everyone
   pointage: 1,           // everyone
   personnel: 1,          // everyone
-  paie: 2,               // CHEF_CHANTIER+
-  'sous-traitants': 2,   // CHEF_CHANTIER+
-  budget: 2,             // CHEF_CHANTIER+
+  paie: 1,               // everyone
+  'sous-traitants': 1,   // everyone
+  budget: 1,             // everyone
   stocks: 1,             // everyone
   engins: 1,             // everyone
   carburant: 1,          // everyone
   rapports: 1,           // everyone
   photos: 1,             // everyone
   documents: 1,          // everyone
-  parametres: 3,         // CONDUCTEUR+
-  'gestion-acces': 5,    // GERANT+ only
-  'admin-plateforme': 6, // SUPER_ADMIN only
+  clients: 1,            // everyone
+  devis: 1,              // everyone
+  contrats: 1,           // everyone
+  facturation: 1,        // everyone
+  support: 1,            // everyone
+  parametres: 2,         // CHEF_PROJET+
+  'gestion-acces': 3,    // GERANT+ only
+  'admin-plateforme': 4, // SUPER_ADMIN only
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -97,8 +103,8 @@ const PAGE_ACCESS: Record<AppPage, number> = {
 // ═══════════════════════════════════════════════════════════
 
 const SETTINGS_ACCESS: Record<SettingsCategory, number> = {
-  general: 3,        // CONDUCTEUR+
-  securite: 4,       // ADMIN_ENTREPRISE+
+  general: 2,        // CHEF_PROJET+
+  securite: 3,       // GERANT+
   notifications: 1,  // everyone
   apparence: 1,      // everyone
 }
@@ -112,20 +118,20 @@ const FEATURE_ACCESS: Record<AppFeature, number> = {
   notifications: 1,            // everyone
   search: 1,                   // everyone
   profile: 1,                  // everyone
-  'export-csv': 2,             // CHEF_CHANTIER+
-  'audit-log': 4,              // ADMIN_ENTREPRISE+
-  'permission-management': 5,  // GERANT+
-  'user-management': 4,        // ADMIN_ENTREPRISE+
-  'enterprise-settings': 5,    // GERANT+
-  'platform-admin': 6,         // SUPER_ADMIN only
+  'export-csv': 2,             // CHEF_PROJET+
+  'audit-log': 3,              // GERANT+
+  'permission-management': 3,  // GERANT+
+  'user-management': 3,        // GERANT+
+  'enterprise-settings': 3,    // GERANT+
+  'platform-admin': 4,         // SUPER_ADMIN only
   '2fa-setup': 1,              // everyone (self-setup)
-  invitation: 4,               // ADMIN_ENTREPRISE+
+  invitation: 3,               // GERANT+
 }
 
 // ═══════════════════════════════════════════════════════════
 // MODULE PERMISSION DEFAULTS
-// Maps each of the 16 application modules to a default
-// PermissionLevel per role. Used for fine-grained permissions.
+// Maps each application module to a default PermissionLevel per role.
+// Used for fine-grained permissions.
 // ═══════════════════════════════════════════════════════════
 
 type AppModule =
@@ -145,6 +151,11 @@ type AppModule =
   | 'parametres'
   | 'gestion-acces'
   | 'admin-plateforme'
+  | 'clients'
+  | 'devis'
+  | 'contrats'
+  | 'facturation'
+  | 'support'
 
 const MODULE_PERMISSIONS: Record<UserRole, Record<AppModule, PermissionLevel>> = {
   SUPER_ADMIN: {
@@ -161,6 +172,11 @@ const MODULE_PERMISSIONS: Record<UserRole, Record<AppModule, PermissionLevel>> =
     rapports: 'GESTION',
     photos: 'GESTION',
     documents: 'GESTION',
+    clients: 'GESTION',
+    devis: 'GESTION',
+    contrats: 'GESTION',
+    facturation: 'GESTION',
+    support: 'GESTION',
     parametres: 'GESTION',
     'gestion-acces': 'GESTION',
     'admin-plateforme': 'GESTION',
@@ -180,34 +196,20 @@ const MODULE_PERMISSIONS: Record<UserRole, Record<AppModule, PermissionLevel>> =
     rapports: 'GESTION',
     photos: 'GESTION',
     documents: 'GESTION',
+    clients: 'GESTION',
+    devis: 'GESTION',
+    contrats: 'GESTION',
+    facturation: 'GESTION',
+    support: 'GESTION',
     parametres: 'GESTION',
     'gestion-acces': 'GESTION',
     'admin-plateforme': 'AUCUN',
   },
 
-  ADMIN_ENTREPRISE: {
-    chantiers: 'GESTION',
-    planning: 'GESTION',
-    pointage: 'GESTION',
-    personnel: 'GESTION',
-    paie: 'GESTION',
-    'sous-traitants': 'GESTION',
-    budget: 'GESTION',
-    stocks: 'GESTION',
-    engins: 'GESTION',
-    carburant: 'GESTION',
-    rapports: 'GESTION',
-    photos: 'GESTION',
-    documents: 'GESTION',
-    parametres: 'ECRITURE',
-    'gestion-acces': 'ECRITURE',
-    'admin-plateforme': 'AUCUN',
-  },
-
-  CONDUCTEUR: {
+  CHEF_PROJET: {
     chantiers: 'ECRITURE',
     planning: 'ECRITURE',
-    pointage: 'LECTURE',
+    pointage: 'ECRITURE',
     personnel: 'LECTURE',
     paie: 'LECTURE',
     'sous-traitants': 'LECTURE',
@@ -215,28 +217,14 @@ const MODULE_PERMISSIONS: Record<UserRole, Record<AppModule, PermissionLevel>> =
     stocks: 'ECRITURE',
     engins: 'ECRITURE',
     carburant: 'ECRITURE',
-    rapports: 'LECTURE',
-    photos: 'LECTURE',
-    documents: 'LECTURE',
-    parametres: 'LECTURE',
-    'gestion-acces': 'AUCUN',
-    'admin-plateforme': 'AUCUN',
-  },
-
-  CHEF_CHANTIER: {
-    chantiers: 'LECTURE',
-    planning: 'LECTURE',
-    pointage: 'ECRITURE',
-    personnel: 'LECTURE',
-    paie: 'LECTURE',
-    'sous-traitants': 'LECTURE',
-    budget: 'LECTURE',
-    stocks: 'LECTURE',
-    engins: 'LECTURE',
-    carburant: 'LECTURE',
     rapports: 'ECRITURE',
     photos: 'ECRITURE',
     documents: 'ECRITURE',
+    clients: 'ECRITURE',
+    devis: 'ECRITURE',
+    contrats: 'ECRITURE',
+    facturation: 'ECRITURE',
+    support: 'ECRITURE',
     parametres: 'LECTURE',
     'gestion-acces': 'AUCUN',
     'admin-plateforme': 'AUCUN',
@@ -245,17 +233,22 @@ const MODULE_PERMISSIONS: Record<UserRole, Record<AppModule, PermissionLevel>> =
   SOUS_TRAITANT: {
     chantiers: 'LECTURE',
     planning: 'LECTURE',
-    pointage: 'AUCUN',
+    pointage: 'LECTURE',
     personnel: 'AUCUN',
     paie: 'AUCUN',
     'sous-traitants': 'LECTURE',
     budget: 'LECTURE',
-    stocks: 'AUCUN',
-    engins: 'AUCUN',
-    carburant: 'AUCUN',
+    stocks: 'LECTURE',
+    engins: 'LECTURE',
+    carburant: 'LECTURE',
     rapports: 'LECTURE',
-    photos: 'AUCUN',
-    documents: 'AUCUN',
+    photos: 'LECTURE',
+    documents: 'LECTURE',
+    clients: 'LECTURE',
+    devis: 'LECTURE',
+    contrats: 'LECTURE',
+    facturation: 'LECTURE',
+    support: 'LECTURE',
     parametres: 'AUCUN',
     'gestion-acces': 'AUCUN',
     'admin-plateforme': 'AUCUN',
@@ -269,9 +262,7 @@ const MODULE_PERMISSIONS: Record<UserRole, Record<AppModule, PermissionLevel>> =
 const ROLE_LABELS: Record<UserRole, string> = {
   SUPER_ADMIN: 'Super Administrateur',
   GERANT: 'Gérant',
-  ADMIN_ENTREPRISE: "Admin d'Entreprise",
-  CONDUCTEUR: 'Conducteur de Travaux',
-  CHEF_CHANTIER: 'Chef de Chantier',
+  CHEF_PROJET: 'Chef de Projet',
   SOUS_TRAITANT: 'Sous-traitant',
 }
 
@@ -282,9 +273,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
 const DEFAULT_PAGES: Record<UserRole, string> = {
   SUPER_ADMIN: 'admin-plateforme',
   GERANT: 'dashboard',
-  ADMIN_ENTREPRISE: 'dashboard',
-  CONDUCTEUR: 'dashboard',
-  CHEF_CHANTIER: 'pointage',
+  CHEF_PROJET: 'pointage',
   SOUS_TRAITANT: 'chantiers',
 }
 
@@ -295,11 +284,70 @@ const DEFAULT_PAGES: Record<UserRole, string> = {
 const ROLE_BADGE_CLASSES: Record<UserRole, string> = {
   SUPER_ADMIN: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800',
   GERANT: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800',
-  ADMIN_ENTREPRISE: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
-  CONDUCTEUR: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400 border-sky-200 dark:border-sky-800',
-  CHEF_CHANTIER: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400 border-violet-200 dark:border-violet-800',
+  CHEF_PROJET: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
   SOUS_TRAITANT: 'bg-stone-100 text-stone-800 dark:bg-stone-900/30 dark:text-stone-400 border-stone-200 dark:border-stone-800',
 }
+
+// ═══════════════════════════════════════════════════════════
+// ALL EXPORTED ROLE CONSTANTS (for UI components)
+// ═══════════════════════════════════════════════════════════
+
+export const ALL_ROLES: UserRole[] = ['SUPER_ADMIN', 'GERANT', 'CHEF_PROJET', 'SOUS_TRAITANT']
+
+export const ENTERPRISE_ROLES: UserRole[] = ['GERANT', 'CHEF_PROJET', 'SOUS_TRAITANT']
+
+export const ROLES_LIST: string[] = ['GERANT', 'CHEF_PROJET', 'SOUS_TRAITANT']
+
+export const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
+  GERANT: {
+    dashboard: 'GESTION', chantiers: 'GESTION', planning: 'GESTION', pointage: 'GESTION',
+    personnel: 'GESTION', paie: 'GESTION', 'sous-traitants': 'GESTION', budget: 'GESTION',
+    stocks: 'GESTION', engins: 'GESTION', carburant: 'GESTION', rapports: 'GESTION',
+    photos: 'GESTION', documents: 'GESTION', clients: 'GESTION', devis: 'GESTION',
+    contrats: 'GESTION', facturation: 'GESTION', support: 'GESTION', parametres: 'GESTION',
+    'gestion-acces': 'GESTION',
+  },
+  CHEF_PROJET: {
+    dashboard: 'ECRITURE', chantiers: 'ECRITURE', planning: 'ECRITURE', pointage: 'ECRITURE',
+    personnel: 'LECTURE', paie: 'LECTURE', 'sous-traitants': 'LECTURE', budget: 'LECTURE',
+    stocks: 'ECRITURE', engins: 'ECRITURE', carburant: 'ECRITURE', rapports: 'ECRITURE',
+    photos: 'ECRITURE', documents: 'ECRITURE', clients: 'ECRITURE', devis: 'ECRITURE',
+    contrats: 'ECRITURE', facturation: 'ECRITURE', support: 'ECRITURE', parametres: 'LECTURE',
+    'gestion-acces': 'AUCUN',
+  },
+  SOUS_TRAITANT: {
+    dashboard: 'LECTURE', chantiers: 'LECTURE', planning: 'LECTURE', pointage: 'LECTURE',
+    personnel: 'AUCUN', paie: 'AUCUN', 'sous-traitants': 'LECTURE', budget: 'LECTURE',
+    stocks: 'LECTURE', engins: 'LECTURE', carburant: 'LECTURE', rapports: 'LECTURE',
+    photos: 'LECTURE', documents: 'LECTURE', clients: 'LECTURE', devis: 'LECTURE',
+    contrats: 'LECTURE', facturation: 'LECTURE', support: 'LECTURE', parametres: 'AUCUN',
+    'gestion-acces': 'AUCUN',
+  },
+}
+
+export const PERMISSION_MODULES: { key: string; label: string }[] = [
+  { key: 'dashboard', label: 'Tableau de bord' },
+  { key: 'chantiers', label: 'Chantiers' },
+  { key: 'planning', label: 'Planning' },
+  { key: 'pointage', label: 'Pointage' },
+  { key: 'personnel', label: 'Personnel' },
+  { key: 'paie', label: 'Paie' },
+  { key: 'sous-traitants', label: 'Sous-traitants' },
+  { key: 'budget', label: 'Budget' },
+  { key: 'stocks', label: 'Stocks' },
+  { key: 'engins', label: 'Parc Engins' },
+  { key: 'carburant', label: 'Carburant' },
+  { key: 'rapports', label: 'Rapports' },
+  { key: 'photos', label: 'Photos' },
+  { key: 'documents', label: 'Documents' },
+  { key: 'clients', label: 'Clients' },
+  { key: 'devis', label: 'Devis' },
+  { key: 'contrats', label: 'Contrats' },
+  { key: 'facturation', label: 'Facturation' },
+  { key: 'support', label: 'Support' },
+  { key: 'parametres', label: 'Paramètres' },
+  { key: 'gestion-acces', label: 'Gestion Accès' },
+]
 
 // ═══════════════════════════════════════════════════════════
 // HELPER FUNCTIONS
@@ -349,16 +397,16 @@ export function getDefaultPage(role: UserRole): string {
 /**
  * Get the French display label for a given role.
  */
-export function getRoleLabel(role: UserRole): string {
-  return ROLE_LABELS[role]
+export function getRoleLabel(role: string): string {
+  return (ROLE_LABELS as Record<string, string>)[role] || role.replace('_', ' ')
 }
 
 /**
  * Get Tailwind CSS badge classes for a given role.
  * Returns classes for a bordered badge with role-specific colors.
  */
-export function getRoleBadgeClass(role: UserRole): string {
-  return ROLE_BADGE_CLASSES[role]
+export function getRoleBadgeClass(role: string): string {
+  return (ROLE_BADGE_CLASSES as Record<string, string>)[role] || 'bg-gray-100 text-gray-800 border-gray-200'
 }
 
 /**

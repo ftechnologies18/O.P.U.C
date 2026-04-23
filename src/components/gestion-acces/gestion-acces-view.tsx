@@ -159,21 +159,13 @@ const TABS = [
 ]
 
 const ROLE_CONFIG: Record<string, { label: string; className: string }> = {
-  ADMIN: {
-    label: 'Administrateur',
-    className: 'bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border-red-200',
+  GERANT: {
+    label: 'Gérant',
+    className: 'bg-gradient-to-r from-amber-100 to-amber-50 text-amber-700 border-amber-200',
   },
-  CHEF_ENTREPRISE: {
-    label: "Chef d'entreprise",
-    className: 'bg-violet-100 text-violet-700 border-violet-200',
-  },
-  CONDUCTEUR: {
-    label: 'Conducteur',
-    className: 'bg-blue-100 text-blue-700 border-blue-200',
-  },
-  CHEF_CHANTIER: {
-    label: 'Chef de chantier',
-    className: 'bg-amber-100 text-amber-700 border-amber-200',
+  CHEF_PROJET: {
+    label: 'Chef de Projet',
+    className: 'bg-emerald-100 text-emerald-700 border-emerald-200',
   },
   SOUS_TRAITANT: {
     label: 'Sous-traitant',
@@ -289,18 +281,21 @@ const PERMISSION_MODULES: { key: string; label: string }[] = [
   { key: 'rapports', label: 'Rapports' },
   { key: 'photos', label: 'Photos' },
   { key: 'documents', label: 'Documents' },
+  { key: 'clients', label: 'Clients' },
+  { key: 'devis', label: 'Devis' },
+  { key: 'contrats', label: 'Contrats' },
+  { key: 'facturation', label: 'Facturation' },
+  { key: 'support', label: 'Support' },
   { key: 'parametres', label: 'Paramètres' },
   { key: 'gestion-acces', label: 'Gestion Accès' },
 ]
 
-const ROLES_LIST = ['ADMIN', 'CHEF_ENTREPRISE', 'CONDUCTEUR', 'CHEF_CHANTIER', 'SOUS_TRAITANT']
+const ROLES_LIST = ['GERANT', 'CHEF_PROJET', 'SOUS_TRAITANT']
 
 const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
-  ADMIN: { dashboard: 'GESTION', chantiers: 'GESTION', planning: 'GESTION', pointage: 'GESTION', personnel: 'GESTION', paie: 'GESTION', 'sous-traitants': 'GESTION', budget: 'GESTION', stocks: 'GESTION', engins: 'GESTION', carburant: 'GESTION', rapports: 'GESTION', photos: 'GESTION', documents: 'GESTION', parametres: 'GESTION', 'gestion-acces': 'GESTION' },
-  CHEF_ENTREPRISE: { dashboard: 'GESTION', chantiers: 'GESTION', planning: 'GESTION', pointage: 'GESTION', personnel: 'GESTION', paie: 'GESTION', 'sous-traitants': 'GESTION', budget: 'GESTION', stocks: 'GESTION', engins: 'GESTION', carburant: 'GESTION', rapports: 'GESTION', photos: 'GESTION', documents: 'GESTION', parametres: 'ECRITURE', 'gestion-acces': 'GESTION' },
-  CONDUCTEUR: { dashboard: 'LECTURE', chantiers: 'ECRITURE', planning: 'ECRITURE', pointage: 'ECRITURE', personnel: 'LECTURE', paie: 'LECTURE', 'sous-traitants': 'LECTURE', budget: 'LECTURE', stocks: 'ECRITURE', engins: 'GESTION', carburant: 'GESTION', rapports: 'ECRITURE', photos: 'ECRITURE', documents: 'ECRITURE', parametres: 'LECTURE', 'gestion-acces': 'AUCUN' },
-  CHEF_CHANTIER: { dashboard: 'LECTURE', chantiers: 'ECRITURE', planning: 'LECTURE', pointage: 'GESTION', personnel: 'LECTURE', paie: 'LECTURE', 'sous-traitants': 'LECTURE', budget: 'LECTURE', stocks: 'ECRITURE', engins: 'LECTURE', carburant: 'ECRITURE', rapports: 'ECRITURE', photos: 'ECRITURE', documents: 'ECRITURE', parametres: 'LECTURE', 'gestion-acces': 'AUCUN' },
-  SOUS_TRAITANT: { dashboard: 'AUCUN', chantiers: 'LECTURE', planning: 'AUCUN', pointage: 'AUCUN', personnel: 'AUCUN', paie: 'AUCUN', 'sous-traitants': 'ECRITURE', budget: 'LECTURE', stocks: 'AUCUN', engins: 'AUCUN', carburant: 'AUCUN', rapports: 'LECTURE', photos: 'LECTURE', documents: 'LECTURE', parametres: 'AUCUN', 'gestion-acces': 'AUCUN' },
+  GERANT: { dashboard: 'GESTION', chantiers: 'GESTION', planning: 'GESTION', pointage: 'GESTION', personnel: 'GESTION', paie: 'GESTION', 'sous-traitants': 'GESTION', budget: 'GESTION', stocks: 'GESTION', engins: 'GESTION', carburant: 'GESTION', rapports: 'GESTION', photos: 'GESTION', documents: 'GESTION', clients: 'GESTION', devis: 'GESTION', contrats: 'GESTION', facturation: 'GESTION', support: 'GESTION', parametres: 'GESTION', 'gestion-acces': 'GESTION' },
+  CHEF_PROJET: { dashboard: 'ECRITURE', chantiers: 'ECRITURE', planning: 'ECRITURE', pointage: 'ECRITURE', personnel: 'LECTURE', paie: 'LECTURE', 'sous-traitants': 'LECTURE', budget: 'LECTURE', stocks: 'ECRITURE', engins: 'ECRITURE', carburant: 'ECRITURE', rapports: 'ECRITURE', photos: 'ECRITURE', documents: 'ECRITURE', clients: 'ECRITURE', devis: 'ECRITURE', contrats: 'ECRITURE', facturation: 'ECRITURE', support: 'ECRITURE', parametres: 'LECTURE', 'gestion-acces': 'AUCUN' },
+  SOUS_TRAITANT: { dashboard: 'LECTURE', chantiers: 'LECTURE', planning: 'LECTURE', pointage: 'LECTURE', personnel: 'AUCUN', paie: 'AUCUN', 'sous-traitants': 'LECTURE', budget: 'LECTURE', stocks: 'LECTURE', engins: 'LECTURE', carburant: 'LECTURE', rapports: 'LECTURE', photos: 'LECTURE', documents: 'LECTURE', clients: 'LECTURE', devis: 'LECTURE', contrats: 'LECTURE', facturation: 'LECTURE', support: 'LECTURE', parametres: 'AUCUN', 'gestion-acces': 'AUCUN' },
 }
 
 const EMPTY_USER_FORM: UserFormData = {

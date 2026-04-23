@@ -37,18 +37,16 @@ interface UserInfo {
 }
 
 const roleLabels: Record<string, string> = {
-  ADMIN: 'Administrateur',
-  CHEF_ENTREPRISE: "Chef d'entreprise",
-  CONDUCTEUR: 'Conducteur de travaux',
-  CHEF_CHANTIER: 'Chef de chantier',
+  SUPER_ADMIN: 'Super Administrateur',
+  GERANT: 'Gérant',
+  CHEF_PROJET: 'Chef de Projet',
   SOUS_TRAITANT: 'Sous-traitant',
 }
 
 const roleColors: Record<string, string> = {
-  ADMIN: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
-  CHEF_ENTREPRISE: 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-400',
-  CONDUCTEUR: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400',
-  CHEF_CHANTIER: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',
+  SUPER_ADMIN: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
+  GERANT: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',
+  CHEF_PROJET: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',
   SOUS_TRAITANT: 'bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-400',
 }
 

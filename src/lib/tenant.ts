@@ -45,37 +45,39 @@ export interface TenantContext {
 }
 
 // ═══════════════════════════════════════════════════════════
-// LEGACY ROLE MAPPING
-// Backward compatibility: maps old role names to new ones.
-// ═══════════════════════════════════════════════════════════
-
-const LEGACY_ROLE_MAP: Record<string, UserRole> = {
-  ADMIN: 'ADMIN_ENTREPRISE',
-  CHEF_ENTREPRISE: 'GERANT',
-  SUPER_ADMIN: 'SUPER_ADMIN',
-  GERANT: 'GERANT',
-  ADMIN_ENTREPRISE: 'ADMIN_ENTREPRISE',
-  CONDUCTEUR: 'CONDUCTEUR',
-  CHEF_CHANTIER: 'CHEF_CHANTIER',
-  SOUS_TRAITANT: 'SOUS_TRAITANT',
-}
-
-function mapRole(rawRole: string): UserRole {
-  return LEGACY_ROLE_MAP[rawRole] ?? 'CHEF_CHANTIER'
-}
-
-// ═══════════════════════════════════════════════════════════
 // VALID ROLE LIST
 // ═══════════════════════════════════════════════════════════
 
-const VALID_ROLES: UserRole[] = [
+const VALID_ROLES: string[] = [
   'SUPER_ADMIN',
   'GERANT',
-  'ADMIN_ENTREPRISE',
-  'CONDUCTEUR',
-  'CHEF_CHANTIER',
+  'CHEF_PROJET',
   'SOUS_TRAITANT',
 ]
+
+// ═══════════════════════════════════════════════════════════
+// LEGACY ROLE MAPPING
+// Maps old role names from previous versions to new 4-role system.
+// Only used for backward compatibility with existing DB records.
+// ═══════════════════════════════════════════════════════════
+
+const LEGACY_ROLE_MAP: Record<string, UserRole> = {
+  // New roles (identity mapping)
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  GERANT: 'GERANT',
+  CHEF_PROJET: 'CHEF_PROJET',
+  SOUS_TRAITANT: 'SOUS_TRAITANT',
+  // Old roles → merged into new system
+  ADMIN_ENTREPRISE: 'GERANT',    // Merged into GERANT
+  ADMIN: 'GERANT',                // Merged into GERANT
+  CHEF_ENTREPRISE: 'GERANT',     // Was alias for GERANT
+  CONDUCTEUR: 'CHEF_PROJET',     // Merged into CHEF_PROJET
+  CHEF_CHANTIER: 'CHEF_PROJET',  // Merged into CHEF_PROJET
+}
+
+function mapRole(rawRole: string): UserRole {
+  return LEGACY_ROLE_MAP[rawRole] ?? 'CHEF_PROJET'
+}
 
 // ═══════════════════════════════════════════════════════════
 // CORE FUNCTIONS
@@ -110,7 +112,6 @@ export async function requireAuth(request: NextRequest): Promise<TenantContext> 
       role: true,
       entrepriseId: true,
       active: true,
-      // These fields may not exist in schema yet — use defaults
       twoFactorEnabled: true,
       premiereConnexion: true,
       lockedUntil: true,
@@ -139,9 +140,6 @@ export async function requireAuth(request: NextRequest): Promise<TenantContext> 
 
   // Map and validate role
   const role = mapRole(user.role)
-  if (!VALID_ROLES.includes(role)) {
-    throw new AuthError('Rôle utilisateur non reconnu.', 403)
-  }
 
   return {
     userId: user.id,
@@ -208,7 +206,7 @@ export async function requireMinimumRole(
  * Use for administrative operations within the platform.
  *
  * @throws AuthError (401) if not authenticated
- * @throws ForbiddenError (403) if not admin
+ * @throws ForbiddenError (403) if admin
  */
 export async function requireAdmin(request: NextRequest): Promise<TenantContext> {
   return requireMinimumRole(request, 'GERANT')

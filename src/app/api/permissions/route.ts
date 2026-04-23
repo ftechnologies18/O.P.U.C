@@ -6,8 +6,8 @@ import { authOptions } from '@/lib/auth'
 // Valid permission levels
 const VALID_LEVELS = ['AUCUN', 'LECTURE', 'ECRITURE', 'GESTION'] as const
 
-// Valid roles in the system
-const VALID_ROLES = ['ADMIN', 'CHEF_ENTREPRISE', 'CONDUCTEUR', 'CHEF_CHANTIER', 'SOUS_TRAITANT'] as const
+// Valid roles in the system (4-role architecture)
+const VALID_ROLES = ['SUPER_ADMIN', 'GERANT', 'CHEF_PROJET', 'SOUS_TRAITANT'] as const
 
 /**
  * GET /api/permissions
@@ -58,9 +58,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    // Only ADMIN can modify permissions
+    // Only GERANT+ can modify permissions
     const userRole = (session.user as { role: string }).role
-    if (userRole !== 'ADMIN') {
+    if (userRole !== 'GERANT' && userRole !== 'SUPER_ADMIN') {
       return NextResponse.json(
         { error: 'Accès refusé. Seul un administrateur peut modifier les permissions.' },
         { status: 403 }
