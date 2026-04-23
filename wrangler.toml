@@ -1,15 +1,14 @@
 # ══════════════════════════════════════════════════════════════════
-# O.P.U.C — Cloudflare Workers / Pages Configuration
+# O.P.U.C — Cloudflare Pages Configuration
 # ══════════════════════════════════════════════════════════════════
-# Ce fichier configure le runtime Cloudflare pour le déploiement.
-# Les variables d'environnement sensibles (DATABASE_URL, etc.)
-# doivent être configurées via le Dashboard Cloudflare, pas ici.
+# Variables sensibles (DATABASE_URL, NEXTAUTH_SECRET) configurées
+# via Cloudflare Dashboard → Pages → Settings → Environment Variables
 # ══════════════════════════════════════════════════════════════════
 
 name = "opuc"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
 
-# Pages project configuration
 [observability]
 enabled = true
