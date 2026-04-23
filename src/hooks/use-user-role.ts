@@ -7,7 +7,7 @@ export function useUserRole() {
   const role = (session?.user as any)?.role as UserRole | undefined
 
   return {
-    role: role ?? ('CHEF_CHANTIER' as UserRole),
+    role: role ?? ('CHEF_PROJET' as UserRole),
     isLoggedIn: status === 'authenticated',
     isLoading: status === 'loading',
     canAccess: (page: Parameters<typeof canAccessPage>[1]) => role ? canAccessPage(role, page) : false,
@@ -17,6 +17,6 @@ export function useUserRole() {
     roleLabel: role ? getRoleLabel(role) : '',
     isSuperAdmin: role === 'SUPER_ADMIN',
     isGerant: role === 'GERANT',
-    isAdmin: role === 'ADMIN_ENTREPRISE' || role === 'GERANT' || role === 'SUPER_ADMIN',
+    isAdmin: role === 'GERANT' || role === 'SUPER_ADMIN',
   }
 }
