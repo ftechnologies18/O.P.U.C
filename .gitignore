@@ -53,3 +53,11 @@ htmlcov/
 
 # ─── Dépendances ────────────────────────────────────────────────
 vendor/
+
+# ─── Secrets (ne JAMAIS committer) ──────────────────────────────
+.env
+.env.*
+*.pid
+.zscripts/backend.pid
+.zscripts/launch.log
+tool-results/
