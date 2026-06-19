@@ -4,6 +4,9 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { OfflineStatusIndicator } from "@/components/pwa/offline-status-indicator";
+import { ThemeProvider } from "@/providers/theme-provider";
+import { QueryProvider } from "@/providers/query-provider";
+import { AuthProvider } from "@/providers/auth-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -64,7 +67,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         <ServiceWorkerRegistration />
-        {children}
+        <ThemeProvider>
+          <QueryProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </QueryProvider>
+        </ThemeProvider>
         <Toaster />
         <OfflineStatusIndicator />
       </body>

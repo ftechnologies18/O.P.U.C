@@ -3,27 +3,26 @@
 import { useEffect } from 'react'
 import { useSession } from '@/lib/auth-session'
 import { AppLayout } from '@/components/layout/app-layout'
-import { ThemeProvider } from '@/providers/theme-provider'
-import { QueryProvider } from '@/providers/query-provider'
-import { AuthProvider } from '@/providers/auth-provider'
 import { Loader2 } from 'lucide-react'
 
 /**
  * Auth-gated layout for all authenticated app pages.
  *
  * Behavior:
- *  - `loading`     → full-screen spinner
- *  - `unauthenticated` → redirect to `/` (landing page)
+ *  - `loading`         → full-screen spinner
+ *  - `unauthenticated` → redirect to `/login`
  *  - `authenticated`   → render `<AppLayout>{children}</AppLayout>`
  *
- * Providers (ThemeProvider, QueryProvider, AuthProvider) are mounted here
- * because the root `src/app/layout.tsx` does not include them — each route
- * group is responsible for its own provider tree.
+ * Providers (ThemeProvider, QueryProvider, AuthProvider) are in the root layout.
  */
-function AppLayoutContent({ children }: { children: React.ReactNode }) {
+export default function AppLayoutRoute({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const { data: session, status } = useSession()
 
-  // Redirect unauthenticated users to /login (not the landing page).
+  // Redirect unauthenticated users to /login.
   useEffect(() => {
     if (status === 'unauthenticated' && typeof window !== 'undefined') {
       window.location.href = '/login'
@@ -42,25 +41,8 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   if (!session) {
-    // useEffect above will trigger the redirect; render nothing in the meantime.
     return null
   }
 
   return <AppLayout>{children}</AppLayout>
-}
-
-export default function AppLayoutRoute({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <ThemeProvider>
-      <QueryProvider>
-        <AuthProvider>
-          <AppLayoutContent>{children}</AppLayoutContent>
-        </AuthProvider>
-      </QueryProvider>
-    </ThemeProvider>
-  )
 }

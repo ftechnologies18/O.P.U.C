@@ -2,9 +2,6 @@
 
 import { useEffect } from 'react'
 import { useSession } from '@/lib/auth-session'
-import { AuthProvider } from '@/providers/auth-provider'
-import { ThemeProvider } from '@/providers/theme-provider'
-import { QueryProvider } from '@/providers/query-provider'
 import { LandingPage } from '@/components/landing/landing-page'
 import { ForcePasswordChange } from '@/components/auth/force-password-change'
 import { Loader2 } from 'lucide-react'
@@ -57,13 +54,5 @@ function AppContent() {
 }
 
 export default function Home() {
-  return (
-    <ThemeProvider>
-      <QueryProvider>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </QueryProvider>
-    </ThemeProvider>
-  )
+  return <AppContent />
 }
