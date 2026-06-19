@@ -6,17 +6,15 @@ const nextConfig: NextConfig = {
   },
   reactStrictMode: false,
 
-  // Cloudflare Pages: no standalone output needed
-  // @opennextjs/cloudflare handles the build internally
-
-  // ── API Gateway : proxy /api/v1/* vers le backend Go (:8080) ──
-  // Pendant la migration, /api/* (legacy) reste géré par Next.js,
-  // /api/v1/* est proxyé vers le backend Go.
+  // ── API Gateway : proxy /api/v1/* vers le backend Go ──────────
+  // En dev local : http://localhost:8080 (BACKEND_URL non set → fallback)
+  // En production (Vercel) : BACKEND_URL = https://opuc-api.fly.dev (ou autre)
   async rewrites() {
+    const backendUrl = process.env.BACKEND_URL || "http://localhost:8080";
     return [
       {
         source: "/api/v1/:path*",
-        destination: "http://localhost:8080/api/v1/:path*",
+        destination: `${backendUrl}/api/v1/:path*`,
       },
     ];
   },
@@ -37,5 +35,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-
-import('@opennextjs/cloudflare').then(m => m.initOpenNextCloudflareForDev());
