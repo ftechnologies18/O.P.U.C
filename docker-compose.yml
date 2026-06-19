@@ -1,0 +1,53 @@
+# ══════════════════════════════════════════════════════════════════
+# O.P.U.C — Docker Compose (développement local)
+# ══════════════════════════════════════════════════════════════════
+#
+# Démarrage rapide :
+#   docker compose up -d
+#
+# Services :
+#   - frontend (Next.js) : http://localhost:3000
+#   - backend  (Go API)  : http://localhost:8080
+#
+# Note : la base de données Neon (Postgres cloud) et le stockage R2
+# (Cloudflare) sont des services externes — configurez-les via .env
+# ══════════════════════════════════════════════════════════════════
+
+services:
+  # ─── Backend Go API ───────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: deployments/docker/Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./backend/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ─── Frontend Next.js ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./frontend/.env.local
+    environment:
+      - NEXTAUTH_URL=http://localhost:3000
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+# ─── Réseau ────────────────────────────────────────────────────
+networks:
+  default:
+    driver: bridge

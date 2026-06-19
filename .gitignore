@@ -1,38 +1,40 @@
 # ══════════════════════════════════════════════════════════════════
-# O.P.U.C — .gitignore monorepo (frontend/ + backend/)
+# O.P.U.C — .gitignore (monorepo frontend/ + backend/)
 # ══════════════════════════════════════════════════════════════════
 
-# ─── Sandbox / infra (ne pas committer) ─────────────────────────
-skills/
-node_modules/
-dev.log
-.next/
-.wrangler/
-open-next/
-.zscripts/dev.pid
-.zscripts/mini-service-*.log
-.zscripts/launch.log
+# ─── Secrets (NEVER commit) ─────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pid
+*.key
+*.pem
 
 # ─── Frontend (Next.js) ─────────────────────────────────────────
 frontend/node_modules/
 frontend/.next/
 frontend/.wrangler/
 frontend/open-next/
-frontend/.env.local
-frontend/.env.*.local
+frontend/.turbo/
 frontend/next-env.d.ts
+frontend/*.tsbuildinfo
 
 # ─── Backend (Go) ───────────────────────────────────────────────
 backend/bin/
 backend/opuc-api
-backend/.env
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+backend/*.exe
+backend/vendor/
 *.test
 *.out
+
+# ─── Logs / tmp ─────────────────────────────────────────────────
+*.log
+dev.log
+backend.log
+/tmp/
+coverage/
+.coverage
+htmlcov/
 
 # ─── OS / éditeurs ──────────────────────────────────────────────
 .DS_Store
@@ -44,20 +46,17 @@ Thumbs.db
 .vscode/
 *.sublime-*
 
-# ─── Logs / tmp ─────────────────────────────────────────────────
-*.log
-/tmp/
-coverage/
-.coverage
-htmlcov/
-
-# ─── Dépendances ────────────────────────────────────────────────
-vendor/
-
-# ─── Secrets (ne JAMAIS committer) ──────────────────────────────
-.env
-.env.*
-*.pid
-.zscripts/backend.pid
-.zscripts/launch.log
+# ─── Sandbox / CI artifacts ─────────────────────────────────────
+.zscripts/
 tool-results/
+download/
+upload/
+examples/
+mini-services/
+skills/
+Caddyfile
+worklog.md
+next-env.d.ts
+
+# Build artifacts
+.wrangler/

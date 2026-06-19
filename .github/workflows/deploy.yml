@@ -1,41 +1,87 @@
 # ══════════════════════════════════════════════════════════════════
-# O.P.U.C — Cloudflare Pages Auto-Deploy
+# O.P.U.C — CD (Continuous Deployment)
 # ══════════════════════════════════════════════════════════════════
-# Déploie la landing page statique sur Cloudflare Pages.
-# Pour l'API + Auth, utilisez un hébergement Node.js dédié (Vercel/Railway).
-# ══════════════════════════════════════════════════════════════════
-
-name: Deploy Landing to Cloudflare Pages
+# Sur push vers main : build + deploy frontend (Cloudflare Pages)
+# Backend : build Docker image (à pousser vers registry)
+name: Deploy
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - 'src/components/landing/**'
-      - 'public/**'
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
-  deploy-landing:
+  # ─── Frontend → Cloudflare Pages ──────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend to Cloudflare Pages
     runs-on: ubuntu-latest
-    name: Deploy Landing Page
-    timeout-minutes: 10
+    permissions:
+      contents: read
+      deployments: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Install frontend deps
+        working-directory: frontend
+        run: bun install
 
-      - name: Build static export
-        run: bun run build
+      - name: Build frontend
+        working-directory: frontend
+        run: bun run build:cf
+        env:
+          NEXTAUTH_URL: ${{ vars.NEXTAUTH_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy .next --project-name opuc --branch main
+          projectName: opuc
+          directory: frontend/.open-next/assets
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─── Backend → Docker image ───────────────────────────────────
+  build-backend:
+    name: Build Backend Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/opuc-api
+          tags: |
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: backend
+          file: backend/deployments/docker/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

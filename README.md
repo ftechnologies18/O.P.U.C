@@ -1,148 +1,220 @@
-# O.P.U.C — Outil de Pilotage Unifié de Chantier
+<div align="center">
 
-Plateforme SaaS de gestion et pilotage de chantiers BTP en Côte d'Ivoire.
+# 🏗️ O.P.U.C
 
-## 📁 Structure du monorepo
+### Outil de Pilotage Unifié de Chantier
+
+Plateforme SaaS multi-tenant de gestion et pilotage de chantiers BTP en Côte d'Ivoire.
+
+[![Go](https://img.shields.io/badge/Go-1.23-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Neon](https://img.shields.io/badge/Neon-Serverless-00E599?logo=neon&logoColor=white)](https://neon.tech/)
+[![Cloudflare R2](https://img.shields.io/badge/Cloudflare-R2-F38020?logo=cloudflare&logoColor=white)](https://www.cloudflare.com/products/r2/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+</div>
+
+---
+
+## 📋 Table des matières
+
+- [Aperçu](#aperçu)
+- [Fonctionnalités](#fonctionnalités)
+- [Architecture](#architecture)
+- [Stack technique](#stack-technique)
+- [Démarrage rapide](#démarrage-rapide)
+- [Identifiants de test](#identifiants-de-test)
+- [Documentation](#documentation)
+- [Contribution](#contribution)
+- [Licence](#licence)
+
+## 🎯 Aperçu
+
+O.P.U.C est une plateforme complète de gestion de chantiers BTP couvrant **17 domaines métier** : pointage, paie, stock, carburant, devis, facturation, sous-traitants, documents, support, et plus.
+
+Le projet est organisé en **monorepo** avec un backend Go (Clean Architecture) et un frontend Next.js (UI uniquement), connectés à Neon Postgres (SQL + RLS) et Cloudflare R2 (fichiers).
+
+## ✨ Fonctionnalités
+
+### 🏗️ Gestion chantier
+- Tableau de bord avec KPIs temps réel
+- Chantiers (CRUD + phases + tâches + avancement)
+- Planning et suivi des travaux
+- Photos, rapports journaliers, documents
+
+### 👥 Gestion personnel
+- Pointage mobile (offline-first via PWA)
+- Paie hebdomadaire (calcul auto depuis pointages validés)
+- Salaires mensuels (CNPS, IR, heures supp, retenues)
+- Journaliers + affectations par chantier
+
+### 📦 Gestion matériel
+- Stock multi-chantier (entrées/sorties + alertes seuil)
+- Parc engins (propriétaire + location)
+- Carburant (cuves + approvisionnements + bons d'achat + relevés compteurs)
+
+### 💼 Commercial
+- Clients (entreprises/particuliers/institutions)
+- Devis (lignes + TVA + remises + statuts)
+- Contrats (travaux/fourniture/service)
+- Facturation (paiements multiples + auto-statut)
+
+### 🔐 Sécurité & multi-tenant
+- Authentification JWT + cookie httpOnly
+- 2FA TOTP (Google Authenticator)
+- Row-Level Security PostgreSQL (isolation tenant natif)
+- 4 rôles RBAC : SUPER_ADMIN, GERANT, CHEF_PROJET, SOUS_TRAITANT
+- Audit log complet
+
+### 📱 PWA
+- Mode offline (Service Worker + sync batch)
+- Installable (manifest + icons)
+- Responsive (mobile-first)
+
+## 🏗️ Architecture
 
 ```
 O.P.U.C/
-├── frontend/          # Application Next.js 16 + shadcn/ui (frontend + API legacy)
-│   ├── src/
-│   ├── prisma/
-│   ├── package.json
-│   └── next.config.ts
-│
-├── backend/           # API Go (Clean Architecture) — en cours de migration
-│   ├── main.go
-│   ├── internal/
-│   │   ├── config/            # Configuration (env vars)
-│   │   ├── domain/            # Entités GORM + enums + erreurs
-│   │   │   └── model/
-│   │   ├── usecase/           # Logique métier (cas d'usage)
-│   │   │   └── auth/
-│   │   ├── repository/gorm/   # Implémentations persistance (GORM)
-│   │   ├── delivery/http/     # Transport HTTP (chi router + handlers)
-│   │   │   ├── handler/
-│   │   │   ├── dto/
-│   │   │   └── middleware/
-│   │   └── infrastructure/    # Détails techniques
-│   │       ├── database/      # PostgreSQL + RLS tenant
-│   │       ├── jwt/
-│   │       └── crypto/
-│   ├── migrations/            # Scripts SQL (rôles, RLS)
-│   ├── deployments/docker/
-│   ├── Makefile
-│   └── go.mod
-│
-├── .zscripts/         # Scripts sandbox (démarrage frontend + backend)
-├── Caddyfile          # Gateway (route /api/v1/* → backend Go)
-└── README.md
+├── frontend/          # Next.js 16 (UI uniquement, ~0 logique backend)
+├── backend/           # Go 1.23 API (Clean Architecture, ~111 endpoints)
+├── docs/              # Documentation (architecture, API, dev, deploy)
+├── .github/           # CI/CD + templates (PR, issues)
+├── docker-compose.yml # Dev local
+├── README.md
+├── CONTRIBUTING.md
+├── CHANGELOG.md
+└── LICENSE
 ```
 
-## 🏗️ Architecture (Clean Architecture)
+### Flux d'une requête
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  delivery/http  ←  infrastructure                   │
-│ (handlers, chi)     (db, jwt, crypto)               │
-├─────────────────────────────────────────────────────┤
-│              usecase (logique métier)                │
-├─────────────────────────────────────────────────────┤
-│            domain (entités GORM)                     │
-└─────────────────────────────────────────────────────┘
+Browser → Next.js (:3000) → /api/v1/* proxy → Backend Go (:8080)
+  → middleware (Auth JWT → RBAC → RLS WithTenant)
+  → usecase (logique métier)
+  → repository (GORM + pgx)
+  → Neon Postgres (RLS-filtered)
+  → JSON response
 ```
 
-**Règle de dépendance** : tout pointe vers l'intérieur. `domain` ne dépend de rien.
-Les interfaces sont définies côté `usecase`, implémentées par `repository/gorm`.
+📖 **Détail** : [docs/architecture.md](docs/architecture.md)
 
-## 🔐 Multi-tenant & Row-Level Security
+## 🛠️ Stack technique
 
-- **Clé de tenancy** : `entreprise_id` (comme côté Prisma/Next.js)
-- **RLS PostgreSQL natif** : chaque requête est automatiquement filtrée par tenant
-- **2 rôles DB** :
-  - `postgres` (superuser) — migrations, seeds, bypass RLS
-  - `app_user` (non-superuser) — runtime, RLS appliquée
-- **Mécanisme** : `SET LOCAL app.current_tenant = ?` dans chaque transaction
+| Couche | Technologie | Rôle |
+|--------|-------------|------|
+| **Frontend** | Next.js 16 + TypeScript + shadcn/ui + Tailwind | UI, routing, proxy API |
+| **Backend** | Go 1.23 + chi v5 + GORM + pgx | API REST, auth, logique métier |
+| **Database** | Neon Serverless Postgres (PG 18.4) | Données SQL + RLS multi-tenant |
+| **Storage** | Cloudflare R2 | Fichiers (photos, documents, PDF) |
+| **Auth** | JWT (HS256) + cookie httpOnly + 2FA TOTP | Authentification stateless |
+| **CI/CD** | GitHub Actions | Tests, build, deploy |
+| **Deploy** | Cloudflare Pages (frontend) + Docker (backend) | Production |
 
-## 🚀 Démarrage (développement)
+## 🚀 Démarrage rapide
 
 ### Prérequis
-- Go 1.23+
-- Bun 1.3+
-- Node.js 24+ (pour Next.js)
 
-### Lancer le frontend + backend (sandbox)
+- [Go](https://go.dev/dl/) 1.23+
+- [Bun](https://bun.sh/) 1.3+ (ou Node.js 18+)
+- [Git](https://git-scm.com/)
 
-```bash
-# Le script .zscripts/dev.sh démarre les deux :
-bash .zscripts/dev.sh
-```
-
-Ou manuellement :
+### Installation
 
 ```bash
-# Frontend (port 3000)
-cd frontend && bun install && bun run dev
-
-# Backend (port 8080)
-cd backend && cp .env.example .env && go run .
+git clone https://github.com/ftechnologies18/O.P.U.C.git
+cd O.P.U.C
 ```
 
-### Routes API Go (Phase 0)
+### Backend
 
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| GET  | `/api/v1/health` | Healthcheck |
-| POST | `/api/v1/auth/login` | Login (email + password) |
-| POST | `/api/v1/auth/logout` | Logout |
-| GET  | `/api/v1/auth/me` | User courant |
+```bash
+cd backend
+cp .env.example .env
+# Configurez DATABASE_URL (Neon), JWT_SECRET, R2_API_TOKEN, etc.
+go mod download
+go run .
+# → Backend sur http://localhost:8080
+```
 
-## 🔑 Authentification
+### Frontend
 
-- **JWT** émis et validé par le backend Go (httpOnly cookie `opuc_session`)
-- **2FA TOTP** supporté (pquerna/otp)
-- **4 rôles** : SUPER_ADMIN, GERANT, CHEF_PROJET, SOUS_TRAITANT
+```bash
+cd frontend
+cp .env.example .env.local
+bun install
+bun run dev
+# → Frontend sur http://localhost:3000
+```
 
-### Identifiants de test (seed)
+### Base de données (Neon)
+
+```bash
+cd frontend
+# Configurez DATABASE_URL avec votre connexion Neon directe
+bunx prisma db push    # Crée les 45 tables
+bunx prisma db seed    # Seed : 4 users + entreprise + chantier + 5 journaliers
+
+cd ../backend
+export MIGRATIONS_URL="postgresql://neondb_owner:...@...neon.tech/neondb"
+go run ./cmd/apply_rls  # Active RLS sur 15 tables tenant-scoped
+```
+
+📖 **Détail** : [docs/development.md](docs/development.md)
+
+## 🔑 Identifiants de test
 
 | Rôle | Email | Mot de passe |
 |------|-------|--------------|
-| SUPER_ADMIN | `superadmin@opuc.demo` | `Admin@123456` |
-| GERANT | `gerant@opuc.demo` | `demo123` |
-| CHEF_PROJET | `chef-projet@opuc.demo` | `demo123` |
-| SOUS_TRAITANT | `sous-traitant@opuc.demo` | `demo123` |
+| Super Admin | `superadmin@opuc.demo` | `Admin@123456` |
+| Gérant | `gerant@opuc.demo` | `demo123` |
+| Chef de Projet | `chef-projet@opuc.demo` | `demo123` |
+| Sous-traitant | `sous-traitant@opuc.demo` | `demo123` |
 
-## 📦 Stack technique
+## 📖 Documentation
 
-### Backend (Go)
-- **Router** : chi v5
-- **ORM** : GORM + pgx (driver PostgreSQL)
-- **Auth** : golang-jwt/v5 + bcrypt + pquerna/otp (2FA)
-- **Config** : godotenv + caarlos0/env
-- **Logging** : log/slog (stdlib)
+| Document | Description |
+|----------|-------------|
+| [docs/architecture.md](docs/architecture.md) | Architecture détaillée, flux, RLS, domaines |
+| [docs/api.md](docs/api.md) | Référence API (~111 endpoints) |
+| [docs/development.md](docs/development.md) | Guide de développement, commandes, debug |
+| [docs/deployment.md](docs/deployment.md) | Déploiement production (Cloudflare + Docker) |
+| [CHANGELOG.md](CHANGELOG.md) | Historique des versions |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Guide de contribution |
 
-### Frontend (Next.js 16)
-- Next.js 16.2.4 + Turbopack
-- shadcn/ui + Tailwind CSS 4
-- Prisma ORM + Supabase
-- NextAuth (en cours de retrait → API Go)
+## 📊 Statistiques
 
-### Infrastructure
-- **DB** : Supabase PostgreSQL (Eu-West-1)
-- **Déploiement** : Cloudflare Workers (frontend) + Docker (backend, à venir)
+- **~111 endpoints API** Go sous `/api/v1/*`
+- **39 modèles GORM** (schéma Prisma préservé)
+- **17 domaines métier** (auth, IAM, chantiers, pointage, paie, stock, carburant, commercial, support, etc.)
+- **15 tables RLS-protected** (isolation multi-tenant native)
+- **0 dépendance NextAuth/Prisma** côté frontend (migration complète)
 
-## 📝 Plan de migration
+## 🤝 Contribution
 
-| Phase | Objectif | Statut |
-|-------|----------|--------|
-| **0** | Squelette Go + auth + RLS | ✅ En cours |
-| **1** | IAM (users, permissions, audit) + 2FA | ⏳ |
-| **2** | Lecture : chantiers, dashboard, notifications | ⏳ |
-| **3** | Cœur métier : pointage, paie, stock, carburant | ⏳ |
-| **4** | Commercial : clients, devis, contrats, facturation | ⏳ |
-| **5** | Périphériques : sous-traitants, documents, support, sync | ⏳ |
-| **6** | Bascule : `/api/*` → Go, décommissionner routes Next.js | ⏳ |
+Les contributions sont les bienvenues ! Voir [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## 📜 Licence
+1. Fork le projet
+2. Créer une branche (`git checkout -b feat/ma-feature`)
+3. Commit (`git commit -m 'feat: ma feature'`)
+4. Push (`git push origin feat/ma-feature`)
+5. Ouvrir une Pull Request
 
-Propriétaire — F Technologies
+## 📄 Licence
+
+Distribué sous licence MIT. Voir [LICENSE](LICENSE).
+
+## 📧 Contact
+
+**F Technologies CI**
+- Email : freelancetechnologies.ci@gmail.com
+- GitHub : [@ftechnologies18](https://github.com/ftechnologies18)
+
+---
+
+<div align="center">
+
+Built with ❤️ in Abidjan, Côte d'Ivoire 🇨🇮
+
+</div>
