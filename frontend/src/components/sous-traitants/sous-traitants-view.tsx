@@ -969,13 +969,13 @@ export function SousTraitantsView() {
                           variant="outline"
                           className={cn(
                             'text-xs',
-                            st._count.contrats > 0
+                            ((st as any)._count?.contrats ?? 0) > 0
                               ? 'bg-amber-50 text-amber-700 border-amber-200'
                               : 'bg-gray-50 text-gray-500 border-gray-200'
                           )}
                         >
                           <FileText className="w-3 h-3 mr-0.5" />
-                          {st._count.contrats} contrat{st._count.contrats > 1 ? 's' : ''}
+                          {((st as any)._count?.contrats ?? 0)} contrat{((st as any)._count?.contrats ?? 0) > 1 ? 's' : ''}
                         </Badge>
                       </div>
 
@@ -1474,7 +1474,7 @@ export function SousTraitantsView() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-[15px] font-semibold text-foreground flex items-center gap-2">
                   <FileText className="w-4 h-4 text-amber-500" />
-                  Contrats ({detailSt.contrats.length})
+                  Contrats ({((detailSt as any).contrats ?? []).length})
                 </h3>
                 <Button
                   size="sm"
@@ -1486,7 +1486,7 @@ export function SousTraitantsView() {
                 </Button>
               </div>
 
-              {detailSt.contrats.length === 0 ? (
+              {((detailSt as any).contrats ?? []).length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
                   <p className="text-[15px]">Aucun contrat pour ce sous-traitant</p>
@@ -1494,7 +1494,7 @@ export function SousTraitantsView() {
               ) : (
                 <ScrollArea className="max-h-[360px]">
                   <div className="space-y-3 pr-3">
-                    {detailSt.contrats.map((contrat) => {
+                    {((detailSt as any).contrats ?? []).map((contrat) => {
                       const statutBadge = getStatutBadge(contrat.statut)
 
                       return (
