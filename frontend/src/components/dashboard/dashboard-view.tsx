@@ -104,11 +104,60 @@ export function DashboardView() {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const res = await fetch('/api/v1/dashboard')
-        if (res.ok) {
-          const json = await res.json()
-          setData(json)
+        // Fetch dashboard data from Go API
+        const [dashRes, chantiersRes, meRes] = await Promise.all([
+          fetch('/api/v1/dashboard'),
+          fetch('/api/v1/chantiers'),
+          fetch('/api/v1/auth/me'),
+        ])
+
+        if (!dashRes.ok) {
+          throw new Error('Failed to fetch dashboard')
         }
+
+        const dash = await dashRes.json()
+        const user = meRes.ok ? await meRes.json() : null
+
+        // Récupère la liste des chantiers pour le statusDistribution
+        let chantiersList: Array<{ id: string; nom: string; budgetPrevisionnel: number; statut: string }> = []
+        if (chantiersRes.ok) {
+          const chJson = await chantiersRes.json()
+          chantiersList = (chJson.chantiers || []).map((c: any) => ({
+            id: c.id,
+            nom: c.nom,
+            budgetPrevisionnel: c.budgetPrevisionnel || 0,
+            statut: c.statut,
+          }))
+        }
+
+        // Map API Go format → DashboardData expected by frontend
+        const mapped: DashboardData = {
+          chantiersActifs: dash.chantiersActifs || 0,
+          journaliersSurSite: dash.journaliersSurSite || 0,
+          pointagesAujourdhui: dash.pointagesAujourdhui || 0,
+          alertesActives: dash.alertesActives || 0,
+          tachesEnRetard: dash.tachesEnRetard || 0,
+          // API Go retourne budgetData avec coutReel (pas budgetReel), on mappe
+          budgetData: (dash.budgetData || []).map((b: any) => ({
+            chantierId: b.id,
+            nom: b.nom,
+            budgetPrevisionnel: b.budgetPrevisionnel || 0,
+            budgetReel: b.coutReel || 0,
+            personnelCost: 0,
+            materiauxCost: 0,
+            stCost: 0,
+          })),
+          // Champs non retournés par l'API Go → valeurs par défaut
+          chantiers: chantiersList,
+          userName: user?.name || 'Utilisateur',
+          userRole: user?.role || '',
+          stockAlerts: [], // API Go retourne un number, pas un array — on vide
+          recentNotifications: [],
+          activeChantierNom: chantiersList[0]?.nom || '',
+          phasesProgress: [],
+          tachesEnRetardDetails: [],
+        }
+        setData(mapped)
       } catch (err) {
         console.error('Dashboard fetch error:', err)
       } finally {

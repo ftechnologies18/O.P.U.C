@@ -321,8 +321,9 @@ export function SousTraitantsView() {
       const res = await fetch(`/api/v1/sous-traitants?${params.toString()}`)
       if (res.ok) {
         const json = await res.json()
-        setSousTraitants(json.sousTraitants)
-        setKpi(json.kpi)
+        // API Go retourne {data: [...], total, page, pageSize} — pas de kpi
+        setSousTraitants(json.data || json.sousTraitants || [])
+        setKpi(json.kpi || { total: json.total || 0, actifs: 0, parType: {} })
       } else {
         toast.error('Erreur lors du chargement des sous-traitants')
       }
