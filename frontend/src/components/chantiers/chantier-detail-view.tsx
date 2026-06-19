@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/app-store'
 import { toast } from 'sonner'
 import { format, parseISO, isValid } from 'date-fns'
@@ -182,7 +183,8 @@ const tacheStatutLabels: Record<string, string> = {
 // ─── Component ────────────────────────────────────────────
 
 export function ChantierDetailView() {
-  const { selectedChantierId, setCurrentView } = useAppStore()
+  const router = useRouter()
+  const { selectedChantierId } = useAppStore()
   const [chantier, setChantier] = useState<ChantierDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -222,14 +224,14 @@ export function ChantierDetailView() {
         setExpandedPhases(ids)
       } else {
         toast.error('Chantier non trouvé')
-        setCurrentView('chantiers')
+        router.push('/chantiers')
       }
     } catch {
       toast.error('Erreur de chargement')
     } finally {
       setLoading(false)
     }
-  }, [selectedChantierId, setCurrentView])
+  }, [selectedChantierId, router])
 
   useEffect(() => {
     fetchChantier()
@@ -299,7 +301,7 @@ export function ChantierDetailView() {
       const res = await fetch(`/api/v1/chantiers/${chantier.id}`, { method: 'DELETE' })
       if (res.ok) {
         toast.success('Chantier supprimé')
-        setCurrentView('chantiers')
+        router.push('/chantiers')
       } else {
         toast.error('Erreur lors de la suppression')
       }
@@ -574,7 +576,7 @@ export function ChantierDetailView() {
           variant="outline"
           size="icon"
           className="h-9 w-9 shrink-0"
-          onClick={() => setCurrentView('chantiers')}
+          onClick={() => router.push('/chantiers')}
         >
           <ArrowLeft className="w-4 h-4" />
           <span className="sr-only">Retour</span>

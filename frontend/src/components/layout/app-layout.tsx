@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useAppStore, type SidebarMode } from '@/store/app-store'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -126,7 +128,7 @@ function SidebarContent({
   mode: 'expanded' | 'compact'
   onNavigate: () => void
 }) {
-  const { currentView, setCurrentView } = useAppStore()
+  const pathname = usePathname()
   const { data: session } = useSession()
   const userRole = (session?.user as any)?.role as UserRole | undefined
   const compact = mode === 'compact'
@@ -180,15 +182,15 @@ function SidebarContent({
               <div className="space-y-px">
                 {section.items.map((item) => {
                   const Icon = item.icon
-                  const isActive = currentView === item.id
+                  const itemHref = `/${item.id}`
+                  const isActive =
+                    pathname === itemHref || pathname.startsWith(`${itemHref}/`)
                   return (
                     <Tooltip key={item.id} delayDuration={0}>
                       <TooltipTrigger asChild>
-                        <button
-                          onClick={() => {
-                            setCurrentView(item.id as AppPage)
-                            onNavigate()
-                          }}
+                        <Link
+                          href={itemHref}
+                          onClick={onNavigate}
                           className={cn(
                             'w-full flex items-center rounded-lg transition-all duration-200',
                             compact
@@ -215,7 +217,7 @@ function SidebarContent({
                               {isActive && <ChevronRight className="w-4 h-4 ml-auto text-amber-400/50" />}
                             </>
                           )}
-                        </button>
+                        </Link>
                       </TooltipTrigger>
                       {compact && (
                         <TooltipContent side="right" sideOffset={8} className="font-medium text-[15px]">
@@ -316,10 +318,15 @@ function SidebarToggleFloat() {
    Main App Layout
    ═══════════════════════════════════════════════ */
 export function AppLayout({ children }: AppLayoutProps) {
-  const { sidebarOpen, setSidebarOpen, toggleSidebar, currentView, sidebarMode, setSidebarMode } = useAppStore()
+  const pathname = usePathname()
+  const { sidebarOpen, setSidebarOpen, toggleSidebar, sidebarMode, setSidebarMode } = useAppStore()
 
-  // Current page label
-  const currentPage = navItems.find((item) => item.id === currentView)
+  // Derive the current page from the URL — App Router is now the source of
+  // truth for navigation (replaces the old `currentView` Zustand state).
+  const currentPage = navItems.find((item) => {
+    const href = `/${item.id}`
+    return pathname === href || pathname.startsWith(`${href}/`)
+  })
   const pageLabel = currentPage?.label || 'Tableau de bord'
   const PageIcon = currentPage?.icon || LayoutDashboard
 

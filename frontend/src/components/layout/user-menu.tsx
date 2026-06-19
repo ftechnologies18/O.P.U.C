@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSession, signOut } from '@/lib/auth-session'
 import { useTheme } from 'next-themes'
-import { useAppStore } from '@/store/app-store'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -64,7 +63,6 @@ const tabs: { id: PanelTab; label: string; icon: React.ElementType }[] = [
    ═════════════════════════════════════════ */
 export function UserMenu() {
   const { data: session } = useSession()
-  const { setCurrentView } = useAppStore()
   const [open, setOpen] = useState(false)
 
   const user = session?.user as { name?: string; email?: string; role?: string } | undefined

@@ -5,12 +5,13 @@ import { canAccessPage } from '@/lib/rbac'
 export type SidebarMode = 'expanded' | 'compact' | 'hidden'
 
 interface AppState {
-  currentView: AppPage | 'chantier-detail'
+  // NOTE: `currentView` was removed — the URL (Next.js App Router) is now the
+  // single source of truth for navigation. Use `usePathname()` to derive the
+  // active view, and `router.push('/<view>')` (or `<Link>`) to navigate.
   selectedChantierId: string | null
   sidebarOpen: boolean
   sidebarMode: SidebarMode
   userRole: UserRole | null
-  setCurrentView: (view: AppPage | 'chantier-detail') => void
   setSelectedChantierId: (id: string | null) => void
   setSidebarOpen: (open: boolean) => void
   toggleSidebar: () => void
@@ -39,13 +40,11 @@ function getInitialUserRole(): UserRole | null {
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
-  currentView: 'dashboard',
   selectedChantierId: null,
   sidebarOpen: false,
   sidebarMode: getInitialSidebarMode(),
   userRole: getInitialUserRole(),
 
-  setCurrentView: (view) => set({ currentView: view }),
   setSelectedChantierId: (id) => set({ selectedChantierId: id }),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),

@@ -9,8 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { useAppStore } from '@/store/app-store'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAppStore } from '@/store/app-store'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Cell, PieChart, Pie,
@@ -99,7 +100,8 @@ const formatFCFA = (value: number) => {
 export function DashboardView() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
-  const { setCurrentView } = useAppStore()
+  const router = useRouter()
+  const setSelectedChantierId = useAppStore((s) => s.setSelectedChantierId)
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -330,7 +332,7 @@ export function DashboardView() {
                   variant="outline"
                   size="sm"
                   className="mt-3 w-full h-8 text-sm border-red-200 hover:bg-red-100 dark:border-red-500/30 dark:hover:bg-red-500/10"
-                  onClick={() => setCurrentView('stocks')}
+                  onClick={() => router.push('/stocks')}
                 >
                   Voir le stock <ArrowRight className="w-3 h-3 ml-1" />
                 </Button>
@@ -368,7 +370,7 @@ export function DashboardView() {
                   variant="outline"
                   size="sm"
                   className="mt-3 w-full h-8 text-sm border-orange-200 hover:bg-orange-100 dark:border-orange-500/30 dark:hover:bg-orange-500/10"
-                  onClick={() => setCurrentView('planning')}
+                  onClick={() => router.push('/planning')}
                 >
                   Voir le planning <ArrowRight className="w-3 h-3 ml-1" />
                 </Button>
@@ -480,8 +482,8 @@ export function DashboardView() {
                       key={c.id}
                       className="flex items-center justify-between text-[15px] w-full text-left hover:bg-muted/50 rounded-md px-2 py-1 -mx-2 transition-colors"
                       onClick={() => {
-                        useAppStore.getState().setSelectedChantierId(c.id)
-                        setCurrentView('chantier-detail')
+                        setSelectedChantierId(c.id)
+                        router.push(`/chantiers/${c.id}`)
                       }}
                     >
                       <span className="text-muted-foreground truncate max-w-[140px]">{c.nom.split(' - ')[0]}</span>
@@ -543,7 +545,7 @@ export function DashboardView() {
                   variant="link"
                   size="sm"
                   className="mt-1 text-amber-600"
-                  onClick={() => setCurrentView('chantiers')}
+                  onClick={() => router.push('/chantiers')}
                 >
                   Voir les chantiers
                 </Button>
@@ -568,7 +570,7 @@ export function DashboardView() {
                       key={action.view}
                       variant="outline"
                       className="h-auto py-3 flex flex-col items-center gap-2 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-700 dark:hover:bg-amber-500/10 dark:hover:border-amber-500/30 transition-colors"
-                      onClick={() => setCurrentView(action.view)}
+                      onClick={() => router.push(`/${action.view}`)}
                     >
                       <Icon className="w-5 h-5" />
                       <span className="text-sm font-medium text-center leading-tight">{action.label}</span>

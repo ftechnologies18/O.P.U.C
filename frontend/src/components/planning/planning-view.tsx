@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   format,
@@ -271,7 +272,8 @@ function StatCard({ label, value, color }: { label: string; value: number; color
 // ─── Main Component ───────────────────────────────────────
 
 export function PlanningView() {
-  const { setCurrentView, setSelectedChantierId: setAppChantierId } = useAppStore()
+  const router = useRouter()
+  const { setSelectedChantierId: setAppChantierId } = useAppStore()
 
   // Data
   const [chantierOptions, setChantierOptions] = useState<ChantierOption[]>([])
@@ -520,7 +522,7 @@ export function PlanningView() {
   const handleNavigateToChantier = (chantierId: string) => {
     setDetailData(null)
     setAppChantierId(chantierId)
-    setCurrentView('chantier-detail')
+    router.push(`/chantiers/${chantierId}`)
   }
 
   // ─── Loading state ───

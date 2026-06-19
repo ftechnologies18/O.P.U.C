@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAppStore } from '@/store/app-store'
+import { useRouter } from 'next/navigation'
 import {
   CommandDialog,
   CommandEmpty,
@@ -53,7 +53,7 @@ const QUICK_ACTIONS = [
 
 export function SearchCommand() {
   const [open, setOpen] = useState(false)
-  const { setCurrentView } = useAppStore()
+  const router = useRouter()
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -67,7 +67,7 @@ export function SearchCommand() {
   }, [])
 
   const handleNavigate = (viewId: string) => {
-    setCurrentView(viewId)
+    router.push(`/${viewId}`)
     setOpen(false)
   }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/app-store'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -158,7 +159,8 @@ function formatDate(date: string | null): string {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function ChantiersView() {
-  const { setCurrentView, setSelectedChantierId } = useAppStore()
+  const router = useRouter()
+  const { setSelectedChantierId } = useAppStore()
 
   // State
   const [chantiers, setChantiers] = useState<Chantier[]>([])
@@ -311,7 +313,7 @@ export function ChantiersView() {
 
   const handleViewDetail = (id: string) => {
     setSelectedChantierId(id)
-    setCurrentView('chantier-detail')
+    router.push(`/chantiers/${id}`)
   }
 
   // ── KPI cards ─────────────────────────────────────────────────────────────
