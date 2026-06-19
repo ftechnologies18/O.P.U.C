@@ -1,0 +1,37 @@
+# Render.com configuration for O.P.U.C backend
+# https://render.com/docs/render.yaml
+services:
+  - type: web
+    name: opuc-api
+    env: go
+    rootDir: backend
+    plan: free
+    region: frankfurt
+    buildCommand: go build -o opuc-api .
+    startCommand: ./opuc-api
+    goVersion: "1.23"
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: PORT
+        value: "8080"
+      - key: FRONTEND_URL
+        value: https://opuc.vercel.app
+      - key: DATABASE_URL
+        sync: false
+      - key: MIGRATIONS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRATION_HOURS
+        value: "24"
+      - key: R2_API_TOKEN
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_BUCKET
+        value: opuc-files
