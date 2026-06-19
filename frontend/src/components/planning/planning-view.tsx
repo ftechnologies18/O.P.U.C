@@ -340,7 +340,7 @@ export function PlanningView() {
         chantier.phases.forEach((phase) => {
           result.push({ type: 'phase', id: `ph-${phase.id}`, chantier, phase })
           if (!collapsedItems.has(`ph-${phase.id}`)) {
-            phase.taches.forEach((task) => {
+            ((phase.taches || []).forEach((task) => {
               result.push({ type: 'task', id: `tk-${task.id}`, chantier, phase, task })
             })
           }
@@ -360,7 +360,7 @@ export function PlanningView() {
         const dE = safeParse(phase.dateFin)
         if (dS) allDates.push(dS)
         if (dE) allDates.push(dE)
-        phase.taches.forEach((t) => {
+        ((phase.taches || []).forEach((t) => {
           const tS = safeParse(t.dateDebut)
           const tE = safeParse(t.dateFin)
           if (tS) allDates.push(tS)
@@ -480,7 +480,7 @@ export function PlanningView() {
     filteredChantiers.forEach((c) => {
       c.phases.forEach((p) => {
         totalPhases++
-        p.taches.forEach((t) => {
+        ((p.taches || []).forEach((t) => {
           totalTasks++
           if (t.statut === 'EN_COURS') tasksEnCours++
           if (t.statut === 'EN_RETARD') tasksEnRetard++
@@ -894,7 +894,7 @@ export function PlanningView() {
                                   Avancement : {Math.round(phase.avancement)}%
                                 </div>
                                 <p className="text-[11px] text-muted-foreground">
-                                  {phase.taches.length} tâche{phase.taches.length !== 1 ? 's' : ''}
+                                  {(phase.taches || []).length} tâche{(phase.taches || []).length !== 1 ? 's' : ''}
                                 </p>
                               </div>
                             </TooltipContent>
@@ -1191,7 +1191,7 @@ export function PlanningView() {
                           <span className="text-muted-foreground">Tâches : </span>
                           <span className="font-medium">
                             {(detailData.data as Chantier).phases.reduce(
-                              (a, p) => a + p.taches.length,
+                              (a, p) => a + (p.taches || []).length,
                               0
                             )}
                           </span>
@@ -1203,15 +1203,15 @@ export function PlanningView() {
 
                 {/* Task list (phase detail) */}
                 {detailData.type === 'phase' &&
-                  (detailData.data as Phase).taches.length > 0 && (
+                  ((detailData.data as Phase).taches || []).length > 0 && (
                     <>
                       <Separator />
                       <div className="space-y-2">
                         <p className="text-sm text-muted-foreground font-medium">
-                          Tâches ({(detailData.data as Phase).taches.length})
+                          Tâches ({((detailData.data as Phase).taches || []).length})
                         </p>
                         <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                          {(detailData.data as Phase).taches.map((t) => {
+                          {((detailData.data as Phase).taches || []).map((t) => {
                             const c =
                               STATUT_COLORS[t.statut] || STATUT_COLORS.PLANIFIEE
                             return (

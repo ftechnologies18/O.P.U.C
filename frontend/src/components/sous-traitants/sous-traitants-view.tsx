@@ -322,8 +322,16 @@ export function SousTraitantsView() {
       if (res.ok) {
         const json = await res.json()
         // API Go retourne {data: [...], total, page, pageSize} — pas de kpi
-        setSousTraitants(json.data || json.sousTraitants || [])
-        setKpi(json.kpi || { total: json.total || 0, actifs: 0, parType: {} })
+        const list = json.data || json.sousTraitants || []
+        setSousTraitants(list)
+        // Kpi non retourné par l'API Go → on calcule localement
+        setKpi({
+          totalSousTraitants: json.total || list.length,
+          entreprises: list.filter((s: any) => s.type === 'ENTREPRISE').length,
+          particuliers: list.filter((s: any) => s.type === 'PARTICULIER').length,
+          contratsEnCours: 0,
+          montantTotalEngage: 0,
+        })
       } else {
         toast.error('Erreur lors du chargement des sous-traitants')
       }
