@@ -192,7 +192,7 @@ export function LoginForm({ onForgotPassword, onBack }: { onForgotPassword?: () 
 
     try {
       await goApi.login(email, password)
-      window.location.href = '/'
+      window.location.href = '/dashboard'
     } catch (e) {
       if (e instanceof ApiError) {
         if (e.status === 401) {
