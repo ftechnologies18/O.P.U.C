@@ -23,10 +23,10 @@ import { Loader2 } from 'lucide-react'
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
 
-  // Redirect unauthenticated users back to the landing page.
+  // Redirect unauthenticated users to /login (not the landing page).
   useEffect(() => {
     if (status === 'unauthenticated' && typeof window !== 'undefined') {
-      window.location.href = '/'
+      window.location.href = '/login'
     }
   }, [status])
 

@@ -106,9 +106,9 @@ export async function signOut(): Promise<void> {
   } catch {
     // ignore
   }
-  // Reload pour reset l'état
+  // Redirect vers /login après logout
   if (typeof window !== 'undefined') {
-    window.location.href = '/'
+    window.location.href = '/login'
   }
 }
 
