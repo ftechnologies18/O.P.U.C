@@ -211,8 +211,13 @@ export function LoginForm({ onForgotPassword, onBack }: { onForgotPassword?: () 
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-amber-50/30 to-orange-50/50 p-4 lg:w-1/2">
-      {/* Subtle background pattern */}
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-amber-50/30 to-orange-50/50">
+      {/* Panneau branding animé (gauche) — visible uniquement sur desktop */}
+      <BrandingPanel />
+
+      {/* Panneau formulaire (droite) */}
+      <div className="flex items-center justify-center w-full lg:w-1/2 p-4 relative">
+      {/* Subtle background pattern (mobile only) */}
       <div className="fixed inset-0 opacity-[0.03] lg:hidden">
         <div
           className="absolute inset-0"
@@ -465,6 +470,7 @@ export function LoginForm({ onForgotPassword, onBack }: { onForgotPassword?: () 
           O.P.U.C v1.0 — Gestion intelligente de chantiers BTP 🇨🇮
         </motion.p>
       </motion.div>
+      </div>
     </div>
   )
 }
