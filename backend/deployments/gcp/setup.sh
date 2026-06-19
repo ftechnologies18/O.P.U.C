@@ -18,8 +18,8 @@
 #   export NEON_DATABASE_URL="postgresql://neondb_owner:...@...neon.tech/neondb?sslmode=require"
 #   export NEON_MIGRATIONS_URL="postgresql://neondb_owner:...@...neon.tech/neondb?sslmode=require"
 #   export JWT_SECRET="opuc-super-secret-change-in-production-2025"
-#   export R2_API_TOKEN="cfat_..."
-#   export R2_ACCOUNT_ID="319de93db5a99db76b4bf41f9d06b785"
+#   export R2_API_TOKEN="cfat_[YOUR_TOKEN]"
+#   export R2_ACCOUNT_ID="[YOUR_CF_ACCOUNT_ID]"
 #   export R2_BUCKET="opuc-files"
 #   bash backend/deployments/gcp/setup.sh
 # ══════════════════════════════════════════════════════════════════
