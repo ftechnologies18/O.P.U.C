@@ -1,65 +1,54 @@
-# ══════════════════════════════════════════════════════════════════
-# O.P.U.C — .gitignore (monorepo frontend/ + backend/)
-# ══════════════════════════════════════════════════════════════════
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# ─── Secrets (NEVER commit) ─────────────────────────────────────
-.env
-.env.*
-!.env.example
-*.pid
-*.key
+# dependencies
+node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
 *.pem
 
-# ─── Frontend (Next.js) ─────────────────────────────────────────
-frontend/node_modules/
-frontend/.next/
-frontend/.wrangler/
-frontend/open-next/
-frontend/.turbo/
-frontend/next-env.d.ts
-frontend/*.tsbuildinfo
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-# ─── Backend (Go) ───────────────────────────────────────────────
-backend/bin/
-backend/opuc-api
-backend/*.exe
-backend/vendor/
-*.test
-*.out
+# env files (can opt-in for committing if needed)
+.env*
 
-# ─── Logs / tmp ─────────────────────────────────────────────────
+# vercel
+.vercel
+
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+local-*
+.claude
+.z-ai-config
 *.log
 dev.log
-backend.log
-/tmp/
-coverage/
-.coverage
-htmlcov/
+dev.out.log
+test
+prompt
 
-# ─── OS / éditeurs ──────────────────────────────────────────────
-.DS_Store
-Thumbs.db
-*.swp
-*.swo
-*~
-.idea/
-.vscode/
-*.sublime-*
-
-# ─── Sandbox / CI artifacts ─────────────────────────────────────
-.zscripts/
-tool-results/
-download/
-upload/
-examples/
-mini-services/
-skills/
-Caddyfile
-worklog.md
-next-env.d.ts
-
-# Build artifacts
-.wrangler/
-
-# Vercel
-.vercel/
+server.log
+# Skills directory
+/skills/
