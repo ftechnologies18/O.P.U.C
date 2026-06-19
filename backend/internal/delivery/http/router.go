@@ -196,7 +196,7 @@ func NewRouter(d Deps) http.Handler {
         r.Use(middleware.Logger(d.Log))
         r.Use(middleware.Recover(d.Log))
         r.Use(cors.Handler(cors.Options{
-                AllowedOrigins:   []string{"http://localhost:3000", "https://opuc.freelancetechnologies-ci.workers.dev"},
+                AllowedOrigins:   []string{"http://localhost:3000", "https://opuc.vercel.app", "https://opuc.freelancetechnologies-ci.workers.dev"},
                 AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
                 AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
                 ExposedHeaders:   []string{"X-Request-ID"},

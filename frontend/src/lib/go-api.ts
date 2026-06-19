@@ -1,10 +1,14 @@
 /**
  * Client API Go — remplace NextAuth + Prisma côté frontend.
  *
- * Tous les appels passent par /api/v1/* qui est proxyé vers le backend Go (:8080).
- * Le cookie httpOnly `opuc_session` (JWT) est envoyé automatiquement (credentials: same-origin).
+ * Tous les appels passent par /api/v1/* qui est proxyé vers le backend Go.
+ * En dev : next.config.ts rewrites → localhost:8080
+ * En prod (Vercel) : next.config.ts rewrites → Render (opuc-api.onrender.com)
  *
- * En cas de 401, on déclenche un reload vers la page de login.
+ * Auth (login/logout) passe par des Next.js API routes qui gèrent le Set-Cookie
+ * (Vercel rewrites ne forward pas les Set-Cookie du backend vers le navigateur).
+ *
+ * Le cookie httpOnly `opuc_session` (JWT) est envoyé automatiquement (credentials: same-origin).
  */
 
 const API_BASE = '/api/v1'
