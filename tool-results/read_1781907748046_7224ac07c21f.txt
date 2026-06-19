@@ -1,0 +1,1142 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react'
+     4→import Image from 'next/image'
+     5→import { OpucLogo } from '@/components/layout/opuc-logo'
+     6→import { Button } from '@/components/ui/button'
+     7→import {
+     8→  Card,
+     9→  CardHeader,
+    10→  CardTitle,
+    11→  CardDescription,
+    12→  CardContent,
+    13→  CardFooter,
+    14→} from '@/components/ui/card'
+    15→import { Badge } from '@/components/ui/badge'
+    16→import {
+    17→  Accordion,
+    18→  AccordionItem,
+    19→  AccordionTrigger,
+    20→  AccordionContent,
+    21→} from '@/components/ui/accordion'
+    22→import { Separator } from '@/components/ui/separator'
+    23→import {
+    24→  Sheet,
+    25→  SheetTrigger,
+    26→  SheetContent,
+    27→  SheetHeader,
+    28→  SheetTitle,
+    29→  SheetClose,
+    30→} from '@/components/ui/sheet'
+    31→import {
+    32→  Menu,
+    33→  X,
+    34→  Check,
+    35→  ChevronRight,
+    36→  ArrowRight,
+    37→  Shield,
+    38→  Smartphone,
+    39→  BarChart3,
+    40→  Users,
+    41→  FileText,
+    42→  Package,
+    43→  Building2,
+    44→  Star,
+    45→  Clock,
+    46→  WifiOff,
+    47→  AlertTriangle,
+    48→  Phone,
+    49→  Mail,
+    50→  MapPin,
+    51→} from 'lucide-react'
+    52→
+    53→// ─── Types ──────────────────────────────────────────────────────────────────
+    54→
+    55→interface LandingPageProps {
+    56→  onLoginClick: () => void
+    57→}
+    58→
+    59→// ─── Helpers ────────────────────────────────────────────────────────────────
+    60→
+    61→/** Smooth-scroll to an element by ID */
+    62→function scrollTo(id: string) {
+    63→  const el = document.getElementById(id)
+    64→  if (el) {
+    65→    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    66→  }
+    67→}
+    68→
+    69→/** IntersectionObserver hook for fade-in-up animations */
+    70→function useScrollReveal(threshold = 0.12) {
+    71→  const ref = useRef<HTMLDivElement>(null)
+    72→  const [isVisible, setIsVisible] = useState(() => {
+    73→    // If user prefers reduced motion, start visible
+    74→    if (typeof window !== 'undefined' &&
+    75→        window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    76→      return true
+    77→    }
+    78→    return false
+    79→  })
+    80→
+    81→  useEffect(() => {
+    82→    const node = ref.current
+    83→    if (!node) return
+    84→
+    85→    // Already visible (e.g. reduced motion), no need to observe
+    86→    if (isVisible) return
+    87→
+    88→    const observer = new IntersectionObserver(
+    89→      ([entry]) => {
+    90→        if (entry.isIntersecting) {
+    91→          setIsVisible(true)
+    92→          observer.unobserve(node)
+    93→        }
+    94→      },
+    95→      { threshold }
+    96→    )
+    97→
+    98→    observer.observe(node)
+    99→    return () => observer.disconnect()
+   100→  }, [threshold, isVisible])
+   101→
+   102→  return { ref, isVisible }
+   103→}
+   104→
+   105→/** Reusable section wrapper with scroll-reveal */
+   106→function RevealSection({
+   107→  children,
+   108→  className = '',
+   109→  id,
+   110→  threshold,
+   111→}: {
+   112→  children: ReactNode
+   113→  className?: string
+   114→  id?: string
+   115→  threshold?: number
+   116→}) {
+   117→  const { ref, isVisible } = useScrollReveal(threshold)
+   118→  return (
+   119→    <section
+   120→      id={id}
+   121→      ref={ref}
+   122→      className={`transition-all duration-700 ease-out ${
+   123→        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+   124→      } ${className}`}
+   125→    >
+   126→      {children}
+   127→    </section>
+   128→  )
+   129→}
+   130→
+   131→// ─── Navigation Links Data ─────────────────────────────────────────────────
+   132→
+   133→const NAV_LINKS = [
+   134→  { label: 'Fonctionnalités', href: '#fonctionnalites' },
+   135→  { label: 'Tarifs', href: '#tarifs' },
+   136→  { label: 'Témoignages', href: '#temoignages' },
+   137→  { label: 'FAQ', href: '#faq' },
+   138→]
+   139→
+   140→// ─── Main Component ────────────────────────────────────────────────────────
+   141→
+   142→export function LandingPage({ onLoginClick }: LandingPageProps) {
+   143→  const [scrolled, setScrolled] = useState(false)
+   144→  const [mobileOpen, setMobileOpen] = useState(false)
+   145→
+   146→  // Track scroll for sticky nav background
+   147→  useEffect(() => {
+   148→    const onScroll = () => setScrolled(window.scrollY > 40)
+   149→    window.addEventListener('scroll', onScroll, { passive: true })
+   150→    return () => window.removeEventListener('scroll', onScroll)
+   151→  }, [])
+   152→
+   153→  // Close mobile sheet on link click
+   154→  const handleNavClick = useCallback((href: string) => {
+   155→    setMobileOpen(false)
+   156→    const id = href.replace('#', '')
+   157→    scrollTo(id)
+   158→  }, [])
+   159→
+   160→  return (
+   161→    <div className="min-h-screen flex flex-col bg-background text-foreground overflow-x-hidden">
+   162→      {/* ─── Skip to content (a11y) ─── */}
+   163→      <a
+   164→        href="#contenu-principal"
+   165→        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:text-sm"
+   166→      >
+   167→        Aller au contenu principal
+   168→      </a>
+   169→
+   170→      {/* ═══════════════════════════════════════════════════════════════════════
+   171→          1. STICKY NAVIGATION BAR
+   172→         ═══════════════════════════════════════════════════════════════════════ */}
+   173→      <header
+   174→        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+   175→          scrolled
+   176→            ? 'bg-background/95 backdrop-blur-md border-b shadow-sm'
+   177→            : 'bg-transparent'
+   178→        }`}
+   179→      >
+   180→        <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-16">
+   181→          {/* Logo + brand */}
+   182→          <button
+   183→            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+   184→            className="flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+   185→          >
+   186→            <OpucLogo size={36} />
+   187→            <span className="text-lg font-bold tracking-tight">O.P.U.C.</span>
+   188→          </button>
+   189→
+   190→          {/* Desktop nav links */}
+   191→          <div className="hidden md:flex items-center gap-6">
+   192→            {NAV_LINKS.map((link) => (
+   193→              <button
+   194→                key={link.href}
+   195→                onClick={() => handleNavClick(link.href)}
+   196→                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm px-1 py-1"
+   197→              >
+   198→                {link.label}
+   199→              </button>
+   200→            ))}
+   201→            <Button
+   202→              size="sm"
+   203→              className="bg-amber-500 hover:bg-amber-600 text-white"
+   204→              onClick={onLoginClick}
+   205→            >
+   206→              Se connecter
+   207→            </Button>
+   208→          </div>
+   209→
+   210→          {/* Mobile hamburger */}
+   211→          <div className="md:hidden">
+   212→            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+   213→              <SheetTrigger asChild>
+   214→                <Button variant="ghost" size="icon" aria-label="Ouvrir le menu">
+   215→                  <Menu className="size-5" />
+   216→                </Button>
+   217→              </SheetTrigger>
+   218→              <SheetContent side="right" className="w-72">
+   219→                <SheetHeader>
+   220→                  <SheetTitle className="flex items-center gap-2">
+   221→                    <OpucLogo size={28} />
+   222→                    <span>O.P.U.C.</span>
+   223→                  </SheetTitle>
+   224→                </SheetHeader>
+   225→                <div className="flex flex-col gap-2 mt-6 px-4">
+   226→                  {NAV_LINKS.map((link) => (
+   227→                    <SheetClose asChild key={link.href}>
+   228→                      <button
+   229→                        onClick={() => handleNavClick(link.href)}
+   230→                        className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-accent transition-colors text-left"
+   231→                      >
+   232→                        {link.label}
+   233→                        <ChevronRight className="size-4 text-muted-foreground ml-auto" />
+   234→                      </button>
+   235→                    </SheetClose>
+   236→                  ))}
+   237→                  <Separator className="my-2" />
+   238→                  <SheetClose asChild>
+   239→                    <Button
+   240→                      className="bg-amber-500 hover:bg-amber-600 text-white w-full mt-2"
+   241→                      onClick={onLoginClick}
+   242→                    >
+   243→                      Se connecter
+   244→                    </Button>
+   245→                  </SheetClose>
+   246→                </div>
+   247→              </SheetContent>
+   248→            </Sheet>
+   249→          </div>
+   250→        </nav>
+   251→      </header>
+   252→
+   253→      {/* ─── Main Content ─── */}
+   254→      <main id="contenu-principal" className="flex-1">
+   255→        {/* ═══════════════════════════════════════════════════════════════════
+   256→            2. HERO SECTION
+   257→           ═══════════════════════════════════════════════════════════════════ */}
+   258→        <section className="relative min-h-screen flex items-center pt-16">
+   259→          {/* Subtle background gradient */}
+   260→          <div className="absolute inset-0 bg-gradient-to-br from-amber-50/60 via-background to-orange-50/40 -z-10" />
+   261→          <div className="absolute top-20 right-0 w-[600px] h-[600px] bg-amber-200/20 rounded-full blur-3xl -z-10" />
+   262→          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-orange-200/15 rounded-full blur-3xl -z-10" />
+   263→
+   264→          <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full py-12 md:py-20">
+   265→            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+   266→              {/* Left column - text */}
+   267→              <RevealSection threshold={0.05}>
+   268→                <Badge
+   269→                  variant="secondary"
+   270→                  className="bg-amber-100 text-amber-700 border-amber-200 mb-6 px-3 py-1 text-xs sm:text-sm"
+   271→                >
+   272→                  <Star className="size-3 mr-1 fill-amber-500 text-amber-500" />
+   273→                  N°1 de la gestion de chantier en Côte d’Ivoire
+   274→                </Badge>
+   275→                <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-[3.4rem] font-extrabold leading-[1.1] tracking-tight">
+   276→                  La gestion de chantier{' '}
+   277→                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-500">
+   278→                    simplifiée
+   279→                  </span>{' '}
+   280→                  pour les entreprises BTP
+   281→                </h1>
+   282→                <p className="mt-6 text-base sm:text-lg text-muted-foreground leading-relaxed max-w-xl">
+   283→                  O.P.U.C. centralise vos chantiers, pointages, budgets et
+   284→                  documents en une seule plateforme intuitive. Fonctionne
+   285→                  hors-ligne sur le terrain.
+   286→                </p>
+   287→                <div className="mt-8 flex flex-col sm:flex-row gap-3">
+   288→                  <Button
+   289→                    size="lg"
+   290→                    className="bg-amber-500 hover:bg-amber-600 text-white h-12 px-8 text-base"
+   291→                    onClick={onLoginClick}
+   292→                  >
+   293→                    Essai gratuit 14 jours
+   294→                    <ArrowRight className="size-4 ml-1" />
+   295→                  </Button>
+   296→                  <Button
+   297→                    variant="outline"
+   298→                    size="lg"
+   299→                    className="h-12 px-8 text-base"
+   300→                    onClick={() => scrollTo('fonctionnalites')}
+   301→                  >
+   302→                    Voir la démo
+   303→                  </Button>
+   304→                </div>
+   305→              </RevealSection>
+   306→
+   307→              {/* Right column - image */}
+   308→              <RevealSection threshold={0.08} className="hidden lg:block">
+   309→                <div className="relative">
+   310→                  <div className="absolute -inset-4 bg-gradient-to-br from-amber-200/30 to-orange-200/30 rounded-3xl blur-2xl" />
+   311→                  <div className="relative rounded-2xl overflow-hidden shadow-2xl rotate-1 hover:rotate-0 transition-transform duration-500">
+   312→                    <Image
+   313→                      src="/landing-hero.png"
+   314→                      alt="Tableau de bord O.P.U.C. - Gestion de chantier BTP"
+   315→                      width={640}
+   316→                      height={480}
+   317→                      className="w-full h-auto"
+   318→                      priority
+   319→                    />
+   320→                  </div>
+   321→                </div>
+   322→              </RevealSection>
+   323→            </div>
+   324→
+   325→            {/* Stats row */}
+   326→            <RevealSection className="mt-16 md:mt-20">
+   327→              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
+   328→                {[
+   329→                  { value: '150+', label: 'entreprises' },
+   330→                  { value: '5 000+', label: 'chantiers' },
+   331→                  { value: '25 000+', label: 'pointages/mois' },
+   332→                ].map((stat) => (
+   333→                  <div
+   334→                    key={stat.label}
+   335→                    className="text-center sm:text-left p-4 rounded-xl bg-card border"
+   336→                  >
+   337→                    <div className="text-2xl sm:text-3xl font-bold text-amber-600">
+   338→                      {stat.value}
+   339→                    </div>
+   340→                    <div className="text-sm text-muted-foreground mt-1">
+   341→                      {stat.label}
+   342→                    </div>
+   343→                  </div>
+   344→                ))}
+   345→              </div>
+   346→            </RevealSection>
+   347→          </div>
+   348→        </section>
+   349→
+   350→        {/* ═══════════════════════════════════════════════════════════════════
+   351→            3. TRUST BAR / SOCIAL PROOF
+   352→           ═══════════════════════════════════════════════════════════════════ */}
+   353→        <RevealSection className="py-16 md:py-20 bg-muted/50">
+   354→          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+   355→            <p className="text-center text-sm font-medium text-muted-foreground uppercase tracking-widest mb-8">
+   356→              Ils nous font confiance
+   357→            </p>
+   358→            <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12 md:gap-16">
+   359→              {[
+   360→                'CI BÂTIMENT',
+   361→                'ABIDJAN CONSTRUCTION',
+   362→                'AFRICAN HABITAT',
+   363→                'IVOIRE TRAVAUX',
+   364→                'COSTA CONSTRUCTION',
+   365→                'LAGOS BTP',
+   366→              ].map((name) => (
+   367→                <div
+   368→                  key={name}
+   369→                  className="flex items-center justify-center px-5 py-3 rounded-lg bg-background border border-border/50"
+   370→                >
+   371→                  <span className="text-xs sm:text-sm font-semibold text-muted-foreground/80 tracking-wide">
+   372→                    {name}
+   373→                  </span>
+   374→                </div>
+   375→              ))}
+   376→            </div>
+   377→          </div>
+   378→        </RevealSection>
+   379→
+   380→        {/* ═══════════════════════════════════════════════════════════════════
+   381→            4. PROBLEM → SOLUTION SECTION
+   382→           ═══════════════════════════════════════════════════════════════════ */}
+   383→        <RevealSection className="py-20 md:py-28">
+   384→          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+   385→            <div className="text-center mb-12 md:mb-16">
+   386→              <Badge
+   387→                variant="outline"
+   388→                className="mb-4 border-amber-300 text-amber-600"
+   389→              >
+   390→                Avant / Après
+   391→              </Badge>
+   392→              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
+   393→                De la confusion à la clarté
+   394→              </h2>
+   395→            </div>
+   396→
+   397→            <div className="grid md:grid-cols-[1fr,auto,1fr] gap-8 md:gap-6 items-start">
+   398→              {/* Problem column */}
+   399→              <div className="rounded-2xl border border-red-200 bg-red-50/40 p-6 md:p-8">
+   400→                <div className="flex items-center gap-2 mb-6">
+   401→                  <div className="flex items-center justify-center size-10 rounded-full bg-red-100">
+   402→                    <AlertTriangle className="size-5 text-red-500" />
+   403→                  </div>
+   404→                  <h3 className="text-lg font-bold text-red-700">
+   405→                    Le chaos du chantier
+   406→                  </h3>
+   407→                </div>
+   408→                <ul className="space-y-4">
+   409→                  {[
+   410→                    'Pointages sur papier perdus',
+   411→                    'Budgets incontrôlables',
+   412→                    'Documents éparpillés',
+   413→                    'Communication chaotique entre équipes',
+   414→                  ].map((item) => (
+   415→                    <li key={item} className="flex items-start gap-3">
+   416→                      <span className="mt-0.5 flex items-center justify-center size-5 rounded-full bg-red-100 shrink-0">
+   417→                        <X className="size-3 text-red-500" />
+   418→                      </span>
+   419→                      <span className="text-sm text-red-800/80">{item}</span>
+   420→                    </li>
+   421→                  ))}
+   422→                </ul>
+   423→              </div>
+   424→
+   425→              {/* VS divider - desktop */}
+   426→              <div className="hidden md:flex flex-col items-center justify-center self-center gap-2 py-8">
+   427→                <div className="w-px h-12 bg-border" />
+   428→                <div className="flex items-center justify-center size-12 rounded-full bg-amber-100 border-2 border-amber-300">
+   429→                  <ArrowRight className="size-5 text-amber-600 rotate-90" />
+   430→                </div>
+   431→                <div className="w-px h-12 bg-border" />
+   432→              </div>
+   433→              {/* VS divider - mobile */}
+   434→              <div className="flex md:hidden items-center justify-center gap-4 py-4">
+   435→                <Separator className="flex-1" />
+   436→                <ArrowRight className="size-5 text-amber-500" />
+   437→                <Separator className="flex-1" />
+   438→              </div>
+   439→
+   440→              {/* Solution column */}
+   441→              <div className="rounded-2xl border border-green-200 bg-green-50/40 p-6 md:p-8">
+   442→                <div className="flex items-center gap-2 mb-6">
+   443→                  <div className="flex items-center justify-center size-10 rounded-full bg-green-100">
+   444→                    <Check className="size-5 text-green-600" />
+   445→                  </div>
+   446→                  <h3 className="text-lg font-bold text-green-700">
+   447→                    Avec O.P.U.C.
+   448→                  </h3>
+   449→                </div>
+   450→                <ul className="space-y-4">
+   451→                  {[
+   452→                    'Pointage mobile en temps réel',
+   453→                    'Suivi budget au centime près',
+   454→                    'Tout centralisé et traçable',
+   455→                    'Collaboration fluide entre équipes',
+   456→                  ].map((item) => (
+   457→                    <li key={item} className="flex items-start gap-3">
+   458→                      <span className="mt-0.5 flex items-center justify-center size-5 rounded-full bg-green-100 shrink-0">
+   459→                        <Check className="size-3 text-green-600" />
+   460→                      </span>
+   461→                      <span className="text-sm text-green-800/80">{item}</span>
+   462→                    </li>
+   463→                  ))}
+   464→                </ul>
+   465→              </div>
+   466→            </div>
+   467→          </div>
+   468→        </RevealSection>
+   469→
+   470→        {/* ═══════════════════════════════════════════════════════════════════
+   471→            5. FEATURES SECTION
+   472→           ═══════════════════════════════════════════════════════════════════ */}
+   473→        <RevealSection
+   474→          className="py-20 md:py-28 bg-muted/30"
+   475→          id="fonctionnalites"
+   476→        >
+   477→          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+   478→            <div className="text-center mb-12 md:mb-16">
+   479→              <Badge
+   480→                variant="outline"
+   481→                className="mb-4 border-amber-300 text-amber-600"
+   482→              >
+   483→                Fonctionnalités
+   484→              </Badge>
+   485→              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
+   486→                Tout ce dont vous avez besoin
+   487→              </h2>
+   488→              <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
+   489→                Une plateforme complète pour piloter vos chantiers de A à Z
+   490→              </p>
+   491→            </div>
+   492→
+   493→            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+   494→              {[
+   495→                {
+   496→                  icon: Building2,
+   497→                  title: 'Gestion des Chantiers',
+   498→                  description:
+   499→                    "Créez, suivez et pilotez tous vos chantiers. Phases, avancement, planning et jalons en un coup d'œil.",
+   500→                },
+   501→                {
+   502→                  icon: Users,
+   503→                  title: 'Personnel & Pointage',
+   504→                  description:
+   505→                    'Pointez vos équipes depuis le terrain. Application mobile, horodatage automatique et rapports détaillés.',
+   506→                },
+   507→                {
+   508→                  icon: BarChart3,
+   509→                  title: 'Budget & Trésorerie',
+   510→                  description:
+   511→                    'Contrôlez vos dépenses en temps réel. Prévisions, écarts budgétaires et alertes pour ne jamais dépasser.',
+   512→                },
+   513→                {
+   514→                  icon: Package,
+   515→                  title: 'Stocks & Matériaux',
+   516→                  description:
+   517→                    "Gérez votre inventaire de matériaux. Suivi des entrées/sorties, alertes de seuil et approvisionnement.",
+   518→                },
+   519→                {
+   520→                  icon: FileText,
+   521→                  title: 'Documents & Rapports',
+   522→                  description:
+   523→                    'Centralisez tous vos documents. Bon de commande, PV de réception, rapports PDF automatisés.',
+   524→                },
+   525→                {
+   526→                  icon: Shield,
+   527→                  title: 'Sécurité Multi-tenant',
+   528→                  description:
+   529→                    "Isolation totale des données. 6 niveaux d'accès, authentification 2FA et traçabilité complète.",
+   530→                },
+   531→              ].map((feature) => (
+   532→                <Card
+   533→                  key={feature.title}
+   534→                  className="group hover:border-amber-300 hover:shadow-md transition-all duration-300 py-0 gap-0"
+   535→                >
+   536→                  <CardHeader className="pt-6 pb-0">
+   537→                    <div className="flex items-center justify-center size-12 rounded-xl bg-amber-100 text-amber-600 mb-3 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
+   538→                      <feature.icon className="size-6" />
+   539→                    </div>
+   540→                    <CardTitle className="text-lg">{feature.title}</CardTitle>
+   541→                  </CardHeader>
+   542→                  <CardContent className="pb-6 pt-2">
+   543→                    <CardDescription className="text-sm leading-relaxed">
+   544→                      {feature.description}
+   545→                    </CardDescription>
+   546→                  </CardContent>
+   547→                </Card>
+   548→              ))}
+   549→            </div>
+   550→          </div>
+   551→        </RevealSection>
+   552→
+   553→        {/* ═══════════════════════════════════════════════════════════════════
+   554→            6. MOBILE / PWA SECTION
+   555→           ═══════════════════════════════════════════════════════════════════ */}
+   556→        <RevealSection className="py-20 md:py-28">
+   557→          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+   558→            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+   559→              {/* Image column */}
+   560→              <div className="order-2 lg:order-1 relative">
+   561→                <div className="absolute -inset-4 bg-gradient-to-tr from-amber-100/40 to-orange-100/40 rounded-3xl blur-2xl" />
+   562→                <div className="relative rounded-2xl overflow-hidden shadow-2xl -rotate-2 hover:rotate-0 transition-transform duration-500 max-w-md mx-auto">
+   563→                  <Image
+   564→                    src="/landing-mobile.png"
+   565→                    alt="Application mobile O.P.U.C. - Pointage hors-ligne sur le terrain"
+   566→                    width={480}
+   567→                    height={640}
+   568→                    className="w-full h-auto"
+   569→                  />
+   570→                </div>
+   571→              </div>
+   572→
+   573→              {/* Text column */}
+   574→              <div className="order-1 lg:order-2">
+   575→                <Badge
+   576→                  variant="secondary"
+   577→                  className="bg-amber-100 text-amber-700 border-amber-200 mb-4"
+   578→                >
+   579→                  <Smartphone className="size-3 mr-1" />
+   580→                  Application Mobile
+   581→                </Badge>
+   582→                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">
+   583→                  Travaillez{' '}
+   584→                  <span className="text-amber-600">hors-ligne</span> sur le
+   585→                  terrain
+   586→                </h2>
+   587→                <p className="mt-4 text-muted-foreground leading-relaxed">
+   588→                  L&apos;application O.P.U.C. est conçue pour les conditions
+   589→                  réelles des chantiers, même sans connexion internet.
+   590→                </p>
+   591→                <ul className="mt-6 space-y-3">
+   592→                  {[
+   593→                    {
+   594→                      icon: WifiOff,
+   595→                      text: 'Pointage hors-ligne, synchronisation automatique',
+   596→                    },
+   597→                    {
+   598→                      icon: MapPin,
+   599→                      text: 'Photos de chantier géolocalisées',
+   600→                    },
+   601→                    {
+   602→                      icon: Smartphone,
+   603→                      text: 'Compatible tablettes et smartphones',
+   604→                    },
+   605→                    {
+   606→                      icon: Check,
+   607→                      text: "Installation en tant qu'application native (PWA)",
+   608→                    },
+   609→                  ].map((item) => (
+   610→                    <li key={item.text} className="flex items-start gap-3">
+   611→                      <div className="mt-0.5 flex items-center justify-center size-6 rounded-full bg-green-100 shrink-0">
+   612→                        <item.icon className="size-3.5 text-green-600" />
+   613→                      </div>
+   614→                      <span className="text-sm">{item.text}</span>
+   615→                    </li>
+   616→                  ))}
+   617→                </ul>
+   618→              </div>
+   619→            </div>
+   620→          </div>
+   621→        </RevealSection>
+   622→
+   623→        {/* ═══════════════════════════════════════════════════════════════════
+   624→            7. PRICING SECTION
+   625→           ═══════════════════════════════════════════════════════════════════ */}
+   626→        <RevealSection className="py-20 md:py-28 bg-muted/30" id="tarifs">
+   627→          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+   628→            <div className="text-center mb-12 md:mb-16">
+   629→              <Badge
+   630→                variant="outline"
+   631→                className="mb-4 border-amber-300 text-amber-600"
+   632→              >
+   633→                Tarifs
+   634→              </Badge>
+   635→              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
+   636→                Des tarifs adaptés à votre entreprise
+   637→              </h2>
+   638→            </div>
+   639→
+   640→            <PricingSection onLoginClick={onLoginClick} />
+   641→
+   642→            <p className="text-center text-xs sm:text-sm text-muted-foreground mt-8">
+   643→              Tous les plans incluent 14 jours d&apos;essai gratuit. Aucune
+   644→              carte bancaire requise.
+   645→            </p>
+   646→          </div>
+   647→        </RevealSection>
+   648→
+   649→        {/* ═══════════════════════════════════════════════════════════════════
+   650→            8. TESTIMONIALS SECTION
+   651→           ═══════════════════════════════════════════════════════════════════ */}
+   652→        <RevealSection className="py-20 md:py-28" id="temoignages">
+   653→          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+   654→            <div className="text-center mb-12 md:mb-16">
+   655→              <Badge
+   656→                variant="outline"
+   657→                className="mb-4 border-amber-300 text-amber-600"
+   658→              >
+   659→                Témoignages
+   660→              </Badge>
+   661→              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
+   662→                Ce que disent nos clients
+   663→              </h2>
+   664→            </div>
+   665→
+   666→            <div className="grid md:grid-cols-3 gap-6">
+   667→              {[
+   668→                {
+   669→                  quote:
+   670→                    "O.P.U.C. a réduit nos retards de 40%. Le pointage mobile a transformé notre gestion de terrain.",
+   671→                  name: 'Moussa K.',
+   672→                  title: 'Directeur Général',
+   673→                  company: 'CI Bâtiment',
+   674→                  city: 'Abidjan',
+   675→                  initials: 'MK',
+   676→                  color: 'bg-amber-500',
+   677→                },
+   678→                {
+   679→                  quote:
+   680→                    "Enfin un outil conçu pour les entreprises BTP africaines. Simple, fiable et le support est réactif.",
+   681→                  name: 'Aminata D.',
+   682→                  title: 'Chef de projets',
+   683→                  company: 'Ivoire Travaux',
+   684→                  city: '',
+   685→                  initials: 'AD',
+   686→                  color: 'bg-orange-500',
+   687→                },
+   688→                {
+   689→                  quote:
+   690→                    "On a éliminé les erreurs de paie grâce au suivi horodaté. ROI positif dès le premier mois.",
+   691→                  name: 'Yao S.',
+   692→                  title: 'Gérant',
+   693→                  company: 'Costa Construction',
+   694→                  city: 'San Pedro',
+   695→                  initials: 'YS',
+   696→                  color: 'bg-green-600',
+   697→                },
+   698→              ].map((testimonial) => (
+   699→                <Card
+   700→                  key={testimonial.name}
+   701→                  className="py-0 gap-0 hover:shadow-md transition-shadow"
+   702→                >
+   703→                  <CardContent className="pt-6 pb-6">
+   704→                    {/* Stars */}
+   705→                    <div className="flex gap-0.5 mb-4">
+   706→                      {Array.from({ length: 5 }).map((_, i) => (
+   707→                        <Star
+   708→                          key={i}
+   709→                          className="size-4 text-amber-400 fill-amber-400"
+   710→                        />
+   711→                      ))}
+   712→                    </div>
+   713→                    <blockquote className="text-sm leading-relaxed text-foreground/90 italic">
+   714→                      &ldquo;{testimonial.quote}&rdquo;
+   715→                    </blockquote>
+   716→                    <Separator className="my-4" />
+   717→                    <div className="flex items-center gap-3">
+   718→                      {/* Avatar */}
+   719→                      <div
+   720→                        className={`flex items-center justify-center size-10 rounded-full ${testimonial.color} text-white text-sm font-bold shrink-0`}
+   721→                      >
+   722→                        {testimonial.initials}
+   723→                      </div>
+   724→                      <div className="min-w-0">
+   725→                        <p className="text-sm font-semibold truncate">
+   726→                          {testimonial.name}
+   727→                        </p>
+   728→                        <p className="text-xs text-muted-foreground truncate">
+   729→                          {testimonial.title}, {testimonial.company}
+   730→                          {testimonial.city
+   731→                            ? ` (${testimonial.city})`
+   732→                            : ''}
+   733→                        </p>
+   734→                      </div>
+   735→                    </div>
+   736→                  </CardContent>
+   737→                </Card>
+   738→              ))}
+   739→            </div>
+   740→          </div>
+   741→        </RevealSection>
+   742→
+   743→        {/* ═══════════════════════════════════════════════════════════════════
+   744→            9. FAQ SECTION
+   745→           ═══════════════════════════════════════════════════════════════════ */}
+   746→        <RevealSection className="py-20 md:py-28 bg-muted/30" id="faq">
+   747→          <div className="max-w-3xl mx-auto px-4 sm:px-6">
+   748→            <div className="text-center mb-12">
+   749→              <Badge
+   750→                variant="outline"
+   751→                className="mb-4 border-amber-300 text-amber-600"
+   752→              >
+   753→                FAQ
+   754→              </Badge>
+   755→              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
+   756→                Questions fréquentes
+   757→              </h2>
+   758→            </div>
+   759→
+   760→            <Card className="py-0 gap-0">
+   761→              <CardContent className="px-0 py-0">
+   762→                <Accordion type="single" collapsible className="w-full">
+   763→                  {[
+   764→                    {
+   765→                      q: "Comment fonctionne l'essai gratuit ?",
+   766→                      a: "Vous bénéficiez de 14 jours d'accès complet à toutes les fonctionnalités du plan Professionnel. Aucune carte bancaire n'est requise. À la fin de la période, choisissez le plan qui vous convient.",
+   767→                    },
+   768→                    {
+   769→                      q: 'Mes données sont-elles sécurisées ?',
+   770→                      a: "Absolument. Vos données sont chiffrées (AES-256), isolées par entreprise, et hébergées sur des serveurs sécurisés. Nous proposons aussi l'authentification à deux facteurs (2FA).",
+   771→                    },
+   772→                    {
+   773→                      q: 'Combien de temps faut-il pour la mise en place ?',
+   774→                      a: "Votre espace est opérationnel en moins de 24 heures. Notre équipe vous accompagne pour l'import de vos données et la formation de vos équipes.",
+   775→                    },
+   776→                    {
+   777→                      q: 'Puis-je migrer depuis Excel ?',
+   778→                      a: 'Oui ! Nous proposons un import automatique de vos données Excel (personnel, chantiers, pointages). Transition fluide et sans perte de données.',
+   779→                    },
+   780→                    {
+   781→                      q: 'O.P.U.C. fonctionne-t-il hors-ligne ?',
+   782→                      a: "Oui. L'application mobile fonctionne entièrement hors-ligne grâce à la technologie PWA. Les données se synchronisent automatiquement dès que la connexion est rétablie.",
+   783→                    },
+   784→                    {
+   785→                      q: 'Comment le paiement se fait-il ?',
+   786→                      a: 'Paiement par virement bancaire, Mobile Money (Orange Money, MTN Money, Moov Money) ou carte bancaire. Facture mensuelle ou annuelle disponible.',
+   787→                    },
+   788→                  ].map((item, idx) => (
+   789→                    <AccordionItem key={idx} value={`faq-${idx}`}>
+   790→                      <AccordionTrigger className="px-6 text-sm sm:text-base font-medium">
+   791→                        {item.q}
+   792→                      </AccordionTrigger>
+   793→                      <AccordionContent className="px-6 text-sm text-muted-foreground leading-relaxed">
+   794→                        {item.a}
+   795→                      </AccordionContent>
+   796→                    </AccordionItem>
+   797→                  ))}
+   798→                </Accordion>
+   799→              </CardContent>
+   800→            </Card>
+   801→          </div>
+   802→        </RevealSection>
+   803→
+   804→        {/* ═══════════════════════════════════════════════════════════════════
+   805→            10. CTA FINAL SECTION
+   806→           ═══════════════════════════════════════════════════════════════════ */}
+   807→        <RevealSection className="relative overflow-hidden">
+   808→          <div className="bg-gradient-to-br from-amber-700 via-amber-800 to-orange-800 py-20 md:py-28">
+   809→            {/* Decorative circles */}
+   810→            <div className="absolute top-0 left-1/4 w-64 h-64 bg-amber-600/30 rounded-full blur-3xl" />
+   811→            <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-orange-600/20 rounded-full blur-3xl" />
+   812→
+   813→            <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center relative z-10">
+   814→              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight">
+   815→                Prêt à transformer la gestion de vos chantiers ?
+   816→              </h2>
+   817→              <p className="mt-4 text-amber-100/80 text-base sm:text-lg max-w-2xl mx-auto">
+   818→                Rejoignez les 150+ entreprises qui font confiance à O.P.U.C.
+   819→              </p>
+   820→              <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+   821→                <Button
+   822→                  size="lg"
+   823→                  className="bg-white text-amber-800 hover:bg-amber-50 h-12 px-8 text-base font-semibold"
+   824→                  onClick={onLoginClick}
+   825→                >
+   826→                  Démarrer l&apos;essai gratuit
+   827→                  <ArrowRight className="size-4 ml-1" />
+   828→                </Button>
+   829→                <Button
+   830→                  variant="outline"
+   831→                  size="lg"
+   832→                  className="h-12 px-8 text-base border-white/30 text-white hover:bg-white/10 hover:text-white"
+   833→                  onClick={() => scrollTo('faq')}
+   834→                >
+   835→                  Contacter l&apos;équipe
+   836→                </Button>
+   837→              </div>
+   838→            </div>
+   839→          </div>
+   840→        </RevealSection>
+   841→      </main>
+   842→
+   843→      {/* ═══════════════════════════════════════════════════════════════════════
+   844→          11. FOOTER
+   845→         ═══════════════════════════════════════════════════════════════════════ */}
+   846→      <footer className="bg-neutral-900 text-neutral-300">
+   847→        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-16">
+   848→          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+   849→            {/* Column 1: Brand */}
+   850→            <div className="sm:col-span-2 lg:col-span-1">
+   851→              <div className="flex items-center gap-2 mb-4">
+   852→                <OpucLogo size={32} className="brightness-0 invert" />
+   853→                <span className="text-white text-lg font-bold">O.P.U.C.</span>
+   854→              </div>
+   855→              <p className="text-sm text-neutral-400 leading-relaxed max-w-xs">
+   856→                La plateforme de gestion de chantier nouvelle génération pour
+   857→                les entreprises BTP en Côte d&apos;Ivoire.
+   858→              </p>
+   859→              {/* Social placeholder icons */}
+   860→              <div className="flex gap-3 mt-4">
+   861→                {[
+   862→                  { label: 'Facebook', short: 'FB' },
+   863→                  { label: 'Twitter', short: 'TW' },
+   864→                  { label: 'LinkedIn', short: 'IN' },
+   865→                  { label: 'YouTube', short: 'YT' },
+   866→                ].map((social) => (
+   867→                  <div
+   868→                    key={social.short}
+   869→                    className="flex items-center justify-center size-9 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-400 hover:text-white transition-colors cursor-pointer"
+   870→                    aria-label={social.label}
+   871→                  >
+   872→                    {social.short}
+   873→                  </div>
+   874→                ))}
+   875→              </div>
+   876→            </div>
+   877→
+   878→            {/* Column 2: Produit */}
+   879→            <div>
+   880→              <h4 className="text-white text-sm font-semibold mb-4">
+   881→                Produit
+   882→              </h4>
+   883→              <ul className="space-y-2.5">
+   884→                {[
+   885→                  {
+   886→                    label: 'Fonctionnalités',
+   887→                    href: 'fonctionnalites',
+   888→                  },
+   889→                  { label: 'Tarifs', href: 'tarifs' },
+   890→                  { label: 'Sécurité', href: '' },
+   891→                  { label: 'Mises à jour', href: '' },
+   892→                ].map((link) => (
+   893→                  <li key={link.label}>
+   894→                    <button
+   895→                      className="text-sm text-neutral-400 hover:text-white transition-colors"
+   896→                      onClick={() => {
+   897→                        if (link.href) scrollTo(link.href)
+   898→                      }}
+   899→                    >
+   900→                      {link.label}
+   901→                    </button>
+   902→                  </li>
+   903→                ))}
+   904→              </ul>
+   905→            </div>
+   906→
+   907→            {/* Column 3: Entreprise */}
+   908→            <div>
+   909→              <h4 className="text-white text-sm font-semibold mb-4">
+   910→                Entreprise
+   911→              </h4>
+   912→              <ul className="space-y-2.5">
+   913→                {[
+   914→                  'À propos',
+   915→                  'Carrières',
+   916→                  'Partenaires',
+   917→                  'Contact',
+   918→                ].map((link) => (
+   919→                  <li key={link}>
+   920→                    <button className="text-sm text-neutral-400 hover:text-white transition-colors">
+   921→                      {link}
+   922→                    </button>
+   923→                  </li>
+   924→                ))}
+   925→              </ul>
+   926→            </div>
+   927→
+   928→            {/* Column 4: Legal */}
+   929→            <div>
+   930→              <h4 className="text-white text-sm font-semibold mb-4">Légal</h4>
+   931→              <ul className="space-y-2.5">
+   932→                {[
+   933→                  'CGU',
+   934→                  'Politique de confidentialité',
+   935→                  'Mentions légales',
+   936→                  'RGPD',
+   937→                ].map((link) => (
+   938→                  <li key={link}>
+   939→                    <button className="text-sm text-neutral-400 hover:text-white transition-colors">
+   940→                      {link}
+   941→                    </button>
+   942→                  </li>
+   943→                ))}
+   944→              </ul>
+   945→            </div>
+   946→          </div>
+   947→
+   948→          <Separator className="my-8 bg-neutral-800" />
+   949→
+   950→          {/* Bottom bar */}
+   951→          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+   952→            <p className="text-xs text-neutral-500 text-center sm:text-left">
+   953→              &copy; 2025 O.P.U.C. Tous droits réservés. Conçu avec{' '}
+   954→              <span className="text-red-400" aria-label="amour">
+   955→                ❤
+   956→              </span>{' '}
+   957→              en Côte d&apos;Ivoire.
+   958→            </p>
+   959→            <div className="flex items-center gap-4">
+   960→              <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+   961→                <Phone className="size-3" />
+   962→                +225 00 00 00 00
+   963→              </div>
+   964→              <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+   965→                <Mail className="size-3" />
+   966→                contact@opuc.ci
+   967→              </div>
+   968→            </div>
+   969→          </div>
+   970→        </div>
+   971→      </footer>
+   972→    </div>
+   973→  )
+   974→}
+   975→
+   976→// ─── Pricing Section (toggle + cards combined for shared state) ──────────────
+   977→
+   978→function PricingSection({ onLoginClick }: { onLoginClick: () => void }) {
+   979→  const [annual, setAnnual] = useState(false)
+   980→
+   981→  const plans = [
+   982→    {
+   983→      name: 'Starter',
+   984→      monthlyPrice: '17 500',
+   985→      annualPrice: '14 000',
+   986→      description: 'Pour les petits chantiers',
+   987→      popular: false,
+   988→      features: [
+   989→        '1 chantier actif',
+   990→        '5 utilisateurs',
+   991→        'Pointage mobile',
+   992→        'Rapports basiques',
+   993→        'Support email',
+   994→      ],
+   995→      buttonLabel: 'Commencer',
+   996→      buttonVariant: 'outline' as const,
+   997→    },
+   998→    {
+   999→      name: 'Professionnel',
+  1000→      monthlyPrice: '47 500',
+  1001→      annualPrice: '38 000',
+  1002→      description: 'Pour les entreprises en croissance',
+  1003→      popular: true,
+  1004→      features: [
+  1005→        'Chantiers illimités',
+  1006→        '25 utilisateurs',
+  1007→        'Budget & trésorerie',
+  1008→        'Gestion des stocks',
+  1009→        'Documents & rapports avancés',
+  1010→        'Support prioritaire',
+  1011→      ],
+  1012→      buttonLabel: 'Choisir Pro',
+  1013→      buttonVariant: 'default' as const,
+  1014→    },
+  1015→    {
+  1016→      name: 'Entreprise',
+  1017→      monthlyPrice: '',
+  1018→      annualPrice: '',
+  1019→      description: 'Pour les grands groupes',
+  1020→      popular: false,
+  1021→      features: [
+  1022→        'Tout Professionnel +',
+  1023→        'Utilisateurs illimités',
+  1024→        'Multi-sites',
+  1025→        'API personnalisée',
+  1026→        'Formation dédiée',
+  1027→        'Account manager dédié',
+  1028→      ],
+  1029→      buttonLabel: 'Nous contacter',
+  1030→      buttonVariant: 'outline' as const,
+  1031→    },
+  1032→  ]
+  1033→
+  1034→  return (
+  1035→    <>
+  1036→      {/* Billing toggle */}
+  1037→      <div className="flex items-center justify-center gap-3 mb-10">
+  1038→        <span
+  1039→          className={`text-sm font-medium transition-colors ${
+  1040→            !annual ? 'text-foreground' : 'text-muted-foreground'
+  1041→          }`}
+  1042→        >
+  1043→          Mensuel
+  1044→        </span>
+  1045→        <button
+  1046→          onClick={() => setAnnual(!annual)}
+  1047→          className="relative inline-flex items-center h-6 w-11 rounded-full bg-amber-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+  1048→          role="switch"
+  1049→          aria-checked={annual}
+  1050→          aria-label="Basculer entre facturation mensuelle et annuelle"
+  1051→        >
+  1052→          <span
+  1053→            className={`inline-block size-5 rounded-full bg-white shadow-sm transform transition-transform ${
+  1054→              annual ? 'translate-x-[22px]' : 'translate-x-[2px]'
+  1055→            }`}
+  1056→          />
+  1057→        </button>
+  1058→        <span
+  1059→          className={`text-sm font-medium transition-colors ${
+  1060→            annual ? 'text-foreground' : 'text-muted-foreground'
+  1061→          }`}
+  1062→        >
+  1063→          Annuel
+  1064→        </span>
+  1065→        {annual && (
+  1066→          <Badge className="bg-green-100 text-green-700 border-green-200 text-xs ml-1">
+  1067→            -20%
+  1068→          </Badge>
+  1069→        )}
+  1070→      </div>
+  1071→
+  1072→      {/* Pricing cards grid */}
+  1073→      <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+  1074→        {plans.map((plan) => (
+  1075→          <Card
+  1076→            key={plan.name}
+  1077→            className={`relative py-0 gap-0 flex flex-col ${
+  1078→              plan.popular
+  1079→                ? 'border-2 border-amber-500 shadow-lg shadow-amber-500/10 scale-[1.02]'
+  1080→                : 'hover:shadow-md'
+  1081→            } transition-all`}
+  1082→          >
+  1083→            {plan.popular && (
+  1084→              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+  1085→                <Badge className="bg-amber-500 text-white border-amber-500 px-3 py-0.5 text-xs font-semibold">
+  1086→                  <Star className="size-3 mr-1 fill-white" />
+  1087→                  Populaire
+  1088→                </Badge>
+  1089→              </div>
+  1090→            )}
+  1091→            <CardHeader className="pt-8 pb-0">
+  1092→              <CardTitle className="text-lg">{plan.name}</CardTitle>
+  1093→              <CardDescription>{plan.description}</CardDescription>
+  1094→            </CardHeader>
+  1095→            <CardContent className="pt-2 pb-4 flex-1">
+  1096→              <div className="mb-6">
+  1097→                {plan.monthlyPrice ? (
+  1098→                  <>
+  1099→                    <span className="text-3xl sm:text-4xl font-bold text-foreground">
+  1100→                      {annual ? plan.annualPrice : plan.monthlyPrice}
+  1101→                    </span>
+  1102→                    <span className="text-sm text-muted-foreground ml-1">
+  1103→                      FCFA/mois
+  1104→                    </span>
+  1105→                  </>
+  1106→                ) : (
+  1107→                  <span className="text-3xl sm:text-4xl font-bold text-foreground">
+  1108→                    Sur devis
+  1109→                  </span>
+  1110→                )}
+  1111→              </div>
+  1112→              <Separator className="mb-4" />
+  1113→              <ul className="space-y-3">
+  1114→                {plan.features.map((feature) => (
+  1115→                  <li key={feature} className="flex items-start gap-2 text-sm">
+  1116→                    <Check className="size-4 text-amber-500 shrink-0 mt-0.5" />
+  1117→                    <span>{feature}</span>
+  1118→                  </li>
+  1119→                ))}
+  1120→              </ul>
+  1121→            </CardContent>
+  1122→            <CardFooter className="pb-8 pt-2">
+  1123→              <Button
+  1124→                variant={plan.buttonVariant}
+  1125→                className={
+  1126→                  plan.popular
+  1127→                    ? 'bg-amber-500 hover:bg-amber-600 text-white w-full'
+  1128→                    : 'w-full'
+  1129→                }
+  1130→                size="lg"
+  1131→                onClick={onLoginClick}
+  1132→              >
+  1133→                {plan.buttonLabel}
+  1134→              </Button>
+  1135→            </CardFooter>
+  1136→          </Card>
+  1137→        ))}
+  1138→      </div>
+  1139→    </>
+  1140→  )
+  1141→}
+  1142→
