@@ -1,62 +1,47 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react'
-import Image from 'next/image'
-import { OpucLogo } from '@/components/layout/opuc-logo'
-import { Button } from '@/components/ui/button'
+import { useState, type ReactNode } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from '@/components/ui/accordion'
-import { Separator } from '@/components/ui/separator'
-import {
-  Sheet,
-  SheetTrigger,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetClose,
-} from '@/components/ui/sheet'
-import {
+  Building2,
+  HardHat,
+  Clock,
+  ShieldCheck,
+  Wallet,
+  Package,
+  Fuel,
+  FileText,
+  LifeBuoy,
   Menu,
   X,
-  Check,
-  ChevronRight,
   ArrowRight,
-  Shield,
-  Smartphone,
-  BarChart3,
-  Users,
-  FileText,
-  Package,
-  Building2,
+  Play,
+  Check,
+  Plus,
+  Minus,
   Star,
-  Clock,
-  WifiOff,
-  AlertTriangle,
-  Phone,
-  Mail,
-  MapPin,
+  Sparkles,
+  TrendingUp,
+  Users,
+  ChevronDown,
+  Quote,
+  Layers,
+  Server,
 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { OpucLogo } from '@/components/layout/opuc-logo'
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// TYPES
+// ═══════════════════════════════════════════════════════════════════════════════
 
 interface LandingPageProps {
   onLoginClick: () => void
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
 
 /** Smooth-scroll to an element by ID */
 function scrollTo(id: string) {
@@ -66,836 +51,1425 @@ function scrollTo(id: string) {
   }
 }
 
-/** IntersectionObserver hook for fade-in-up animations */
-function useScrollReveal(threshold = 0.12) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [isVisible, setIsVisible] = useState(() => {
-    // If user prefers reduced motion, start visible
-    if (typeof window !== 'undefined' &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return true
-    }
-    return false
-  })
+// ═══════════════════════════════════════════════════════════════════════════════
+// ANIMATION VARIANTS
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  useEffect(() => {
-    const node = ref.current
-    if (!node) return
+const EASE_OUT = [0.22, 1, 0.36, 1] as const
 
-    // Already visible (e.g. reduced motion), no need to observe
-    if (isVisible) return
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true)
-          observer.unobserve(node)
-        }
-      },
-      { threshold }
-    )
-
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [threshold, isVisible])
-
-  return { ref, isVisible }
+const containerStagger = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1, delayChildren: 0.05 },
+  },
 }
 
-/** Reusable section wrapper with scroll-reveal */
-function RevealSection({
-  children,
-  className = '',
-  id,
-  threshold,
-}: {
-  children: ReactNode
-  className?: string
-  id?: string
-  threshold?: number
-}) {
-  const { ref, isVisible } = useScrollReveal(threshold)
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.55, ease: EASE_OUT },
+  },
+}
+
+const slideInLeft = {
+  hidden: { opacity: 0, x: -40 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.65, ease: EASE_OUT },
+  },
+}
+
+const slideInRight = {
+  hidden: { opacity: 0, x: 40 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.65, ease: EASE_OUT },
+  },
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const NAV_LINKS: { label: string; target: string }[] = [
+  { label: 'Fonctionnalités', target: 'fonctionnalites' },
+  { label: 'Tarifs', target: 'tarifs' },
+  { label: 'Témoignages', target: 'temoignages' },
+  { label: 'FAQ', target: 'faq' },
+]
+
+const FEATURES: {
+  icon: typeof Building2
+  title: string
+  description: string
+  color: string
+}[] = [
+  {
+    icon: Clock,
+    title: 'Pointage mobile',
+    description:
+      'Pointage chantier en temps réel depuis le smartphone, mode hors-ligne inclus. Géolocalisation et QR code.',
+    color: 'from-amber-400 to-orange-500',
+  },
+  {
+    icon: Wallet,
+    title: 'Paie automatique',
+    description:
+      'Génération automatique des bulletins de paie à partir des pointages. Conformité droit du travail ivoirien.',
+    color: 'from-orange-400 to-amber-600',
+  },
+  {
+    icon: Package,
+    title: 'Stock multi-chantier',
+    description:
+      'Suivi des stocks par chantier, transferts inter-sites, alertes de seuil et gestion des fournisseurs.',
+    color: 'from-amber-500 to-orange-600',
+  },
+  {
+    icon: Fuel,
+    title: 'Carburant & engins',
+    description:
+      'Suivi de la consommation carburant par engin, kilométrage, maintenance préventive et coûts horaires.',
+    color: 'from-orange-500 to-amber-700',
+  },
+  {
+    icon: FileText,
+    title: 'Devis & facturation',
+    description:
+      'Création de devis, conversion en factures, suivi des règlements et relances clients automatisées.',
+    color: 'from-amber-400 to-orange-600',
+  },
+  {
+    icon: LifeBuoy,
+    title: 'Support tickets',
+    description:
+      'Système de tickets intégré, base de connaissances, suivi SLA et support prioritaire pour les abonnés Pro.',
+    color: 'from-orange-400 to-amber-500',
+  },
+]
+
+const PRICING_PLANS = [
+  {
+    name: 'Starter',
+    monthly: 0,
+    annual: 0,
+    description: 'Pour démarrer et tester la plateforme',
+    features: [
+      'Jusqu’à 3 utilisateurs',
+      '1 chantier actif',
+      'Pointage mobile',
+      'Stock basique',
+      'Support par email',
+    ],
+    cta: 'Commencer gratuitement',
+    popular: false,
+  },
+  {
+    name: 'Pro',
+    monthly: 29000,
+    annual: 279000,
+    description: 'Pour les PME du BTP en croissance',
+    features: [
+      'Utilisateurs illimités',
+      'Chantiers illimités',
+      'Tous les 17 modules',
+      'Paie automatique',
+      'Mode hors-ligne',
+      'Support prioritaire 7j/7',
+    ],
+    cta: 'Démarrer l’essai 14 jours',
+    popular: true,
+  },
+  {
+    name: 'Enterprise',
+    monthly: null,
+    annual: null,
+    description: 'Pour les grands groupes et sur-mesure',
+    features: [
+      'SSO & SAML',
+      'Multi-sociétés',
+      'API & webhooks',
+      'Hébergement dédié',
+      'Onboarding personnalisé',
+      'Account manager dédié',
+    ],
+    cta: 'Contacter l’équipe',
+    popular: false,
+  },
+] as const
+
+const TESTIMONIALS: {
+  name: string
+  role: string
+  initials: string
+  quote: string
+}[] = [
+  {
+    name: 'Konan Yao',
+    role: 'Directeur Général, BTP Côte d’Ivoire SARL',
+    initials: 'KY',
+    quote:
+      'Depuis O.P.U.C, nos pointages sont fiables et la paie se fait en 2 jours au lieu de 8. Un gain de temps spectaculaire pour nos chantiers d’Abidjan.',
+  },
+  {
+    name: 'Aminata Traoré',
+    role: 'Chef Comptable, Groupe SOTCI',
+    initials: 'AT',
+    quote:
+      'Le suivi multi-chantier nous a changé la vie. On sait enfin où va chaque sac de ciment, chaque litre de gasoil. La transparence est totale.',
+  },
+  {
+    name: 'Marc-André Kouassi',
+    role: 'Conducteur de travaux, KBC Construction',
+    initials: 'MK',
+    quote:
+      'L’appli mobile fonctionne même sans réseau sur mes chantiers de l’intérieur. La synchronisation auto est redoutable. Plus aucune excuse pour rater un pointage.',
+  },
+]
+
+const FAQS: { question: string; answer: string }[] = [
+  {
+    question: 'O.P.U.C fonctionne-t-il hors connexion sur le chantier ?',
+    answer:
+      'Oui. L’application mobile dispose d’un mode hors-ligne complet. Les pointages, photos et entrées de stock sont enregistrés localement puis synchronisés automatiquement dès que la connexion revient. Aucune donnée n’est perdue.',
+  },
+  {
+    question: 'Combien de temps prend la mise en place ?',
+    answer:
+      'La création du compte prend 2 minutes. L’import de votre personnel, chantiers et stocks peut être réalisé via CSV ou accompagné par notre équipe. La plupart de nos clients sont opérationnels en moins de 48h.',
+  },
+  {
+    question: 'Mes données sont-elles sécurisées ?',
+    answer:
+      'Toutes les données sont chiffrées en transit (TLS 1.3) et au repos (AES-256). Les sauvegardes sont quotidiennes avec rétention 30 jours. Nous hébergeons sur des infrastructures certifiées et offrons l’authentification à deux facteurs.',
+  },
+  {
+    question: 'Puis-je changer d’offre ou résilier à tout moment ?',
+    answer:
+      'Absolument. Vous pouvez upgrader, downgrader ou résilier votre abonnement à tout moment depuis l’interface. Aucun engagement de durée, aucun frais caché. Le prorata est calculé automatiquement.',
+  },
+  {
+    question: 'Proposez-vous un accompagnement à la prise en main ?',
+    answer:
+      'Oui. L’offre Pro inclut une session de formation de 2h pour vos équipes. L’offre Enterprise inclut un onboarding personnalisé sur site et un account manager dédié pour accompagner la transformation digitale de votre entreprise.',
+  },
+]
+
+const FOOTER_COLUMNS: {
+  title: string
+  links: { label: string; target?: string; action?: 'login' }[]
+}[] = [
+  {
+    title: 'Produit',
+    links: [
+      { label: 'Fonctionnalités', target: 'fonctionnalites' },
+      { label: 'Tarifs', target: 'tarifs' },
+      { label: 'Témoignages', target: 'temoignages' },
+      { label: 'FAQ', target: 'faq' },
+    ],
+  },
+  {
+    title: 'Entreprise',
+    links: [
+      { label: 'À propos' },
+      { label: 'Blog' },
+      { label: 'Carrières' },
+      { label: 'Contact' },
+    ],
+  },
+  {
+    title: 'Légal',
+    links: [
+      { label: 'Conditions d’utilisation' },
+      { label: 'Politique de confidentialité' },
+      { label: 'Mentions légales' },
+      { label: 'RGPD' },
+    ],
+  },
+]
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FLOATING ORBS (Hero background)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function FloatingOrbs() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+      <motion.div
+        animate={{
+          x: [0, 60, 0],
+          y: [0, -40, 0],
+          scale: [1, 1.1, 1],
+        }}
+        transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-amber-400/30 blur-3xl"
+      />
+      <motion.div
+        animate={{
+          x: [0, -50, 0],
+          y: [0, 50, 0],
+          scale: [1, 1.15, 1],
+        }}
+        transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute top-20 -right-32 w-[32rem] h-[32rem] rounded-full bg-orange-500/25 blur-3xl"
+      />
+      <motion.div
+        animate={{
+          x: [0, 40, 0],
+          y: [0, -60, 0],
+          scale: [1, 1.2, 1],
+        }}
+        transition={{ duration: 26, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute bottom-0 left-1/3 w-[26rem] h-[26rem] rounded-full bg-amber-300/30 blur-3xl"
+      />
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NAVBAR
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function Navbar({ onLoginClick }: { onLoginClick: () => void }) {
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  return (
+    <motion.header
+      initial={{ y: -80, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.6, ease: EASE_OUT }}
+      className="fixed top-0 inset-x-0 z-50"
+    >
+      <nav className="backdrop-blur-xl bg-white/70 border-b border-white/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 lg:h-20">
+            {/* Logo */}
+            <button
+              onClick={() => scrollTo('hero')}
+              className="flex items-center gap-2.5 group"
+            >
+              <OpucLogo
+                size={40}
+                className="transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3"
+              />
+              <div className="hidden sm:flex flex-col leading-none">
+                <span className="text-lg font-bold text-slate-900 tracking-tight">
+                  O.P.U.C
+                </span>
+                <span className="text-[10px] font-semibold text-amber-700 uppercase tracking-[0.2em]">
+                  BTP SaaS
+                </span>
+              </div>
+            </button>
+
+            {/* Desktop nav links */}
+            <div className="hidden lg:flex items-center gap-1">
+              {NAV_LINKS.map((link) => (
+                <button
+                  key={link.target}
+                  onClick={() => scrollTo(link.target)}
+                  className="relative px-4 py-2 text-sm font-medium text-slate-700 hover:text-amber-700 rounded-lg transition-colors group"
+                >
+                  {link.label}
+                  <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+                </button>
+              ))}
+            </div>
+
+            {/* Desktop CTAs */}
+            <div className="hidden lg:flex items-center gap-3">
+              <Button
+                variant="ghost"
+                onClick={onLoginClick}
+                className="text-slate-700 hover:text-amber-700 hover:bg-amber-50/60"
+              >
+                Se connecter
+              </Button>
+              <motion.div
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                <Button
+                  onClick={onLoginClick}
+                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/30 border-0"
+                >
+                  Essai gratuit
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </motion.div>
+            </div>
+
+            {/* Mobile hamburger */}
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="lg:hidden p-2 -mr-2 text-slate-700 rounded-lg hover:bg-amber-50/60 transition-colors"
+              aria-label="Ouvrir le menu"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Mobile drawer */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileOpen(false)}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm lg:hidden z-40"
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+              className="fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white/95 backdrop-blur-xl border-l border-amber-100 lg:hidden z-50 p-6 flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-2.5">
+                  <OpucLogo size={36} />
+                  <span className="text-lg font-bold text-slate-900">O.P.U.C</span>
+                </div>
+                <button
+                  onClick={() => setMobileOpen(false)}
+                  className="p-2 text-slate-600 rounded-lg hover:bg-amber-50 transition-colors"
+                  aria-label="Fermer le menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                {NAV_LINKS.map((link, i) => (
+                  <motion.button
+                    key={link.target}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + i * 0.06 }}
+                    onClick={() => {
+                      scrollTo(link.target)
+                      setMobileOpen(false)
+                    }}
+                    className="text-left px-4 py-3 text-base font-medium text-slate-700 hover:text-amber-700 hover:bg-amber-50/60 rounded-lg transition-colors"
+                  >
+                    {link.label}
+                  </motion.button>
+                ))}
+              </div>
+
+              <div className="mt-auto flex flex-col gap-3 pt-6 border-t border-amber-100">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    onLoginClick()
+                    setMobileOpen(false)
+                  }}
+                  className="w-full border-amber-200 text-amber-700 hover:bg-amber-50"
+                >
+                  Se connecter
+                </Button>
+                <Button
+                  onClick={() => {
+                    onLoginClick()
+                    setMobileOpen(false)
+                  }}
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0"
+                >
+                  Essai gratuit
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </motion.header>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HERO — Mock Dashboard Preview
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function DashboardPreview() {
+  const bars = [40, 65, 50, 80, 60, 95, 72]
+  const days = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30, rotate: 2 }}
+      animate={{ opacity: 1, y: 0, rotate: 0 }}
+      transition={{ duration: 0.8, delay: 0.3, ease: EASE_OUT }}
+      className="relative w-full"
+    >
+      {/* Glow halo */}
+      <div className="absolute -inset-4 bg-gradient-to-br from-amber-400/30 via-orange-400/20 to-transparent rounded-3xl blur-2xl" />
+
+      {/* Glass card */}
+      <div className="relative backdrop-blur-xl bg-white/70 border border-white/60 rounded-2xl shadow-2xl shadow-amber-900/10 overflow-hidden">
+        {/* Window top bar */}
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-100/60 bg-white/50">
+          <div className="flex gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-amber-400" />
+            <span className="w-3 h-3 rounded-full bg-orange-400" />
+            <span className="w-3 h-3 rounded-full bg-amber-300" />
+          </div>
+          <div className="flex-1 mx-2 h-6 rounded-md bg-amber-50/80 border border-amber-100 flex items-center justify-center">
+            <span className="text-[10px] font-mono text-amber-700/70">
+              app.opuc.ci/chantier/cocody
+            </span>
+          </div>
+        </div>
+
+        {/* Dashboard body */}
+        <div className="p-4 sm:p-5 space-y-4">
+          {/* Header row */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-slate-500">Tableau de bord</p>
+              <h3 className="text-base font-bold text-slate-900">
+                Chantier Cocody Bay
+              </h3>
+            </div>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              En cours
+            </span>
+          </div>
+
+          {/* Stat tiles */}
+          <div className="grid grid-cols-3 gap-2.5">
+            {[
+              { label: 'Pointages', value: '142', icon: Users, color: 'amber' },
+              { label: 'Heures', value: '1 248h', icon: Clock, color: 'orange' },
+              { label: 'Alertes', value: '3', icon: ShieldCheck, color: 'amber' },
+            ].map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 + i * 0.1 }}
+                className="rounded-xl bg-white/70 border border-amber-100 p-2.5"
+              >
+                <div className="flex items-center gap-1.5 text-amber-600 mb-1">
+                  <stat.icon className="w-3 h-3" />
+                  <span className="text-[9px] font-medium text-slate-500 uppercase tracking-wide">
+                    {stat.label}
+                  </span>
+                </div>
+                <p className="text-base font-bold text-slate-900">{stat.value}</p>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Chart */}
+          <div className="rounded-xl bg-white/60 border border-amber-100 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-semibold text-slate-600">
+                Heures travaillées / jour
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
+                <TrendingUp className="w-3 h-3" />
+                +12%
+              </span>
+            </div>
+            <div className="flex items-end justify-between gap-1.5 h-16">
+              {bars.map((h, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ height: 0 }}
+                  animate={{ height: `${h}%` }}
+                  transition={{ delay: 0.7 + i * 0.08, duration: 0.5, ease: 'easeOut' }}
+                  className="flex-1 rounded-t-md bg-gradient-to-t from-amber-500 to-orange-400"
+                />
+              ))}
+            </div>
+            <div className="flex justify-between mt-1">
+              {days.map((d, i) => (
+                <span key={i} className="text-[8px] text-slate-400 flex-1 text-center">
+                  {d}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Progress */}
+          <div className="rounded-xl bg-white/60 border border-amber-100 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-semibold text-slate-600">
+                Avancement chantier
+              </span>
+              <span className="text-[10px] font-bold text-amber-700">67%</span>
+            </div>
+            <div className="h-2 rounded-full bg-amber-100 overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: '67%' }}
+                transition={{ delay: 1, duration: 1, ease: 'easeOut' }}
+                className="h-full rounded-full bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Floating mini cards */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 1.2, duration: 0.5 }}
+        className="absolute -top-4 -right-4 sm:-right-6 backdrop-blur-xl bg-white/80 border border-white/70 rounded-xl shadow-lg p-2.5 hidden sm:block"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+            <Check className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="text-[9px] text-slate-500">Pointage validé</p>
+            <p className="text-[10px] font-bold text-slate-900">Équipe B - 06h42</p>
+          </div>
+        </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 1.4, duration: 0.5 }}
+        className="absolute -bottom-4 -left-4 sm:-left-6 backdrop-blur-xl bg-white/80 border border-white/70 rounded-xl shadow-lg p-2.5 hidden sm:block"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-400 to-amber-600 flex items-center justify-center">
+            <Wallet className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="text-[9px] text-slate-500">Paie générée</p>
+            <p className="text-[10px] font-bold text-slate-900">2,4M FCFA · 28 employés</p>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HERO SECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function Hero({ onLoginClick }: { onLoginClick: () => void }) {
+  const stats = [
+    { value: '17', label: 'Modules', icon: Layers },
+    { value: '4', label: 'Rôles', icon: Users },
+    { value: '111+', label: 'Endpoints API', icon: Server },
+    { value: '0€', label: '/ mois pour démarrer', icon: Sparkles },
+  ]
+
   return (
     <section
-      id={id}
-      ref={ref}
-      className={`transition-all duration-700 ease-out ${
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-      } ${className}`}
+      id="hero"
+      className="relative min-h-screen flex items-center pt-24 pb-16 overflow-hidden bg-gradient-to-br from-amber-50 via-orange-50/40 to-white"
     >
-      {children}
+      <FloatingOrbs />
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+          {/* Left content */}
+          <motion.div
+            variants={containerStagger}
+            initial="hidden"
+            animate="visible"
+            className="flex flex-col items-start text-left"
+          >
+            <motion.div
+              variants={fadeUp}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 backdrop-blur border border-amber-200 text-amber-700 text-xs font-medium mb-6 shadow-sm"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Nouveau · Pointage mobile hors-ligne 2.0
+            </motion.div>
+
+            <motion.h1
+              variants={fadeUp}
+              className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight text-slate-900 leading-[1.05] mb-6"
+            >
+              La gestion de{' '}
+              <span className="relative inline-block">
+                <span className="bg-gradient-to-r from-amber-600 via-amber-500 to-orange-500 bg-clip-text text-transparent">
+                  chantier
+                </span>
+                <motion.span
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ delay: 0.8, duration: 0.6, ease: 'easeOut' }}
+                  className="absolute -bottom-1 inset-x-0 h-1 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full origin-left"
+                />
+              </span>{' '}
+              simplifiée.
+            </motion.h1>
+
+            <motion.p
+              variants={fadeUp}
+              className="text-base sm:text-lg text-slate-600 max-w-xl mb-8 leading-relaxed"
+            >
+              O.P.U.C est la plateforme SaaS tout-en-un pour les entreprises BTP en
+              Côte d’Ivoire. Pointage mobile, paie automatique, stock multi-chantier,
+              carburant et devis — réunis dans une interface unique, accessible
+              même hors-ligne.
+            </motion.p>
+
+            <motion.div
+              variants={fadeUp}
+              className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto mb-8"
+            >
+              <motion.div
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="w-full sm:w-auto"
+              >
+                <Button
+                  onClick={onLoginClick}
+                  size="lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-xl shadow-amber-500/30 border-0 h-12 px-7 text-base"
+                >
+                  Essai gratuit 14 jours
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </motion.div>
+              <motion.div
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="w-full sm:w-auto"
+              >
+                <Button
+                  onClick={() => scrollTo('fonctionnalites')}
+                  size="lg"
+                  variant="outline"
+                  className="w-full sm:w-auto backdrop-blur-xl bg-white/60 border-amber-200/80 text-slate-800 hover:bg-white/80 hover:text-amber-700 h-12 px-7 text-base"
+                >
+                  <Play className="w-4 h-4" />
+                  Voir la démo
+                </Button>
+              </motion.div>
+            </motion.div>
+
+            <motion.div
+              variants={fadeUp}
+              className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-600"
+            >
+              <div className="flex items-center gap-1.5">
+                <Check className="w-4 h-4 text-amber-600" />
+                Sans carte bancaire
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Check className="w-4 h-4 text-amber-600" />
+                Setup en 2 minutes
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Check className="w-4 h-4 text-amber-600" />
+                Support en français
+              </div>
+            </motion.div>
+          </motion.div>
+
+          {/* Right visual */}
+          <div className="relative">
+            <DashboardPreview />
+          </div>
+        </div>
+
+        {/* Stats bar */}
+        <motion.div
+          variants={containerStagger}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+          className="mt-16 lg:mt-24 grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6"
+        >
+          {stats.map((stat) => (
+            <motion.div
+              key={stat.label}
+              variants={fadeUp}
+              whileHover={{ y: -4 }}
+              className="backdrop-blur-xl bg-white/60 border border-white/70 rounded-2xl p-4 lg:p-6 text-center shadow-sm"
+            >
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 text-amber-700 mb-2">
+                <stat.icon className="w-5 h-5" />
+              </div>
+              <div className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                {stat.value}
+              </div>
+              <div className="text-xs lg:text-sm text-slate-500 mt-0.5">
+                {stat.label}
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
     </section>
   )
 }
 
-// ─── Navigation Links Data ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION HEADER (shared)
+// ═══════════════════════════════════════════════════════════════════════════════
 
-const NAV_LINKS = [
-  { label: 'Fonctionnalités', href: '#fonctionnalites' },
-  { label: 'Tarifs', href: '#tarifs' },
-  { label: 'Témoignages', href: '#temoignages' },
-  { label: 'FAQ', href: '#faq' },
-]
+function SectionHeader({
+  eyebrow,
+  title,
+  subtitle,
+}: {
+  eyebrow: string
+  title: ReactNode
+  subtitle: string
+}) {
+  return (
+    <motion.div
+      variants={containerStagger}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.4 }}
+      className="text-center max-w-2xl mx-auto mb-12 lg:mb-16"
+    >
+      <motion.div
+        variants={fadeUp}
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100/70 border border-amber-200 text-amber-700 text-xs font-semibold uppercase tracking-wider mb-4"
+      >
+        <Sparkles className="w-3.5 h-3.5" />
+        {eyebrow}
+      </motion.div>
+      <motion.h2
+        variants={fadeUp}
+        className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 mb-4"
+      >
+        {title}
+      </motion.h2>
+      <motion.p
+        variants={fadeUp}
+        className="text-base lg:text-lg text-slate-600"
+      >
+        {subtitle}
+      </motion.p>
+    </motion.div>
+  )
+}
 
-// ─── Main Component ────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// FEATURES SECTION
+// ═══════════════════════════════════════════════════════════════════════════════
 
-export function LandingPage({ onLoginClick }: LandingPageProps) {
-  const [scrolled, setScrolled] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
+function FeaturesSection() {
+  return (
+    <section
+      id="fonctionnalites"
+      className="relative py-20 lg:py-28 bg-gradient-to-b from-white to-amber-50/50 overflow-hidden"
+    >
+      {/* Decorative blurred blobs */}
+      <div className="absolute top-1/4 -left-20 w-72 h-72 bg-amber-200/30 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-orange-200/30 rounded-full blur-3xl pointer-events-none" />
 
-  // Track scroll for sticky nav background
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <SectionHeader
+          eyebrow="Fonctionnalités"
+          title={
+            <>
+              Tout ce dont vous avez{' '}
+              <span className="bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent">
+                besoin
+              </span>
+            </>
+          }
+          subtitle="17 modules intégrés pour piloter l’intégralité de votre activité BTP, du pointage à la facturation."
+        />
 
-  // Close mobile sheet on link click
-  const handleNavClick = useCallback((href: string) => {
-    setMobileOpen(false)
-    const id = href.replace('#', '')
-    scrollTo(id)
-  }, [])
+        <motion.div
+          variants={containerStagger}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6"
+        >
+          {FEATURES.map((feature) => (
+            <motion.div
+              key={feature.title}
+              variants={fadeUp}
+              whileHover={{ y: -8 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className="group relative backdrop-blur-xl bg-white/70 border border-white/70 rounded-2xl p-6 shadow-sm hover:shadow-2xl hover:shadow-amber-500/10 transition-shadow"
+            >
+              {/* Glow on hover */}
+              <div
+                className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500 pointer-events-none`}
+              />
+
+              <div
+                className={`relative inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} text-white shadow-lg mb-4 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}
+              >
+                <feature.icon className="w-6 h-6" />
+              </div>
+
+              <h3 className="text-lg font-bold text-slate-900 mb-2">
+                {feature.title}
+              </h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                {feature.description}
+              </p>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PRICING SECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function formatPrice(amount: number | null): string {
+  if (amount === null) return 'Sur mesure'
+  if (amount === 0) return '0€'
+  return `${amount.toLocaleString('fr-FR')} FCFA`
+}
+
+function PricingSection({ onLoginClick }: { onLoginClick: () => void }) {
+  const [annual, setAnnual] = useState(false)
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground overflow-x-hidden">
-      {/* ─── Skip to content (a11y) ─── */}
-      <a
-        href="#contenu-principal"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:text-sm"
-      >
-        Aller au contenu principal
-      </a>
+    <section
+      id="tarifs"
+      className="relative py-20 lg:py-28 bg-gradient-to-b from-amber-50/50 to-white overflow-hidden"
+    >
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[40rem] h-80 bg-amber-300/20 rounded-full blur-3xl pointer-events-none" />
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          1. STICKY NAVIGATION BAR
-         ═══════════════════════════════════════════════════════════════════════ */}
-      <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled
-            ? 'bg-background/95 backdrop-blur-md border-b shadow-sm'
-            : 'bg-transparent'
-        }`}
-      >
-        <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-16">
-          {/* Logo + brand */}
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-          >
-            <OpucLogo size={36} />
-            <span className="text-lg font-bold tracking-tight">O.P.U.C.</span>
-          </button>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <SectionHeader
+          eyebrow="Tarifs"
+          title={
+            <>
+              Des tarifs{' '}
+              <span className="bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent">
+                adaptés
+              </span>{' '}
+              à votre croissance
+            </>
+          }
+          subtitle="Commencez gratuitement, évoluez quand vous êtes prêt. Sans engagement, sans carte bancaire."
+        />
 
-          {/* Desktop nav links */}
-          <div className="hidden md:flex items-center gap-6">
-            {NAV_LINKS.map((link) => (
-              <button
-                key={link.href}
-                onClick={() => handleNavClick(link.href)}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm px-1 py-1"
-              >
-                {link.label}
-              </button>
-            ))}
-            <Button
-              size="sm"
-              className="bg-amber-500 hover:bg-amber-600 text-white"
-              onClick={onLoginClick}
-            >
-              Se connecter
-            </Button>
-          </div>
-
-          {/* Mobile hamburger */}
-          <div className="md:hidden">
-            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Ouvrir le menu">
-                  <Menu className="size-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-72">
-                <SheetHeader>
-                  <SheetTitle className="flex items-center gap-2">
-                    <OpucLogo size={28} />
-                    <span>O.P.U.C.</span>
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="flex flex-col gap-2 mt-6 px-4">
-                  {NAV_LINKS.map((link) => (
-                    <SheetClose asChild key={link.href}>
-                      <button
-                        onClick={() => handleNavClick(link.href)}
-                        className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-accent transition-colors text-left"
-                      >
-                        {link.label}
-                        <ChevronRight className="size-4 text-muted-foreground ml-auto" />
-                      </button>
-                    </SheetClose>
-                  ))}
-                  <Separator className="my-2" />
-                  <SheetClose asChild>
-                    <Button
-                      className="bg-amber-500 hover:bg-amber-600 text-white w-full mt-2"
-                      onClick={onLoginClick}
-                    >
-                      Se connecter
-                    </Button>
-                  </SheetClose>
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </nav>
-      </header>
-
-      {/* ─── Main Content ─── */}
-      <main id="contenu-principal" className="flex-1">
-        {/* ═══════════════════════════════════════════════════════════════════
-            2. HERO SECTION
-           ═══════════════════════════════════════════════════════════════════ */}
-        <section className="relative min-h-screen flex items-center pt-16">
-          {/* Subtle background gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-50/60 via-background to-orange-50/40 -z-10" />
-          <div className="absolute top-20 right-0 w-[600px] h-[600px] bg-amber-200/20 rounded-full blur-3xl -z-10" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-orange-200/15 rounded-full blur-3xl -z-10" />
-
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full py-12 md:py-20">
-            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-              {/* Left column - text */}
-              <RevealSection threshold={0.05}>
-                <Badge
-                  variant="secondary"
-                  className="bg-amber-100 text-amber-700 border-amber-200 mb-6 px-3 py-1 text-xs sm:text-sm"
-                >
-                  <Star className="size-3 mr-1 fill-amber-500 text-amber-500" />
-                  N°1 de la gestion de chantier en Côte d’Ivoire
-                </Badge>
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-[3.4rem] font-extrabold leading-[1.1] tracking-tight">
-                  La gestion de chantier{' '}
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-500">
-                    simplifiée
-                  </span>{' '}
-                  pour les entreprises BTP
-                </h1>
-                <p className="mt-6 text-base sm:text-lg text-muted-foreground leading-relaxed max-w-xl">
-                  O.P.U.C. centralise vos chantiers, pointages, budgets et
-                  documents en une seule plateforme intuitive. Fonctionne
-                  hors-ligne sur le terrain.
-                </p>
-                <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                  <Button
-                    size="lg"
-                    className="bg-amber-500 hover:bg-amber-600 text-white h-12 px-8 text-base"
-                    onClick={onLoginClick}
-                  >
-                    Essai gratuit 14 jours
-                    <ArrowRight className="size-4 ml-1" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="h-12 px-8 text-base"
-                    onClick={() => scrollTo('fonctionnalites')}
-                  >
-                    Voir la démo
-                  </Button>
-                </div>
-              </RevealSection>
-
-              {/* Right column - image */}
-              <RevealSection threshold={0.08} className="hidden lg:block">
-                <div className="relative">
-                  <div className="absolute -inset-4 bg-gradient-to-br from-amber-200/30 to-orange-200/30 rounded-3xl blur-2xl" />
-                  <div className="relative rounded-2xl overflow-hidden shadow-2xl rotate-1 hover:rotate-0 transition-transform duration-500">
-                    <Image
-                      src="/landing-hero.png"
-                      alt="Tableau de bord O.P.U.C. - Gestion de chantier BTP"
-                      width={640}
-                      height={480}
-                      className="w-full h-auto"
-                      priority
-                    />
-                  </div>
-                </div>
-              </RevealSection>
-            </div>
-
-            {/* Stats row */}
-            <RevealSection className="mt-16 md:mt-20">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
-                {[
-                  { value: '150+', label: 'entreprises' },
-                  { value: '5 000+', label: 'chantiers' },
-                  { value: '25 000+', label: 'pointages/mois' },
-                ].map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="text-center sm:text-left p-4 rounded-xl bg-card border"
-                  >
-                    <div className="text-2xl sm:text-3xl font-bold text-amber-600">
-                      {stat.value}
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {stat.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </RevealSection>
-          </div>
-        </section>
-
-        {/* ═══════════════════════════════════════════════════════════════════
-            3. TRUST BAR / SOCIAL PROOF
-           ═══════════════════════════════════════════════════════════════════ */}
-        <RevealSection className="py-16 md:py-20 bg-muted/50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <p className="text-center text-sm font-medium text-muted-foreground uppercase tracking-widest mb-8">
-              Ils nous font confiance
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12 md:gap-16">
-              {[
-                'CI BÂTIMENT',
-                'ABIDJAN CONSTRUCTION',
-                'AFRICAN HABITAT',
-                'IVOIRE TRAVAUX',
-                'COSTA CONSTRUCTION',
-                'LAGOS BTP',
-              ].map((name) => (
-                <div
-                  key={name}
-                  className="flex items-center justify-center px-5 py-3 rounded-lg bg-background border border-border/50"
-                >
-                  <span className="text-xs sm:text-sm font-semibold text-muted-foreground/80 tracking-wide">
-                    {name}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </RevealSection>
-
-        {/* ═══════════════════════════════════════════════════════════════════
-            4. PROBLEM → SOLUTION SECTION
-           ═══════════════════════════════════════════════════════════════════ */}
-        <RevealSection className="py-20 md:py-28">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="text-center mb-12 md:mb-16">
-              <Badge
-                variant="outline"
-                className="mb-4 border-amber-300 text-amber-600"
-              >
-                Avant / Après
-              </Badge>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
-                De la confusion à la clarté
-              </h2>
-            </div>
-
-            <div className="grid md:grid-cols-[1fr,auto,1fr] gap-8 md:gap-6 items-start">
-              {/* Problem column */}
-              <div className="rounded-2xl border border-red-200 bg-red-50/40 p-6 md:p-8">
-                <div className="flex items-center gap-2 mb-6">
-                  <div className="flex items-center justify-center size-10 rounded-full bg-red-100">
-                    <AlertTriangle className="size-5 text-red-500" />
-                  </div>
-                  <h3 className="text-lg font-bold text-red-700">
-                    Le chaos du chantier
-                  </h3>
-                </div>
-                <ul className="space-y-4">
-                  {[
-                    'Pointages sur papier perdus',
-                    'Budgets incontrôlables',
-                    'Documents éparpillés',
-                    'Communication chaotique entre équipes',
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-3">
-                      <span className="mt-0.5 flex items-center justify-center size-5 rounded-full bg-red-100 shrink-0">
-                        <X className="size-3 text-red-500" />
-                      </span>
-                      <span className="text-sm text-red-800/80">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* VS divider - desktop */}
-              <div className="hidden md:flex flex-col items-center justify-center self-center gap-2 py-8">
-                <div className="w-px h-12 bg-border" />
-                <div className="flex items-center justify-center size-12 rounded-full bg-amber-100 border-2 border-amber-300">
-                  <ArrowRight className="size-5 text-amber-600 rotate-90" />
-                </div>
-                <div className="w-px h-12 bg-border" />
-              </div>
-              {/* VS divider - mobile */}
-              <div className="flex md:hidden items-center justify-center gap-4 py-4">
-                <Separator className="flex-1" />
-                <ArrowRight className="size-5 text-amber-500" />
-                <Separator className="flex-1" />
-              </div>
-
-              {/* Solution column */}
-              <div className="rounded-2xl border border-green-200 bg-green-50/40 p-6 md:p-8">
-                <div className="flex items-center gap-2 mb-6">
-                  <div className="flex items-center justify-center size-10 rounded-full bg-green-100">
-                    <Check className="size-5 text-green-600" />
-                  </div>
-                  <h3 className="text-lg font-bold text-green-700">
-                    Avec O.P.U.C.
-                  </h3>
-                </div>
-                <ul className="space-y-4">
-                  {[
-                    'Pointage mobile en temps réel',
-                    'Suivi budget au centime près',
-                    'Tout centralisé et traçable',
-                    'Collaboration fluide entre équipes',
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-3">
-                      <span className="mt-0.5 flex items-center justify-center size-5 rounded-full bg-green-100 shrink-0">
-                        <Check className="size-3 text-green-600" />
-                      </span>
-                      <span className="text-sm text-green-800/80">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </RevealSection>
-
-        {/* ═══════════════════════════════════════════════════════════════════
-            5. FEATURES SECTION
-           ═══════════════════════════════════════════════════════════════════ */}
-        <RevealSection
-          className="py-20 md:py-28 bg-muted/30"
-          id="fonctionnalites"
+        {/* Billing toggle */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="flex items-center justify-center gap-3 mb-10"
         >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="text-center mb-12 md:mb-16">
-              <Badge
-                variant="outline"
-                className="mb-4 border-amber-300 text-amber-600"
+          <span
+            className={`text-sm font-medium transition-colors ${
+              !annual ? 'text-slate-900' : 'text-slate-500'
+            }`}
+          >
+            Mensuel
+          </span>
+          <button
+            onClick={() => setAnnual(!annual)}
+            className="relative w-14 h-7 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 p-1 shadow-inner"
+            aria-label="Basculer mensuel / annuel"
+          >
+            <motion.span
+              layout
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              className={`block w-5 h-5 rounded-full bg-white shadow-md ${
+                annual ? 'translate-x-7' : 'translate-x-0'
+              }`}
+            />
+          </button>
+          <span
+            className={`text-sm font-medium transition-colors ${
+              annual ? 'text-slate-900' : 'text-slate-500'
+            }`}
+          >
+            Annuel
+          </span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-semibold">
+            -20%
+          </span>
+        </motion.div>
+
+        {/* Pricing cards */}
+        <motion.div
+          variants={containerStagger}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+          className="grid lg:grid-cols-3 gap-6 lg:gap-8 items-stretch"
+        >
+          {PRICING_PLANS.map((plan) => (
+            <motion.div
+              key={plan.name}
+              variants={fadeUp}
+              whileHover={{ y: -8 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className={`relative rounded-2xl p-[1.5px] ${
+                plan.popular
+                  ? 'bg-gradient-to-b from-amber-400 via-orange-500 to-amber-600 shadow-2xl shadow-amber-500/30 lg:scale-105'
+                  : 'bg-white/70 border border-white/70'
+              }`}
+            >
+              <div
+                className={`relative h-full rounded-2xl p-6 lg:p-7 flex flex-col ${
+                  plan.popular
+                    ? 'bg-white/90 backdrop-blur-xl'
+                    : 'backdrop-blur-xl bg-white/70'
+                }`}
               >
-                Fonctionnalités
-              </Badge>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
-                Tout ce dont vous avez besoin
-              </h2>
-              <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-                Une plateforme complète pour piloter vos chantiers de A à Z
-              </p>
-            </div>
+                {plan.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold uppercase tracking-wider shadow-lg">
+                      <Star className="w-3 h-3 fill-current" />
+                      Populaire
+                    </span>
+                  </div>
+                )}
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                {
-                  icon: Building2,
-                  title: 'Gestion des Chantiers',
-                  description:
-                    "Créez, suivez et pilotez tous vos chantiers. Phases, avancement, planning et jalons en un coup d'œil.",
-                },
-                {
-                  icon: Users,
-                  title: 'Personnel & Pointage',
-                  description:
-                    'Pointez vos équipes depuis le terrain. Application mobile, horodatage automatique et rapports détaillés.',
-                },
-                {
-                  icon: BarChart3,
-                  title: 'Budget & Trésorerie',
-                  description:
-                    'Contrôlez vos dépenses en temps réel. Prévisions, écarts budgétaires et alertes pour ne jamais dépasser.',
-                },
-                {
-                  icon: Package,
-                  title: 'Stocks & Matériaux',
-                  description:
-                    "Gérez votre inventaire de matériaux. Suivi des entrées/sorties, alertes de seuil et approvisionnement.",
-                },
-                {
-                  icon: FileText,
-                  title: 'Documents & Rapports',
-                  description:
-                    'Centralisez tous vos documents. Bon de commande, PV de réception, rapports PDF automatisés.',
-                },
-                {
-                  icon: Shield,
-                  title: 'Sécurité Multi-tenant',
-                  description:
-                    "Isolation totale des données. 6 niveaux d'accès, authentification 2FA et traçabilité complète.",
-                },
-              ].map((feature) => (
-                <Card
-                  key={feature.title}
-                  className="group hover:border-amber-300 hover:shadow-md transition-all duration-300 py-0 gap-0"
-                >
-                  <CardHeader className="pt-6 pb-0">
-                    <div className="flex items-center justify-center size-12 rounded-xl bg-amber-100 text-amber-600 mb-3 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
-                      <feature.icon className="size-6" />
-                    </div>
-                    <CardTitle className="text-lg">{feature.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pb-6 pt-2">
-                    <CardDescription className="text-sm leading-relaxed">
-                      {feature.description}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </RevealSection>
-
-        {/* ═══════════════════════════════════════════════════════════════════
-            6. MOBILE / PWA SECTION
-           ═══════════════════════════════════════════════════════════════════ */}
-        <RevealSection className="py-20 md:py-28">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-              {/* Image column */}
-              <div className="order-2 lg:order-1 relative">
-                <div className="absolute -inset-4 bg-gradient-to-tr from-amber-100/40 to-orange-100/40 rounded-3xl blur-2xl" />
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl -rotate-2 hover:rotate-0 transition-transform duration-500 max-w-md mx-auto">
-                  <Image
-                    src="/landing-mobile.png"
-                    alt="Application mobile O.P.U.C. - Pointage hors-ligne sur le terrain"
-                    width={480}
-                    height={640}
-                    className="w-full h-auto"
-                  />
-                </div>
-              </div>
-
-              {/* Text column */}
-              <div className="order-1 lg:order-2">
-                <Badge
-                  variant="secondary"
-                  className="bg-amber-100 text-amber-700 border-amber-200 mb-4"
-                >
-                  <Smartphone className="size-3 mr-1" />
-                  Application Mobile
-                </Badge>
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">
-                  Travaillez{' '}
-                  <span className="text-amber-600">hors-ligne</span> sur le
-                  terrain
-                </h2>
-                <p className="mt-4 text-muted-foreground leading-relaxed">
-                  L&apos;application O.P.U.C. est conçue pour les conditions
-                  réelles des chantiers, même sans connexion internet.
+                <h3 className="text-lg font-bold text-slate-900 mb-1">
+                  {plan.name}
+                </h3>
+                <p className="text-xs text-slate-500 mb-5 min-h-[2rem]">
+                  {plan.description}
                 </p>
-                <ul className="mt-6 space-y-3">
-                  {[
-                    {
-                      icon: WifiOff,
-                      text: 'Pointage hors-ligne, synchronisation automatique',
-                    },
-                    {
-                      icon: MapPin,
-                      text: 'Photos de chantier géolocalisées',
-                    },
-                    {
-                      icon: Smartphone,
-                      text: 'Compatible tablettes et smartphones',
-                    },
-                    {
-                      icon: Check,
-                      text: "Installation en tant qu'application native (PWA)",
-                    },
-                  ].map((item) => (
-                    <li key={item.text} className="flex items-start gap-3">
-                      <div className="mt-0.5 flex items-center justify-center size-6 rounded-full bg-green-100 shrink-0">
-                        <item.icon className="size-3.5 text-green-600" />
-                      </div>
-                      <span className="text-sm">{item.text}</span>
+
+                <div className="mb-6">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl lg:text-4xl font-bold text-slate-900">
+                      {formatPrice(annual ? plan.annual : plan.monthly)}
+                    </span>
+                    {plan.monthly !== null && plan.monthly !== 0 && (
+                      <span className="text-sm text-slate-500">
+                        / {annual ? 'an' : 'mois'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <Button
+                  onClick={onLoginClick}
+                  className={`w-full mb-6 h-11 ${
+                    plan.popular
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 shadow-lg shadow-amber-500/30'
+                      : 'bg-white border border-amber-200 text-amber-700 hover:bg-amber-50'
+                  }`}
+                >
+                  {plan.cta}
+                </Button>
+
+                <ul className="space-y-2.5 flex-1">
+                  {plan.features.map((feat) => (
+                    <li
+                      key={feat}
+                      className="flex items-start gap-2.5 text-sm text-slate-700"
+                    >
+                      <span className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-amber-100 flex items-center justify-center">
+                        <Check className="w-2.5 h-2.5 text-amber-700" />
+                      </span>
+                      {feat}
                     </li>
                   ))}
                 </ul>
               </div>
-            </div>
-          </div>
-        </RevealSection>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  )
+}
 
-        {/* ═══════════════════════════════════════════════════════════════════
-            7. PRICING SECTION
-           ═══════════════════════════════════════════════════════════════════ */}
-        <RevealSection className="py-20 md:py-28 bg-muted/30" id="tarifs">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="text-center mb-12 md:mb-16">
-              <Badge
-                variant="outline"
-                className="mb-4 border-amber-300 text-amber-600"
-              >
-                Tarifs
-              </Badge>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
-                Des tarifs adaptés à votre entreprise
-              </h2>
-            </div>
+// ═══════════════════════════════════════════════════════════════════════════════
+// TESTIMONIALS SECTION
+// ═══════════════════════════════════════════════════════════════════════════════
 
-            <PricingSection onLoginClick={onLoginClick} />
+function TestimonialsSection() {
+  return (
+    <section
+      id="temoignages"
+      className="relative py-20 lg:py-28 bg-gradient-to-b from-white to-amber-50/50 overflow-hidden"
+    >
+      <div className="absolute top-0 right-0 w-80 h-80 bg-orange-200/30 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-200/30 rounded-full blur-3xl pointer-events-none" />
 
-            <p className="text-center text-xs sm:text-sm text-muted-foreground mt-8">
-              Tous les plans incluent 14 jours d&apos;essai gratuit. Aucune
-              carte bancaire requise.
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <SectionHeader
+          eyebrow="Témoignages"
+          title={
+            <>
+              Ils nous font{' '}
+              <span className="bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent">
+                confiance
+              </span>
+            </>
+          }
+          subtitle="Des entreprises BTP ivoiriennes de toutes tailles pilotent leurs chantiers avec O.P.U.C au quotidien."
+        />
+
+        <motion.div
+          variants={containerStagger}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+          className="grid md:grid-cols-3 gap-6"
+        >
+          {TESTIMONIALS.map((t, i) => (
+            <motion.div
+              key={t.name}
+              variants={i % 2 === 0 ? slideInLeft : slideInRight}
+              whileHover={{ y: -6 }}
+              className="relative backdrop-blur-xl bg-white/70 border border-white/70 rounded-2xl p-6 lg:p-7 shadow-sm hover:shadow-xl hover:shadow-amber-500/10 transition-shadow"
+            >
+              <Quote className="w-8 h-8 text-amber-300 mb-4" />
+
+              <div className="flex gap-0.5 mb-4">
+                {[...Array(5)].map((_, s) => (
+                  <Star
+                    key={s}
+                    className="w-4 h-4 fill-amber-400 text-amber-400"
+                  />
+                ))}
+              </div>
+
+              <p className="text-sm text-slate-700 leading-relaxed mb-6">
+                « {t.quote} »
+              </p>
+
+              <div className="flex items-center gap-3 pt-4 border-t border-amber-100">
+                <div className="flex-shrink-0 w-11 h-11 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white font-bold flex items-center justify-center text-sm shadow-md">
+                  {t.initials}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-900">{t.name}</p>
+                  <p className="text-xs text-slate-500">{t.role}</p>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAQ SECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function FaqItem({
+  question,
+  answer,
+  isOpen,
+  onToggle,
+  index,
+}: {
+  question: string
+  answer: string
+  isOpen: boolean
+  onToggle: () => void
+  index: number
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ delay: index * 0.05 }}
+      className={`backdrop-blur-xl bg-white/70 border rounded-2xl overflow-hidden transition-colors ${
+        isOpen
+          ? 'border-amber-300 shadow-lg shadow-amber-500/10'
+          : 'border-white/70 hover:border-amber-200'
+      }`}
+    >
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-4 px-5 lg:px-6 py-4 lg:py-5 text-left"
+      >
+        <span className="text-sm lg:text-base font-semibold text-slate-900">
+          {question}
+        </span>
+        <span
+          className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
+            isOpen
+              ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white'
+              : 'bg-amber-100 text-amber-700'
+          }`}
+        >
+          {isOpen ? (
+            <Minus className="w-4 h-4" />
+          ) : (
+            <Plus className="w-4 h-4" />
+          )}
+        </span>
+      </button>
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <p className="px-5 lg:px-6 pb-5 text-sm text-slate-600 leading-relaxed">
+              {answer}
             </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
+function FaqSection() {
+  const [openIndex, setOpenIndex] = useState<number | null>(0)
+
+  return (
+    <section
+      id="faq"
+      className="relative py-20 lg:py-28 bg-gradient-to-b from-amber-50/50 to-white overflow-hidden"
+    >
+      <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <SectionHeader
+          eyebrow="FAQ"
+          title={
+            <>
+              Questions{' '}
+              <span className="bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent">
+                fréquentes
+              </span>
+            </>
+          }
+          subtitle="Tout ce que vous devez savoir sur la plateforme O.P.U.C avant de vous lancer."
+        />
+
+        <div className="space-y-3">
+          {FAQS.map((faq, i) => (
+            <FaqItem
+              key={i}
+              index={i}
+              question={faq.question}
+              answer={faq.answer}
+              isOpen={openIndex === i}
+              onToggle={() => setOpenIndex(openIndex === i ? null : i)}
+            />
+          ))}
+        </div>
+
+        {/* Help banner */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-10 text-center"
+        >
+          <p className="text-sm text-slate-600">
+            Une autre question ?{' '}
+            <a
+              href="mailto:contact@opuc.ci"
+              className="font-semibold text-amber-700 hover:text-amber-800 underline-offset-2 hover:underline"
+            >
+              Écrivez-nous
+            </a>
+          </p>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CTA BANNER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function CtaBanner({ onLoginClick }: { onLoginClick: () => void }) {
+  return (
+    <section className="relative py-20 lg:py-24 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.6, ease: EASE_OUT }}
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500 via-orange-500 to-orange-600 px-6 py-14 lg:px-16 lg:py-20 text-center shadow-2xl shadow-orange-500/30"
+        >
+          {/* Decorative pattern */}
+          <div className="absolute inset-0 opacity-20" aria-hidden>
+            <div className="absolute -top-12 -left-12 w-48 h-48 rounded-full bg-white/30 blur-2xl" />
+            <div className="absolute top-1/2 -right-12 w-64 h-64 rounded-full bg-amber-200/40 blur-3xl" />
+            <div className="absolute -bottom-16 left-1/3 w-56 h-56 rounded-full bg-orange-300/30 blur-3xl" />
           </div>
-        </RevealSection>
 
-        {/* ═══════════════════════════════════════════════════════════════════
-            8. TESTIMONIALS SECTION
-           ═══════════════════════════════════════════════════════════════════ */}
-        <RevealSection className="py-20 md:py-28" id="temoignages">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="text-center mb-12 md:mb-16">
-              <Badge
-                variant="outline"
-                className="mb-4 border-amber-300 text-amber-600"
+          <div className="relative">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight mb-4 max-w-3xl mx-auto"
+            >
+              Prêt à transformer la gestion de vos chantiers ?
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="text-base lg:text-lg text-amber-50 max-w-xl mx-auto mb-8"
+            >
+              Rejoignez les entreprises BTP ivoiriennes qui digitalisent leur
+              opérationnel avec O.P.U.C. Aucune carte bancaire requise.
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="flex flex-col sm:flex-row gap-3 justify-center"
+            >
+              <motion.div
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
               >
-                Témoignages
-              </Badge>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
-                Ce que disent nos clients
-              </h2>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              {[
-                {
-                  quote:
-                    "O.P.U.C. a réduit nos retards de 40%. Le pointage mobile a transformé notre gestion de terrain.",
-                  name: 'Moussa K.',
-                  title: 'Directeur Général',
-                  company: 'CI Bâtiment',
-                  city: 'Abidjan',
-                  initials: 'MK',
-                  color: 'bg-amber-500',
-                },
-                {
-                  quote:
-                    "Enfin un outil conçu pour les entreprises BTP africaines. Simple, fiable et le support est réactif.",
-                  name: 'Aminata D.',
-                  title: 'Chef de projets',
-                  company: 'Ivoire Travaux',
-                  city: '',
-                  initials: 'AD',
-                  color: 'bg-orange-500',
-                },
-                {
-                  quote:
-                    "On a éliminé les erreurs de paie grâce au suivi horodaté. ROI positif dès le premier mois.",
-                  name: 'Yao S.',
-                  title: 'Gérant',
-                  company: 'Costa Construction',
-                  city: 'San Pedro',
-                  initials: 'YS',
-                  color: 'bg-green-600',
-                },
-              ].map((testimonial) => (
-                <Card
-                  key={testimonial.name}
-                  className="py-0 gap-0 hover:shadow-md transition-shadow"
+                <Button
+                  onClick={onLoginClick}
+                  size="lg"
+                  className="bg-white text-amber-700 hover:bg-amber-50 hover:text-amber-800 shadow-xl h-12 px-8 text-base border-0"
                 >
-                  <CardContent className="pt-6 pb-6">
-                    {/* Stars */}
-                    <div className="flex gap-0.5 mb-4">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className="size-4 text-amber-400 fill-amber-400"
-                        />
-                      ))}
-                    </div>
-                    <blockquote className="text-sm leading-relaxed text-foreground/90 italic">
-                      &ldquo;{testimonial.quote}&rdquo;
-                    </blockquote>
-                    <Separator className="my-4" />
-                    <div className="flex items-center gap-3">
-                      {/* Avatar */}
-                      <div
-                        className={`flex items-center justify-center size-10 rounded-full ${testimonial.color} text-white text-sm font-bold shrink-0`}
-                      >
-                        {testimonial.initials}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate">
-                          {testimonial.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {testimonial.title}, {testimonial.company}
-                          {testimonial.city
-                            ? ` (${testimonial.city})`
-                            : ''}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  Démarrer l’essai gratuit
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </motion.div>
+              <motion.div
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+              >
+                <Button
+                  onClick={() => scrollTo('tarifs')}
+                  size="lg"
+                  variant="outline"
+                  className="bg-transparent border-white/40 text-white hover:bg-white/10 hover:text-white hover:border-white h-12 px-8 text-base"
+                >
+                  Voir les tarifs
+                </Button>
+              </motion.div>
+            </motion.div>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FOOTER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function SocialIcon({ path }: { path: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="w-4 h-4"
+      aria-hidden
+    >
+      <path d={path} />
+    </svg>
+  )
+}
+
+const SOCIAL_LINKS = [
+  {
+    label: 'Facebook',
+    path: 'M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z',
+  },
+  {
+    label: 'Twitter',
+    path: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z',
+  },
+  {
+    label: 'LinkedIn',
+    path: 'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.063 2.063 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z',
+  },
+  {
+    label: 'YouTube',
+    path: 'M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z',
+  },
+]
+
+function Footer({ onLoginClick }: { onLoginClick: () => void }) {
+  return (
+    <footer className="relative bg-slate-900 text-slate-300 overflow-hidden">
+      {/* Top glow line */}
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-500/60 to-transparent" />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-16">
+        <div className="grid gap-10 lg:gap-12 lg:grid-cols-5 mb-12">
+          {/* Brand column */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center gap-2.5 mb-4">
+              <OpucLogo size={44} />
+              <div className="flex flex-col leading-none">
+                <span className="text-xl font-bold text-white tracking-tight">
+                  O.P.U.C
+                </span>
+                <span className="text-[10px] font-semibold text-amber-500 uppercase tracking-[0.2em]">
+                  BTP SaaS
+                </span>
+              </div>
+            </div>
+            <p className="text-sm text-slate-400 leading-relaxed max-w-sm mb-6">
+              La plateforme tout-en-un pour la gestion de chantier BTP en
+              Côte d’Ivoire. Pointage, paie, stock, carburant et facturation —
+              réunis dans une seule application.
+            </p>
+
+            <div className="flex items-center gap-3">
+              {SOCIAL_LINKS.map((social) => (
+                <motion.a
+                  key={social.label}
+                  href="#"
+                  aria-label={social.label}
+                  whileHover={{ scale: 1.12, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-amber-400 hover:border-amber-500/40 hover:bg-slate-800/80 flex items-center justify-center transition-colors"
+                >
+                  <SocialIcon path={social.path} />
+                </motion.a>
               ))}
             </div>
           </div>
-        </RevealSection>
 
-        {/* ═══════════════════════════════════════════════════════════════════
-            9. FAQ SECTION
-           ═══════════════════════════════════════════════════════════════════ */}
-        <RevealSection className="py-20 md:py-28 bg-muted/30" id="faq">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6">
-            <div className="text-center mb-12">
-              <Badge
-                variant="outline"
-                className="mb-4 border-amber-300 text-amber-600"
-              >
-                FAQ
-              </Badge>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
-                Questions fréquentes
-              </h2>
-            </div>
-
-            <Card className="py-0 gap-0">
-              <CardContent className="px-0 py-0">
-                <Accordion type="single" collapsible className="w-full">
-                  {[
-                    {
-                      q: "Comment fonctionne l'essai gratuit ?",
-                      a: "Vous bénéficiez de 14 jours d'accès complet à toutes les fonctionnalités du plan Professionnel. Aucune carte bancaire n'est requise. À la fin de la période, choisissez le plan qui vous convient.",
-                    },
-                    {
-                      q: 'Mes données sont-elles sécurisées ?',
-                      a: "Absolument. Vos données sont chiffrées (AES-256), isolées par entreprise, et hébergées sur des serveurs sécurisés. Nous proposons aussi l'authentification à deux facteurs (2FA).",
-                    },
-                    {
-                      q: 'Combien de temps faut-il pour la mise en place ?',
-                      a: "Votre espace est opérationnel en moins de 24 heures. Notre équipe vous accompagne pour l'import de vos données et la formation de vos équipes.",
-                    },
-                    {
-                      q: 'Puis-je migrer depuis Excel ?',
-                      a: 'Oui ! Nous proposons un import automatique de vos données Excel (personnel, chantiers, pointages). Transition fluide et sans perte de données.',
-                    },
-                    {
-                      q: 'O.P.U.C. fonctionne-t-il hors-ligne ?',
-                      a: "Oui. L'application mobile fonctionne entièrement hors-ligne grâce à la technologie PWA. Les données se synchronisent automatiquement dès que la connexion est rétablie.",
-                    },
-                    {
-                      q: 'Comment le paiement se fait-il ?',
-                      a: 'Paiement par virement bancaire, Mobile Money (Orange Money, MTN Money, Moov Money) ou carte bancaire. Facture mensuelle ou annuelle disponible.',
-                    },
-                  ].map((item, idx) => (
-                    <AccordionItem key={idx} value={`faq-${idx}`}>
-                      <AccordionTrigger className="px-6 text-sm sm:text-base font-medium">
-                        {item.q}
-                      </AccordionTrigger>
-                      <AccordionContent className="px-6 text-sm text-muted-foreground leading-relaxed">
-                        {item.a}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </CardContent>
-            </Card>
-          </div>
-        </RevealSection>
-
-        {/* ═══════════════════════════════════════════════════════════════════
-            10. CTA FINAL SECTION
-           ═══════════════════════════════════════════════════════════════════ */}
-        <RevealSection className="relative overflow-hidden">
-          <div className="bg-gradient-to-br from-amber-700 via-amber-800 to-orange-800 py-20 md:py-28">
-            {/* Decorative circles */}
-            <div className="absolute top-0 left-1/4 w-64 h-64 bg-amber-600/30 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-orange-600/20 rounded-full blur-3xl" />
-
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center relative z-10">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight">
-                Prêt à transformer la gestion de vos chantiers ?
-              </h2>
-              <p className="mt-4 text-amber-100/80 text-base sm:text-lg max-w-2xl mx-auto">
-                Rejoignez les 150+ entreprises qui font confiance à O.P.U.C.
-              </p>
-              <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-                <Button
-                  size="lg"
-                  className="bg-white text-amber-800 hover:bg-amber-50 h-12 px-8 text-base font-semibold"
-                  onClick={onLoginClick}
-                >
-                  Démarrer l&apos;essai gratuit
-                  <ArrowRight className="size-4 ml-1" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="h-12 px-8 text-base border-white/30 text-white hover:bg-white/10 hover:text-white"
-                  onClick={() => scrollTo('faq')}
-                >
-                  Contacter l&apos;équipe
-                </Button>
-              </div>
-            </div>
-          </div>
-        </RevealSection>
-      </main>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          11. FOOTER
-         ═══════════════════════════════════════════════════════════════════════ */}
-      <footer className="bg-neutral-900 text-neutral-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-16">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-            {/* Column 1: Brand */}
-            <div className="sm:col-span-2 lg:col-span-1">
-              <div className="flex items-center gap-2 mb-4">
-                <OpucLogo size={32} className="brightness-0 invert" />
-                <span className="text-white text-lg font-bold">O.P.U.C.</span>
-              </div>
-              <p className="text-sm text-neutral-400 leading-relaxed max-w-xs">
-                La plateforme de gestion de chantier nouvelle génération pour
-                les entreprises BTP en Côte d&apos;Ivoire.
-              </p>
-              {/* Social placeholder icons */}
-              <div className="flex gap-3 mt-4">
-                {[
-                  { label: 'Facebook', short: 'FB' },
-                  { label: 'Twitter', short: 'TW' },
-                  { label: 'LinkedIn', short: 'IN' },
-                  { label: 'YouTube', short: 'YT' },
-                ].map((social) => (
-                  <div
-                    key={social.short}
-                    className="flex items-center justify-center size-9 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-400 hover:text-white transition-colors cursor-pointer"
-                    aria-label={social.label}
-                  >
-                    {social.short}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Column 2: Produit */}
-            <div>
-              <h4 className="text-white text-sm font-semibold mb-4">
-                Produit
+          {/* Link columns */}
+          {FOOTER_COLUMNS.map((col) => (
+            <div key={col.title}>
+              <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+                {col.title}
               </h4>
               <ul className="space-y-2.5">
-                {[
-                  {
-                    label: 'Fonctionnalités',
-                    href: 'fonctionnalites',
-                  },
-                  { label: 'Tarifs', href: 'tarifs' },
-                  { label: 'Sécurité', href: '' },
-                  { label: 'Mises à jour', href: '' },
-                ].map((link) => (
+                {col.links.map((link) => (
                   <li key={link.label}>
                     <button
-                      className="text-sm text-neutral-400 hover:text-white transition-colors"
                       onClick={() => {
-                        if (link.href) scrollTo(link.href)
+                        if (link.target) {
+                          scrollTo(link.target)
+                        } else if (link.action === 'login') {
+                          onLoginClick()
+                        }
                       }}
+                      className="text-sm text-slate-400 hover:text-amber-400 transition-colors text-left"
                     >
                       {link.label}
                     </button>
@@ -903,239 +1477,43 @@ export function LandingPage({ onLoginClick }: LandingPageProps) {
                 ))}
               </ul>
             </div>
+          ))}
+        </div>
 
-            {/* Column 3: Entreprise */}
-            <div>
-              <h4 className="text-white text-sm font-semibold mb-4">
-                Entreprise
-              </h4>
-              <ul className="space-y-2.5">
-                {[
-                  'À propos',
-                  'Carrières',
-                  'Partenaires',
-                  'Contact',
-                ].map((link) => (
-                  <li key={link}>
-                    <button className="text-sm text-neutral-400 hover:text-white transition-colors">
-                      {link}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Column 4: Legal */}
-            <div>
-              <h4 className="text-white text-sm font-semibold mb-4">Légal</h4>
-              <ul className="space-y-2.5">
-                {[
-                  'CGU',
-                  'Politique de confidentialité',
-                  'Mentions légales',
-                  'RGPD',
-                ].map((link) => (
-                  <li key={link}>
-                    <button className="text-sm text-neutral-400 hover:text-white transition-colors">
-                      {link}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <Separator className="my-8 bg-neutral-800" />
-
-          {/* Bottom bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-neutral-500 text-center sm:text-left">
-              &copy; 2025 O.P.U.C. Tous droits réservés. Conçu avec{' '}
-              <span className="text-red-400" aria-label="amour">
-                ❤
-              </span>{' '}
-              en Côte d&apos;Ivoire.
-            </p>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 text-xs text-neutral-500">
-                <Phone className="size-3" />
-                +225 00 00 00 00
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-neutral-500">
-                <Mail className="size-3" />
-                contact@opuc.ci
-              </div>
-            </div>
+        <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-slate-500">
+            © {new Date().getFullYear()} O.P.U.C — Tous droits réservés.
+            Conçu en Côte d’Ivoire 🇨🇮
+          </p>
+          <div className="flex items-center gap-4 text-xs text-slate-500">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Tous les systèmes opérationnels
+            </span>
           </div>
         </div>
-      </footer>
-    </div>
+      </div>
+    </footer>
   )
 }
 
-// ─── Pricing Section (toggle + cards combined for shared state) ──────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════════
 
-function PricingSection({ onLoginClick }: { onLoginClick: () => void }) {
-  const [annual, setAnnual] = useState(false)
-
-  const plans = [
-    {
-      name: 'Starter',
-      monthlyPrice: '17 500',
-      annualPrice: '14 000',
-      description: 'Pour les petits chantiers',
-      popular: false,
-      features: [
-        '1 chantier actif',
-        '5 utilisateurs',
-        'Pointage mobile',
-        'Rapports basiques',
-        'Support email',
-      ],
-      buttonLabel: 'Commencer',
-      buttonVariant: 'outline' as const,
-    },
-    {
-      name: 'Professionnel',
-      monthlyPrice: '47 500',
-      annualPrice: '38 000',
-      description: 'Pour les entreprises en croissance',
-      popular: true,
-      features: [
-        'Chantiers illimités',
-        '25 utilisateurs',
-        'Budget & trésorerie',
-        'Gestion des stocks',
-        'Documents & rapports avancés',
-        'Support prioritaire',
-      ],
-      buttonLabel: 'Choisir Pro',
-      buttonVariant: 'default' as const,
-    },
-    {
-      name: 'Entreprise',
-      monthlyPrice: '',
-      annualPrice: '',
-      description: 'Pour les grands groupes',
-      popular: false,
-      features: [
-        'Tout Professionnel +',
-        'Utilisateurs illimités',
-        'Multi-sites',
-        'API personnalisée',
-        'Formation dédiée',
-        'Account manager dédié',
-      ],
-      buttonLabel: 'Nous contacter',
-      buttonVariant: 'outline' as const,
-    },
-  ]
-
+export function LandingPage({ onLoginClick }: LandingPageProps) {
   return (
-    <>
-      {/* Billing toggle */}
-      <div className="flex items-center justify-center gap-3 mb-10">
-        <span
-          className={`text-sm font-medium transition-colors ${
-            !annual ? 'text-foreground' : 'text-muted-foreground'
-          }`}
-        >
-          Mensuel
-        </span>
-        <button
-          onClick={() => setAnnual(!annual)}
-          className="relative inline-flex items-center h-6 w-11 rounded-full bg-amber-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          role="switch"
-          aria-checked={annual}
-          aria-label="Basculer entre facturation mensuelle et annuelle"
-        >
-          <span
-            className={`inline-block size-5 rounded-full bg-white shadow-sm transform transition-transform ${
-              annual ? 'translate-x-[22px]' : 'translate-x-[2px]'
-            }`}
-          />
-        </button>
-        <span
-          className={`text-sm font-medium transition-colors ${
-            annual ? 'text-foreground' : 'text-muted-foreground'
-          }`}
-        >
-          Annuel
-        </span>
-        {annual && (
-          <Badge className="bg-green-100 text-green-700 border-green-200 text-xs ml-1">
-            -20%
-          </Badge>
-        )}
-      </div>
-
-      {/* Pricing cards grid */}
-      <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
-        {plans.map((plan) => (
-          <Card
-            key={plan.name}
-            className={`relative py-0 gap-0 flex flex-col ${
-              plan.popular
-                ? 'border-2 border-amber-500 shadow-lg shadow-amber-500/10 scale-[1.02]'
-                : 'hover:shadow-md'
-            } transition-all`}
-          >
-            {plan.popular && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <Badge className="bg-amber-500 text-white border-amber-500 px-3 py-0.5 text-xs font-semibold">
-                  <Star className="size-3 mr-1 fill-white" />
-                  Populaire
-                </Badge>
-              </div>
-            )}
-            <CardHeader className="pt-8 pb-0">
-              <CardTitle className="text-lg">{plan.name}</CardTitle>
-              <CardDescription>{plan.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-2 pb-4 flex-1">
-              <div className="mb-6">
-                {plan.monthlyPrice ? (
-                  <>
-                    <span className="text-3xl sm:text-4xl font-bold text-foreground">
-                      {annual ? plan.annualPrice : plan.monthlyPrice}
-                    </span>
-                    <span className="text-sm text-muted-foreground ml-1">
-                      FCFA/mois
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-3xl sm:text-4xl font-bold text-foreground">
-                    Sur devis
-                  </span>
-                )}
-              </div>
-              <Separator className="mb-4" />
-              <ul className="space-y-3">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2 text-sm">
-                    <Check className="size-4 text-amber-500 shrink-0 mt-0.5" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-            <CardFooter className="pb-8 pt-2">
-              <Button
-                variant={plan.buttonVariant}
-                className={
-                  plan.popular
-                    ? 'bg-amber-500 hover:bg-amber-600 text-white w-full'
-                    : 'w-full'
-                }
-                size="lg"
-                onClick={onLoginClick}
-              >
-                {plan.buttonLabel}
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
-    </>
+    <div className="min-h-screen bg-white text-slate-900 antialiased overflow-x-hidden">
+      <Navbar onLoginClick={onLoginClick} />
+      <main>
+        <Hero onLoginClick={onLoginClick} />
+        <FeaturesSection />
+        <PricingSection onLoginClick={onLoginClick} />
+        <TestimonialsSection />
+        <FaqSection />
+        <CtaBanner onLoginClick={onLoginClick} />
+      </main>
+      <Footer onLoginClick={onLoginClick} />
+    </div>
   )
 }
