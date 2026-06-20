@@ -180,9 +180,12 @@ type Deps struct {
         Support      *handler.SupportHandler
         Sync         *handler.SyncHandler
         // R2 storage handler
-        Storage      *handler.StorageHandler
-        Signer       *appjwt.Signer
-        Log          *slog.Logger
+        Storage *handler.StorageHandler
+        // Phase 6 — SaaS handler (admin + support-access)
+        SaaS *handler.SaaSHandler
+        // Common
+        Signer *appjwt.Signer
+        Log    *slog.Logger
 }
 
 // NewRouter monte le routeur chi complet.
@@ -444,6 +447,68 @@ func NewRouter(d Deps) http.Handler {
                                 r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET", "SOUS_TRAITANT")).Delete("/files/*", d.Storage.DeleteFile)
                                 // Download accessible à tous les authentifiés (lecture)
                                 r.Get("/files/*", d.Storage.Download)
+                        }
+
+                        // ── Phase 6 — SaaS endpoints ───────────────────────
+                        //
+                        // Admin (SUPER_ADMIN only) :
+                        //   GET    /admin/dashboard                       — KPIs plateforme
+                        //   GET    /admin/entreprises                     — list tenants
+                        //   POST   /admin/entreprises                     — create tenant
+                        //   GET    /admin/entreprises/{id}                — tenant detail + stats
+                        //   PUT    /admin/entreprises/{id}                — update tenant
+                        //   POST   /admin/entreprises/{id}/suspend
+                        //   POST   /admin/entreprises/{id}/reactivate
+                        //   GET    /admin/subscriptions                   — list subscriptions
+                        //   POST   /admin/subscriptions                   — create subscription
+                        //   PUT    /admin/subscriptions/{id}              — change plan
+                        //   POST   /admin/subscriptions/{id}/cancel
+                        //   GET    /admin/support-access                  — list requests (all)
+                        //   POST   /admin/support-access/request          — request access
+                        //   POST   /admin/support-access/{id}/revoke
+                        //
+                        // GERANT (support access approval) :
+                        //   GET    /support-access                        — list own requests
+                        //   POST   /support-access/{id}/approve           — GERANT approves
+                        //   POST   /support-access/{id}/refuse            — GERANT refuses
+                        //   POST   /support-access/{id}/revoke            — GERANT revokes
+                        if d.SaaS != nil {
+                                // /admin/* — SUPER_ADMIN only
+                                r.Group(func(r chi.Router) {
+                                        r.Use(middleware.RequireRole("SUPER_ADMIN"))
+                                        r.Get("/admin/dashboard", d.SaaS.Dashboard)
+
+                                        // Entreprises CRUD
+                                        r.Get("/admin/entreprises", d.SaaS.ListEntreprises)
+                                        r.Post("/admin/entreprises", d.SaaS.CreateEntreprise)
+                                        r.Get("/admin/entreprises/{id}", d.SaaS.GetEntreprise)
+                                        r.Put("/admin/entreprises/{id}", d.SaaS.UpdateEntreprise)
+                                        r.Post("/admin/entreprises/{id}/suspend", d.SaaS.SuspendEntreprise)
+                                        r.Post("/admin/entreprises/{id}/reactivate", d.SaaS.ReactivateEntreprise)
+
+                                        // Subscriptions
+                                        r.Get("/admin/subscriptions", d.SaaS.ListSubscriptions)
+                                        r.Post("/admin/subscriptions", d.SaaS.CreateSubscription)
+                                        r.Put("/admin/subscriptions/{id}", d.SaaS.ChangePlan)
+                                        r.Post("/admin/subscriptions/{id}/cancel", d.SaaS.CancelSubscription)
+
+                                        // Support access (admin view)
+                                        r.Get("/admin/support-access", d.SaaS.ListSupportAccess)
+                                        r.Post("/admin/support-access/request", d.SaaS.RequestSupportAccess)
+                                        r.Post("/admin/support-access/{id}/revoke", d.SaaS.RevokeSupportAccess)
+                                })
+
+                                // /support-access/* — GERANT approval flow
+                                r.Group(func(r chi.Router) {
+                                        // GET /support-access : auth requis (tous rôles — le usecase
+                                        // force EntrepriseID = auth.EntrepriseID pour les non-SUPER_ADMIN)
+                                        r.Get("/support-access", d.SaaS.ListMySupportAccess)
+
+                                        // Approve/Refuse/Revoke : GERANT only
+                                        r.With(middleware.RequireRole("GERANT")).Post("/support-access/{id}/approve", d.SaaS.ApproveSupportAccess)
+                                        r.With(middleware.RequireRole("GERANT")).Post("/support-access/{id}/refuse", d.SaaS.RefuseSupportAccess)
+                                        r.With(middleware.RequireRole("GERANT")).Post("/support-access/{id}/revoke", d.SaaS.RevokeMySupportAccess)
+                                })
                         }
                 })
         })

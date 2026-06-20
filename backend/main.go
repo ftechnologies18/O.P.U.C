@@ -24,6 +24,7 @@ import (
         appjwt "opuc/internal/infrastructure/jwt"
         "opuc/internal/infrastructure/storage"
         "opuc/internal/repository/gorm"
+        "opuc/internal/usecase/admin"
         "opuc/internal/usecase/auth"
         "opuc/internal/usecase/carburant"
         "opuc/internal/usecase/chantier"
@@ -132,6 +133,14 @@ func main() {
         documentRepo := gorm.NewDocumentRepository(dbm.Runtime)
         supportRepo := gorm.NewSupportRepository(dbm.Runtime)
 
+        // Phase 6 — repositories SaaS (tous Migrations, bypass RLS — usecase fait l'autorisation)
+        //   - SupportAccessRepo    : demandes d'accès SUPER_ADMIN ↔ GERANT (cross-tenant)
+        //   - SubscriptionRepo     : abonnements STARTER/PRO/ENTERPRISE (cross-tenant)
+        //   - AdminEntrepriseRepo  : CRUD admin des tenants (SUPER_ADMIN only)
+        supportAccessRepo := gorm.NewSupportAccessRepo(dbm.Migrations)
+        subscriptionRepo := gorm.NewSubscriptionRepo(dbm.Migrations)
+        adminEntrepriseRepo := gorm.NewAdminEntrepriseRepo(dbm.Migrations)
+
         // ── 6. Usecases ─────────────────────────────────────────────
         authUC := auth.NewUsecase(userRepo, signer, log)
         usersUC := iam.NewUsersUsecase(userRepo, log)
@@ -157,6 +166,13 @@ func main() {
         supportUC := support.NewUsecase(supportRepo, log)
         // syncUC injecte pointage/stock/carburant usecases pour dispatcher les mutations offline
         syncUC := sync.NewUsecase(pointageUC, stockUC, carburantUC, log)
+
+        // Phase 6 — usecase SaaS (SupportAccess + Subscriptions + Admin Dashboard)
+        saasUC := admin.NewUsecase(admin.SaaSRepos{
+                SupportAccess:   supportAccessRepo,
+                Subscription:    subscriptionRepo,
+                AdminEntreprise: adminEntrepriseRepo,
+        }, log)
 
         // ── 7. Handlers ─────────────────────────────────────────────
         authHandler := handler.NewAuthHandler(authUC, signer, log)
@@ -184,6 +200,9 @@ func main() {
         documentHandler := handler.NewDocumentHandler(documentUC, log)
         supportHandler := handler.NewSupportHandler(supportUC, log)
         syncHandler := handler.NewSyncHandler(syncUC, log)
+
+        // Phase 6 — handler SaaS (admin + support-access approval flow)
+        saasHandler := handler.NewSaaSHandler(saasUC, log)
 
         // ── R2 Storage (Cloudflare) ─────────────────────────────────
         var storageHandler *handler.StorageHandler
@@ -221,6 +240,8 @@ func main() {
                 Sync:         syncHandler,
                 // R2 storage
                 Storage:      storageHandler,
+                // Phase 6 — SaaS handler
+                SaaS:         saasHandler,
                 Signer:       signer,
                 Log:          log,
         })
