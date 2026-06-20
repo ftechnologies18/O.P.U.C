@@ -14,6 +14,7 @@ import (
         "context"
         "errors"
         "fmt"
+        "time"
 
         "opuc/internal/domain/model"
         "opuc/internal/infrastructure/database"
@@ -274,4 +275,182 @@ func (r *ChantierRepository) ListWithMeta(ctx context.Context, auth *database.Au
         }
 
         return chantiers, total, jourCounts, nil
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Phase 0.2 — CRUD write (Create, Update, Delete, HasChildren)
+// ══════════════════════════════════════════════════════════════════
+
+// Create — insère un nouveau chantier. L'ID est généré si vide (cuid-like).
+// L'entrepriseId est résolu par le usecase (auth.EntrepriseID pour non-SUPER_ADMIN).
+func (r *ChantierRepository) Create(ctx context.Context, auth *database.AuthUser, c model.Chantier) (*model.Chantier, error) {
+        if c.ID == "" {
+                c.ID = newCuidLikeID()
+        }
+        now := time.Now().UTC()
+        if c.CreatedAt.IsZero() {
+                c.CreatedAt = now
+        }
+        if c.UpdatedAt.IsZero() {
+                c.UpdatedAt = now
+        }
+        // Defaults défensifs (le usecase valide déjà, mais on garde la cohérence DB)
+        if c.Statut == "" {
+                c.Statut = "EN_PREPARATION"
+        }
+        if c.ModeCarburant == "" {
+                c.ModeCarburant = "STOCK_PHYSIQUE"
+        }
+        err := database.WithTenant(ctx, r.db, auth, func(tx *gorm.DB) error {
+                return tx.Create(&c).Error
+        })
+        if err != nil {
+                return nil, err
+        }
+        return &c, nil
+}
+
+// Update — met à jour un chantier par ID (partial updates via map).
+// Renvoie (nil, nil) si non trouvé ou non visible par RLS.
+func (r *ChantierRepository) Update(ctx context.Context, auth *database.AuthUser, id string, updates map[string]any) (*model.Chantier, error) {
+        // Force updatedAt
+        updates["updatedAt"] = time.Now().UTC()
+
+        var updated model.Chantier
+        err := database.WithTenant(ctx, r.db, auth, func(tx *gorm.DB) error {
+                // Vérifie l'existence (pour 404)
+                var exists int64
+                if err := tx.Model(&model.Chantier{}).Where("id = ?", id).Count(&exists).Error; err != nil {
+                        return err
+                }
+                if exists == 0 {
+                        return nil
+                }
+                // Applique les updates (GORM Updates avec map = partial update)
+                if err := tx.Model(&model.Chantier{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+                        return err
+                }
+                // Recharge avec Phases + Taches préloadées (cohérent avec GetByID)
+                if err := tx.Preload("Phases.Taches").Where("id = ?", id).First(&updated).Error; err != nil {
+                        if errors.Is(err, gorm.ErrRecordNotFound) {
+                                return nil
+                        }
+                        return err
+                }
+                return nil
+        })
+        if err != nil {
+                return nil, err
+        }
+        if updated.ID == "" {
+                return nil, nil
+        }
+        return &updated, nil
+}
+
+// HasChildren — true si le chantier a au moins une dépendance (phases,
+// journaliers affectés, pointages, photos, rapports, documents).
+// Utilisé pour bloquer le delete sans ?force=true.
+func (r *ChantierRepository) HasChildren(ctx context.Context, auth *database.AuthUser, chantierID string) (bool, error) {
+        // On check les tables dépendantes directes (sans RLS direct, JOIN via Chantier).
+        // Tables checkées : Phase, JournalierAffectation, Pointage, Photo, RapportJournalier, DocumentChantier
+        // Note : on utilise COUNT(*) via JOIN sur Chantier pour bénéficier du RLS.
+        var has bool
+        err := database.WithTenant(ctx, r.db, auth, func(tx *gorm.DB) error {
+                // Phase
+                var nPhase int64
+                if err := tx.Model(&model.Phase{}).
+                        Joins(`JOIN "Chantier" ON "Chantier".id = "Phase"."chantierId"`).
+                        Where(`"Phase"."chantierId" = ?`, chantierID).
+                        Count(&nPhase).Error; err != nil {
+                        return err
+                }
+                if nPhase > 0 {
+                        has = true
+                        return nil
+                }
+                // JournalierAffectation
+                var nJour int64
+                if err := tx.Model(&model.JournalierAffectation{}).
+                        Joins(`JOIN "Chantier" ON "Chantier".id = "JournalierAffectation"."chantierId"`).
+                        Where(`"JournalierAffectation"."chantierId" = ?`, chantierID).
+                        Count(&nJour).Error; err != nil {
+                        return err
+                }
+                if nJour > 0 {
+                        has = true
+                        return nil
+                }
+                // Pointage
+                var nPoint int64
+                if err := tx.Model(&model.Pointage{}).
+                        Joins(`JOIN "Chantier" ON "Chantier".id = "Pointage"."chantierId"`).
+                        Where(`"Pointage"."chantierId" = ?`, chantierID).
+                        Count(&nPoint).Error; err != nil {
+                        return err
+                }
+                if nPoint > 0 {
+                        has = true
+                        return nil
+                }
+                // DocumentChantier
+                var nDoc int64
+                if err := tx.Model(&model.DocumentChantier{}).
+                        Joins(`JOIN "Chantier" ON "Chantier".id = "DocumentChantier"."chantierId"`).
+                        Where(`"DocumentChantier"."chantierId" = ?`, chantierID).
+                        Count(&nDoc).Error; err != nil {
+                        return err
+                }
+                if nDoc > 0 {
+                        has = true
+                        return nil
+                }
+                return nil
+        })
+        return has, err
+}
+
+// Delete — supprime un chantier (hard delete).
+// Si force=true : cascade delete Phase → Tache, JournalierAffectation, Pointage,
+// DocumentChantier avant de supprimer le Chantier.
+// Si force=false : le usecase a déjà vérifié HasChildren, on peut juste supprimer.
+func (r *ChantierRepository) Delete(ctx context.Context, auth *database.AuthUser, id string, force bool) error {
+        return database.WithTenant(ctx, r.db, auth, func(tx *gorm.DB) error {
+                // Vérifie l'existence
+                var exists int64
+                if err := tx.Model(&model.Chantier{}).Where("id = ?", id).Count(&exists).Error; err != nil {
+                        return err
+                }
+                if exists == 0 {
+                        return nil // idempotent
+                }
+
+                // Cascade si force=true
+                if force {
+                        // 1. Taches via Phase (Phase.PhaseID = Tache.PhaseID)
+                        if err := tx.Where(`"phaseId" IN (SELECT id FROM "Phase" WHERE "chantierId" = ?)`, id).
+                                Delete(&model.Tache{}).Error; err != nil {
+                                return fmt.Errorf("cascade delete Tache: %w", err)
+                        }
+                        // 2. Phases
+                        if err := tx.Where(`"chantierId" = ?`, id).Delete(&model.Phase{}).Error; err != nil {
+                                return fmt.Errorf("cascade delete Phase: %w", err)
+                        }
+                        // 3. JournalierAffectation
+                        if err := tx.Where(`"chantierId" = ?`, id).Delete(&model.JournalierAffectation{}).Error; err != nil {
+                                return fmt.Errorf("cascade delete JournalierAffectation: %w", err)
+                        }
+                        // 4. Pointage
+                        if err := tx.Where(`"chantierId" = ?`, id).Delete(&model.Pointage{}).Error; err != nil {
+                                return fmt.Errorf("cascade delete Pointage: %w", err)
+                        }
+                        // 5. DocumentChantier
+                        if err := tx.Where(`"chantierId" = ?`, id).Delete(&model.DocumentChantier{}).Error; err != nil {
+                                return fmt.Errorf("cascade delete DocumentChantier: %w", err)
+                        }
+                }
+
+                // Hard delete Chantier
+                return tx.Where("id = ?", id).Delete(&model.Chantier{}).Error
+        })
 }

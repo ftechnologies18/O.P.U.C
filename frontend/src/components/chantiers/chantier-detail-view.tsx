@@ -400,7 +400,7 @@ export function ChantierDetailView() {
     setSaving(true)
     try {
       const res = await fetch(
-        `/api/chantiers/${chantier.id}/phases/${targetPhaseIdForTask}/taches`,
+        `/api/v1/chantiers/${chantier.id}/phases/${targetPhaseIdForTask}/taches`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -430,7 +430,7 @@ export function ChantierDetailView() {
     setSaving(true)
     try {
       const res = await fetch(
-        `/api/chantiers/${chantier.id}/phases/${targetPhaseIdForTask}/taches/${targetTaskId}`,
+        `/api/v1/chantiers/${chantier.id}/phases/${targetPhaseIdForTask}/taches/${targetTaskId}`,
         { method: 'DELETE' }
       )
       if (res.ok) {
@@ -461,7 +461,7 @@ export function ChantierDetailView() {
     setSaving(true)
     try {
       const res = await fetch(
-        `/api/chantiers/${chantier!.id}/phases/${phaseId}/taches/${tacheId}`,
+        `/api/v1/chantiers/${chantier!.id}/phases/${phaseId}/taches/${tacheId}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

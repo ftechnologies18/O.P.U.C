@@ -267,7 +267,13 @@ func NewRouter(d Deps) http.Handler {
 
                         if d.Chantier != nil {
                                 r.Get("/chantiers", d.Chantier.List)
+                                // Create : GERANT+ (décision stratégique de l'entreprise)
+                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/chantiers", d.Chantier.Create)
                                 r.Get("/chantiers/{id}", d.Chantier.Get)
+                                // Update : CHEF_PROJET+ (édition des détails opérationnels)
+                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/chantiers/{id}", d.Chantier.Update)
+                                // Delete : GERANT+ (irréversible, risque données)
+                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Delete("/chantiers/{id}", d.Chantier.Delete)
                         }
 
                         if d.Dashboard != nil {
@@ -291,7 +297,7 @@ func NewRouter(d Deps) http.Handler {
                                 // Static routes declared first to avoid chi matching them as {id}
                                 r.Get("/pointage/summary", d.Pointage.Summary)
                                 r.Get("/pointage", d.Pointage.List)
-                                r.Post("/pointage", d.Pointage.Create)
+                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/pointage", d.Pointage.Create)
                                 r.Get("/pointage/{id}", d.Pointage.Get)
                                 r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/pointage/{id}", d.Pointage.Update)
                                 r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/pointage/{id}", d.Pointage.Delete)
@@ -315,11 +321,11 @@ func NewRouter(d Deps) http.Handler {
                         if d.Stock != nil {
                                 // Static routes declared first to avoid chi matching them as {id}
                                 r.Get("/stocks/entrees", d.Stock.ListEntrees)
-                                r.Post("/stocks/entrees", d.Stock.CreateEntree)
+                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/stocks/entrees", d.Stock.CreateEntree)
                                 r.Get("/stocks/sorties", d.Stock.ListSorties)
-                                r.Post("/stocks/sorties", d.Stock.CreateSortie)
+                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/stocks/sorties", d.Stock.CreateSortie)
                                 r.Get("/stocks", d.Stock.List)
-                                r.Post("/stocks", d.Stock.Create)
+                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/stocks", d.Stock.Create)
                                 r.Get("/stocks/{id}", d.Stock.Get)
                                 r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/stocks/{id}", d.Stock.Update)
                                 r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/stocks/{id}", d.Stock.Delete)
@@ -330,17 +336,17 @@ func NewRouter(d Deps) http.Handler {
                                 r.Route("/carburant", func(r chi.Router) {
                                         // Static routes first
                                         r.Get("/entrees", d.Carburant.ListEntrees)
-                                        r.Post("/entrees", d.Carburant.CreateEntree)
+                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/entrees", d.Carburant.CreateEntree)
                                         r.Get("/sorties", d.Carburant.ListSorties)
-                                        r.Post("/sorties", d.Carburant.CreateSortie)
+                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/sorties", d.Carburant.CreateSortie)
                                         r.Get("/achats", d.Carburant.ListAchats)
-                                        r.Post("/achats", d.Carburant.CreateAchat)
+                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/achats", d.Carburant.CreateAchat)
                                         r.Get("/releves", d.Carburant.ListReleves)
-                                        r.Post("/releves", d.Carburant.CreateReleve)
+                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/releves", d.Carburant.CreateReleve)
                                         r.Get("/stats", d.Carburant.Stats)
 
                                         r.Get("/stock", d.Carburant.ListStock)
-                                        r.Post("/stock", d.Carburant.CreateStock)
+                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/stock", d.Carburant.CreateStock)
                                         r.Get("/stock/{id}", d.Carburant.GetStock)
                                         r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/stock/{id}", d.Carburant.UpdateStock)
                                         r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/stock/{id}", d.Carburant.DeleteStock)
@@ -411,19 +417,19 @@ func NewRouter(d Deps) http.Handler {
                         // Phase 5 — Documents (peripheral)
                         if d.Document != nil {
                                 r.Get("/documents", d.Document.List)
-                                r.Post("/documents", d.Document.Create)
+                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/documents", d.Document.Create)
                                 r.Get("/documents/{id}", d.Document.Get)
                                 r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/documents/{id}", d.Document.Update)
                                 r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/documents/{id}", d.Document.Delete)
 
-                                // Photos
+                                // Photos — auth-seul OK (suivi terrain : tout user peut prendre une photo)
                                 r.Get("/photos", d.Document.ListPhotos)
                                 r.Post("/photos", d.Document.CreatePhoto)
                                 r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/photos/{id}", d.Document.DeletePhoto)
 
                                 // Rapports journaliers
                                 r.Get("/rapports", d.Document.ListRapports)
-                                r.Post("/rapports", d.Document.CreateRapport)
+                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/rapports", d.Document.CreateRapport)
                                 r.Get("/rapports/{id}", d.Document.GetRapport)
                                 r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/rapports/{id}", d.Document.UpdateRapport)
                         }

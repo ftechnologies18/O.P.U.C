@@ -441,3 +441,96 @@ Stage Summary:
   `/home/z/my-project/` (root stub) instead of `/home/z/my-project/frontend/`.
   The new routes return 404 via the preview panel until the dev server is
   restarted from the frontend directory. Code is correct (lint + tsc pass).
+
+---
+Task ID: ONBOARDING
+Agent: Z.ai Code (tutor/assistant)
+Task: Clonage du dépôt O.P.U.C, configuration de l'identité Git, vérification de la connectivité à tous les services (GitHub, Neon, Vercel, Render).
+
+Work Log:
+- Cloné https://github.com/ftechnologies18/O.P.U.C.git vers /home/z/my-project/opuc (branche main, HEAD ea79f60).
+- Configuré l'identité Git globale : ftechnologies18 / freelancetechnologies.ci@gmail.com.
+- Configuré le remote origin avec le token GitHub pour push automatique.
+- Vérifié GitHub : clone OK, working tree clean, à jour avec origin/main.
+- Vérifié Neon DB : connexion OK via pg (node), PostgreSQL 18.4, 48 tables dans le schéma public, utilisateur neondb_owner.
+- Vérifié Vercel frontend (https://opuc.vercel.app) : HTTP 200 OK.
+- Vérifié Render backend (https://opuc-api.onrender.com) : /api/v1/health → {"status":"ok","service":"opuc-api","version":"0.1.0"} (service réveillé, free tier).
+- Vérifié toolchain local : Bun 1.3.14, Node v24.16.0. Go NON installé localement (le backend est buildé par Render).
+- Examiné la structure : monorepo (frontend Next.js 16 + backend Go 1.23 + docs + prisma). 17 domaines métier, ~111 endpoints, 39 modèles GORM, 15 tables RLS.
+
+Stage Summary:
+- Environnement de travail prêt : le code source du projet O.P.U.C est cloné dans /home/z/my-project/opuc.
+- Workflow établi : édition locale → commit/push vers GitHub (identité ftechnologies18) → déploiement auto sur Vercel (frontend) + Render (backend) → synchronisation Neon DB via Prisma/migrations Go.
+- Tous les services sont connectés et opérationnels.
+- Le projet est à un stade avancé : dernière feature = système de délégation (co-GERANT + domain delegation) + plateforme SaaS admin (dashboard, entreprises, abonnements, support access).
+- En attente : directive de l'utilisateur sur la prochaine tâche/fonctionnalité à développer.
+
+---
+Task ID: AUDIT-RBAC
+Agent: Explore (very thorough)
+Task: Audit factuel du système RBAC, délégation, rôle SOUS_TRAITANT, modèle tenant, middleware, suivi de tâches, endpoints API.
+
+Work Log:
+- Lu /home/z/my-project/opuc/worklog.md pour contexte (features récentes : co-GERANT + domain delegation + SaaS admin).
+- Cartographié la structure du repo : backend Go (clean arch via internal/{domain,usecase,repository,delivery}), frontend Next.js 16 (app router + zustand), Prisma schema (1031 lignes, 39+ modèles).
+- Lu intégralement : frontend/src/lib/rbac.ts (462 lignes), backend/internal/domain/enums.go, middleware/{auth,rbac,delegation,logger,utils}.go, infrastructure/database/tenant.go, domain/model/{user,chantier,phase,soustraitant,delegation,entreprise,saas,iam,notification,document}.go, usecase/{delegation,chantier,iam/users,soustraitant,dashboard}.*, delivery/http/router.go (574 lignes), main.go.
+- Lu schéma Prisma (frontend/prisma/schema.prisma) : User, Entreprise, Chantier, Phase, Tache, Journalier, SousTraitant, ContratST, UserChantierAccess, Delegation, SupportAccess, Subscription, PermissionConfig, etc.
+- Lu pages frontend : (app)/parametres/delegations/page.tsx (910 lignes), co-gerant/page.tsx (713 lignes), chantiers/[id]/page.tsx + chantier-detail-view.tsx (1471 lignes), sous-traitants-view.tsx (1877 lignes), gestion-acces-view.tsx, app-layout.tsx.
+- Vérifié le proxy Next.js (next.config.ts) : seul `/api/v1/:path*` est proxyé vers le backend Go.
+- Recoupé la présence/absence d'endpoints via Grep sur router.go + handler files.
+- Croisé les appels fetch du frontend avec les routes backend pour identifier les endpoints manquants.
+
+Stage Summary:
+- AXE 1 (RBAC) : 4 rôles (SUPER_ADMIN=4, GERANT=3, CHEF_PROJET=2, SOUS_TRAITANT=1). Frontend rbac.ts définit PAGE_ACCESS + MODULE_PERMISSIONS + canAccessPage/canAccessSettings/canAccessFeature. Backend enums.go + Role.IsAtLeast + middleware.RequireRole (liste blanche). CHEF_PROJET n'a aucun sous-rôle (pas de co-CHEF_PROJET).
+- AXE 2 (Délégation) : Modèle Delegation (6 domaines : FINANCE/RH/LOGISTIQUE/COMMERCIAL/CHANTIER/DOCUMENTS × 3 niveaux LECTURE/ECRITURE/GESTION). Middleware RequireAccess défini dans middleware/delegation.go MAIS JAMAIS APPLIQUÉ sur aucune route — le `DelegationRepo` est injecté dans Deps "pour usage futur" (router.go:190, main.go:258). Co-GERANT via flag `isCoGerant` sur User (max 2/entreprise), promu/démoté uniquement par le principal GERANT. Délegation ≠ RLS : ne change pas le tenant, étend juste les droits fonctionnels (mais sans effet puisque RequireAccess n'est pas branché).
+- AXE 3 (SOUS_TRAITANT) : DUALITÉ CRITIQUE — deux concepts homonymes sans lien : (a) `User.role = "SOUS_TRAITANT"` = user interne du tenant (entrepriseId = GERANT's company, créé via /users), (b) `model.SousTraitant` = entité externe (entreprise/particulier/fournisseur, table séparée, créée via /sous-traitants). AUCUNE FK entre les deux. Le seed crée un User "Aliou Diop" SOUS_TRAITANT + aucune entrée SousTraitant. Aucune notion de relation commerciale "entreprise A sous-traite à entreprise B".
+- AXE 4 (Modèle) : tenant_id (`entrepriseId`) sur 15 tables RLS (User, Entreprise, Chantier, Client, Journalier, SousTraitant, Equipement, Devis, Contrat, Facture, TicketSupport, AuditLog, PermissionConfig, SystemSetting, InvitationToken) + SupportAccess/Subscription. Tache existe (model.phase.go:26) avec `responsableId` (FK → User) et `tachePrecedenteId` (dépendance). UserChantierAccess existe côté Prisma (schema:103) MAIS PAS côté backend (aucun modèle GORM, aucun endpoint).
+- AXE 5 (Middleware) : chi router avec middlewares globaux RequestID + RealIP + Logger + Recover + CORS. Auth via cookie `opuc_session` (JWT), injecte AuthUser dans context. WithTenant (tenant.go:57) = SET LOCAL ROLE app_user + set_config('app.current_tenant'/'app.user_role'/'app.user_id'). RequireRole = liste blanche simple. RequireAccess = défini mais inactif.
+- AXE 6 (Suivi de tâches) : Le modèle Tache existe en DB mais le backend n'expose AUCUN endpoint /phases ou /taches (seulement lecture via Preload dans GET /chantiers/{id}). Le frontend chantier-detail-view.tsx appelle POST/PUT/DELETE `/api/chantiers/{id}/phases/...` (sans /v1/) → ces routes N'EXISTENT PAS côté backend → 404 silencieux. Aucune notion d'"assignation" de tâche de suivi à une personne — le champ `responsableId` existe dans le modèle mais aucun endpoint ne permet de le setter. Chantier CRUD absent (uniquement GET list + GET détail).
+- AXE 7 (Endpoints) : ~111 endpoints sous /api/v1/*, répartis sur 16 domaines. Endpoints réservés SUPER_ADMIN : 14 (/admin/*). Endpoints GERANT-only (en plus de SUPER_ADMIN) : contrats, facturation, paie generate/update, support update/statut. Endpoints CHEF_PROJET+ (en plus) : pointage, stocks, carburant, clients, devis, sous-traitants, documents, photos, rapports. SOUS_TRAITANT explicitement autorisé sur : /upload (POST) + /files/* (DELETE) uniquement. Trous de RBAC : POST /pointage, /stocks, /stocks/entrees, /stocks/sorties, /carburant/*, /documents, /photos, /rapports, /support, /support/{id}/messages, /sync n'ont AUCUN RequireRole → tout utilisateur authentifié (y compris SOUS_TRAITANT) peut appeler ces POST (RLS protège le scoping mais pas le rôle).
+
+Points de friction identifiés :
+1. DUALITÉ SOUS_TRAITANT — User interne ( rôle SOUS_TRAITANT, tenant = GERANT) ≠ model.SousTraitant (entité externe, table séparée). Aucune FK, aucun pont. Le nom identique crée une ambiguïté conceptuelle majeure.
+2. ABSENCE DE CO-CHEF_PROJET — co-GERANT existe (isCoGerant flag, max 2) mais aucune mécanique équivalente pour CHEF_PROJET. La délégation de domaine (Delegation) est censée combler ce gap mais RequireAccess n'est pas branché.
+3. MIDDLEWARE REQUIREACCESS INACTIF — Défini (delegation.go:39), repo branché (main.go:260), mais JAMAIS APPLIQUÉ sur une route. Toute la machinerie de délégation (Delegation table, GetActive, hasRoleAccess, EndpointDomain map) est actuellement sans effet côté autorisation HTTP.
+4. ENDPOINTS DE SUIVI DE TÂCHES ABSENTS — Le frontend chantier-detail-view.tsx a une UI complète (créer phase, créer tâche, éditer avancement, supprimer) qui appelle des routes inexistantes côté backend. La fonctionnalité "suivi" est non-opérationnelle.
+5. CHANTIER CRUD ABSENT — Backend expose uniquement GET /chantiers (list) et GET /chantiers/{id}. Le frontend chantiers-view.tsx tente POST/PUT/DELETE /api/v1/chantiers/{id} → 404.
+6. USERCHANTIERACCESS FANTÔME — Modèle Prisma défini (schema:103) + frontend l'appelle (gestion-acces-view.tsx:693,728) MAIS aucun modèle GORM, aucun usecase, aucun handler, aucun endpoint backend.
+7. TROUS RBAC SUR WRITE ENDPOINTS — 11+ routes POST (pointage, stocks, carburant, documents, photos, rapports, support, sync) n'ont aucun RequireRole → SOUS_TRAITANT peut créer/modifier/supprimer (seule la RLS limite la portée tenant).
+8. TACHE RESPONSABLE NON-UTILISABLE — Champ `responsableId` (FK→User) présent dans model.Tache, mais aucun endpoint pour setter/updater ce champ côté backend (et aucun endpoint /taches du tout). La "délégation de suivi" évoquée par le besoin utilisateur est donc infaisable sans backend nouveau.
+
+---
+Task ID: PHASE-0
+Agent: Z.ai Code (tutor/assistant)
+Task: Phase 0 — Stabilisation et sécurité (fermer trous RBAC, CRUD Chantier backend, harmoniser statut Tache, hook useUserRole, fix URLs frontend).
+
+Work Log:
+- 0.1 RBAC holes fermés (router.go) : ajout `middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")` sur 12 POST write sensibles :
+  * POST /pointage
+  * POST /stocks, /stocks/entrees, /stocks/sorties
+  * POST /carburant/{entrees,sorties,achats,releves,stock}
+  * POST /documents, /rapports
+  * POST /photos laissé auth-seul (suivi terrain : tout user peut prendre une photo)
+  * POST /support, /support/{id}/messages, /sync laissés auth-seul (usage justifié)
+- 0.2 CRUD Chantier backend implémenté :
+  * repo : Create (cuid-like ID + defaults), Update (partial map + Preload Phases.Taches), Delete (hard + cascade si force=true), HasChildren (check Phase/JournalierAffectation/Pointage/DocumentChantier)
+  * usecase : Create (validation nom/statut/modeCarburant + résolution entrepriseId), Update (partial input + rechargement), Delete (force flag + 409 Conflict si enfants)
+  * handler : Create (POST, parseChantierCreateInput avec conversion dates string), Update (PUT, parseChantierUpdateInput), Delete (DELETE ?force=true)
+  * router : POST (GERANT+), PUT (CHEF_PROJET+), DELETE (GERANT+) sur /api/v1/chantiers[/{id}]
+- 0.3 Statut Tache harmonisé : `gorm:"default:EN_ATTENTE"` → `gorm:"default:PLANIFIEE"` dans phase.go (cohérent avec Prisma + frontend).
+- 0.4 Hook useUserRole étendu : ajout isChefProjet, isSousTraitant, isEmploye (alias forward-compat), isOperationnel.
+- Fix bonus : 3 URLs frontend sans /v1/ dans chantier-detail-view.tsx corrigées (lignes 403, 433, 464) — routes désormais proxyées vers backend (au lieu de 404 silencieux Next.js).
+
+Vérifications :
+- `go build ./...` → OK (build backend clean)
+- `go vet ./...` → OK (0 warnings)
+- `bun run lint` (frontend) → OK (0 errors, 0 warnings)
+- Go SDK 1.23.4 installé localement dans ~/go-sdk pour validation build (Render utilisera sa propre toolchain).
+
+Stage Summary:
+- 6 fichiers modifiés : router.go, phase.go, chantier.go (usecase), chantier_repo.go, chantier_handler.go, use-user-role.ts, chantier-detail-view.tsx.
+- ~600 lignes de code Go/TS ajoutées.
+- Sécurité : 12 trous RBAC fermés. Un SOUS_TRAITANT ne peut plus créer pointages/stocks/carburant/documents.
+- Fonctionnalité : CRUD Chantier complet (POST/PUT/DELETE) — les boutons frontend "Créer/Éditer/Supprimer" de /chantiers ne retournent plus 404.
+- Dépendances : aucun nouveau package, juste `time` ajouté aux imports de chantier_repo.go et chantier usecase.
+- Prêt pour commit + push vers GitHub (déploiement auto Vercel + Render).

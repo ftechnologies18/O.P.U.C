@@ -18,5 +18,10 @@ export function useUserRole() {
     isSuperAdmin: role === 'SUPER_ADMIN',
     isGerant: role === 'GERANT',
     isAdmin: role === 'GERANT' || role === 'SUPER_ADMIN',
+    isChefProjet: role === 'CHEF_PROJET',
+    isSousTraitant: role === 'SOUS_TRAITANT',
+    // Alias forward-compat (Phase 1: SOUS_TRAITANT interne sera renommé EMPLOYE)
+    isEmploye: role === 'SOUS_TRAITANT',
+    isOperationnel: role === 'CHEF_PROJET' || role === 'SOUS_TRAITANT',
   }
 }
