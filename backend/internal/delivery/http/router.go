@@ -152,6 +152,7 @@ import (
 
         "opuc/internal/delivery/http/handler"
         "opuc/internal/delivery/http/middleware"
+        "opuc/internal/domain/model"
         appjwt "opuc/internal/infrastructure/jwt"
 )
 
@@ -267,13 +268,13 @@ func NewRouter(d Deps) http.Handler {
 
                         if d.Chantier != nil {
                                 r.Get("/chantiers", d.Chantier.List)
-                                // Create : GERANT+ (décision stratégique de l'entreprise)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/chantiers", d.Chantier.Create)
+                                // Create : GESTION sur CHANTIER (GERANT+ par défaut, CHEF_PROJET via baseline, EMPLOYE via délégation GESTION)
+                                r.With(middleware.RequireAccess(model.DomainChantier, model.PermGestion, d.DelegationRepo)).Post("/chantiers", d.Chantier.Create)
                                 r.Get("/chantiers/{id}", d.Chantier.Get)
-                                // Update : CHEF_PROJET+ (édition des détails opérationnels)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/chantiers/{id}", d.Chantier.Update)
-                                // Delete : GERANT+ (irréversible, risque données)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Delete("/chantiers/{id}", d.Chantier.Delete)
+                                // Update : ECRITURE sur CHANTIER
+                                r.With(middleware.RequireAccess(model.DomainChantier, model.PermEcriture, d.DelegationRepo)).Put("/chantiers/{id}", d.Chantier.Update)
+                                // Delete : GESTION sur CHANTIER (irréversible)
+                                r.With(middleware.RequireAccess(model.DomainChantier, model.PermGestion, d.DelegationRepo)).Delete("/chantiers/{id}", d.Chantier.Delete)
                         }
 
                         if d.Dashboard != nil {
@@ -297,23 +298,25 @@ func NewRouter(d Deps) http.Handler {
                                 // Static routes declared first to avoid chi matching them as {id}
                                 r.Get("/pointage/summary", d.Pointage.Summary)
                                 r.Get("/pointage", d.Pointage.List)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/pointage", d.Pointage.Create)
+                                r.With(middleware.RequireAccess(model.DomainRH, model.PermEcriture, d.DelegationRepo)).Post("/pointage", d.Pointage.Create)
                                 r.Get("/pointage/{id}", d.Pointage.Get)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/pointage/{id}", d.Pointage.Update)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/pointage/{id}", d.Pointage.Delete)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/pointage/{id}/validate", d.Pointage.Validate)
+                                r.With(middleware.RequireAccess(model.DomainRH, model.PermEcriture, d.DelegationRepo)).Put("/pointage/{id}", d.Pointage.Update)
+                                r.With(middleware.RequireAccess(model.DomainRH, model.PermEcriture, d.DelegationRepo)).Delete("/pointage/{id}", d.Pointage.Delete)
+                                // Validate : GESTION sur RH (action de management — CHEF_PROJET est limité à ECRITURE sur RH par baseline, donc ne peut pas valider sans délégation GESTION)
+                                r.With(middleware.RequireAccess(model.DomainRH, model.PermGestion, d.DelegationRepo)).Post("/pointage/{id}/validate", d.Pointage.Validate)
                         }
 
                         // Phase 3 — Paie (write métier)
                         if d.Paie != nil {
                                 r.Route("/paie", func(r chi.Router) {
                                         r.Get("/paiements-hebdo", d.Paie.ListPaiementHebdo)
-                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/paiements-hebdo/generate", d.Paie.GeneratePaiementHebdo)
-                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Put("/paiements-hebdo/{id}", d.Paie.UpdatePaiementHebdo)
+                                        // Generate/Update paie : GESTION sur RH (management — réservé GERANT+ par défaut, délégable)
+                                        r.With(middleware.RequireAccess(model.DomainRH, model.PermGestion, d.DelegationRepo)).Post("/paiements-hebdo/generate", d.Paie.GeneratePaiementHebdo)
+                                        r.With(middleware.RequireAccess(model.DomainRH, model.PermGestion, d.DelegationRepo)).Put("/paiements-hebdo/{id}", d.Paie.UpdatePaiementHebdo)
 
                                         r.Get("/salaires", d.Paie.ListSalaireMensuel)
-                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/salaires/generate", d.Paie.GenerateSalaireMensuel)
-                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Put("/salaires/{id}", d.Paie.UpdateSalaireMensuel)
+                                        r.With(middleware.RequireAccess(model.DomainRH, model.PermGestion, d.DelegationRepo)).Post("/salaires/generate", d.Paie.GenerateSalaireMensuel)
+                                        r.With(middleware.RequireAccess(model.DomainRH, model.PermGestion, d.DelegationRepo)).Put("/salaires/{id}", d.Paie.UpdateSalaireMensuel)
                                 })
                         }
 
@@ -321,14 +324,14 @@ func NewRouter(d Deps) http.Handler {
                         if d.Stock != nil {
                                 // Static routes declared first to avoid chi matching them as {id}
                                 r.Get("/stocks/entrees", d.Stock.ListEntrees)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/stocks/entrees", d.Stock.CreateEntree)
+                                r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Post("/stocks/entrees", d.Stock.CreateEntree)
                                 r.Get("/stocks/sorties", d.Stock.ListSorties)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/stocks/sorties", d.Stock.CreateSortie)
+                                r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Post("/stocks/sorties", d.Stock.CreateSortie)
                                 r.Get("/stocks", d.Stock.List)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/stocks", d.Stock.Create)
+                                r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Post("/stocks", d.Stock.Create)
                                 r.Get("/stocks/{id}", d.Stock.Get)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/stocks/{id}", d.Stock.Update)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/stocks/{id}", d.Stock.Delete)
+                                r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Put("/stocks/{id}", d.Stock.Update)
+                                r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Delete("/stocks/{id}", d.Stock.Delete)
                         }
 
                         // Phase 3 — Carburant (write métier)
@@ -336,20 +339,20 @@ func NewRouter(d Deps) http.Handler {
                                 r.Route("/carburant", func(r chi.Router) {
                                         // Static routes first
                                         r.Get("/entrees", d.Carburant.ListEntrees)
-                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/entrees", d.Carburant.CreateEntree)
+                                        r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Post("/entrees", d.Carburant.CreateEntree)
                                         r.Get("/sorties", d.Carburant.ListSorties)
-                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/sorties", d.Carburant.CreateSortie)
+                                        r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Post("/sorties", d.Carburant.CreateSortie)
                                         r.Get("/achats", d.Carburant.ListAchats)
-                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/achats", d.Carburant.CreateAchat)
+                                        r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Post("/achats", d.Carburant.CreateAchat)
                                         r.Get("/releves", d.Carburant.ListReleves)
-                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/releves", d.Carburant.CreateReleve)
+                                        r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Post("/releves", d.Carburant.CreateReleve)
                                         r.Get("/stats", d.Carburant.Stats)
 
                                         r.Get("/stock", d.Carburant.ListStock)
-                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/stock", d.Carburant.CreateStock)
+                                        r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Post("/stock", d.Carburant.CreateStock)
                                         r.Get("/stock/{id}", d.Carburant.GetStock)
-                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/stock/{id}", d.Carburant.UpdateStock)
-                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/stock/{id}", d.Carburant.DeleteStock)
+                                        r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Put("/stock/{id}", d.Carburant.UpdateStock)
+                                        r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Delete("/stock/{id}", d.Carburant.DeleteStock)
                                 })
                         }
 
@@ -358,80 +361,80 @@ func NewRouter(d Deps) http.Handler {
                                 // Static route first (stats avant /{id})
                                 r.Get("/clients/stats", d.Client.Stats)
                                 r.Get("/clients", d.Client.List)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/clients", d.Client.Create)
+                                r.With(middleware.RequireAccess(model.DomainCommercial, model.PermEcriture, d.DelegationRepo)).Post("/clients", d.Client.Create)
                                 r.Get("/clients/{id}", d.Client.Get)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/clients/{id}", d.Client.Update)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/clients/{id}", d.Client.Delete)
+                                r.With(middleware.RequireAccess(model.DomainCommercial, model.PermEcriture, d.DelegationRepo)).Put("/clients/{id}", d.Client.Update)
+                                r.With(middleware.RequireAccess(model.DomainCommercial, model.PermEcriture, d.DelegationRepo)).Delete("/clients/{id}", d.Client.Delete)
                         }
 
                         // Phase 4 — Devis (commercial)
                         if d.Devis != nil {
                                 r.Get("/devis", d.Devis.List)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/devis", d.Devis.Create)
+                                r.With(middleware.RequireAccess(model.DomainCommercial, model.PermEcriture, d.DelegationRepo)).Post("/devis", d.Devis.Create)
                                 r.Get("/devis/{id}", d.Devis.Get)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/devis/{id}", d.Devis.Update)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/devis/{id}", d.Devis.Delete)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/devis/{id}/statut", d.Devis.ChangeStatut)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/devis/{id}/lignes", d.Devis.AddLigne)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/devis/{id}/lignes/{ligneId}", d.Devis.UpdateLigne)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/devis/{id}/lignes/{ligneId}", d.Devis.DeleteLigne)
+                                r.With(middleware.RequireAccess(model.DomainCommercial, model.PermEcriture, d.DelegationRepo)).Put("/devis/{id}", d.Devis.Update)
+                                r.With(middleware.RequireAccess(model.DomainCommercial, model.PermEcriture, d.DelegationRepo)).Delete("/devis/{id}", d.Devis.Delete)
+                                r.With(middleware.RequireAccess(model.DomainCommercial, model.PermEcriture, d.DelegationRepo)).Post("/devis/{id}/statut", d.Devis.ChangeStatut)
+                                r.With(middleware.RequireAccess(model.DomainCommercial, model.PermEcriture, d.DelegationRepo)).Post("/devis/{id}/lignes", d.Devis.AddLigne)
+                                r.With(middleware.RequireAccess(model.DomainCommercial, model.PermEcriture, d.DelegationRepo)).Put("/devis/{id}/lignes/{ligneId}", d.Devis.UpdateLigne)
+                                r.With(middleware.RequireAccess(model.DomainCommercial, model.PermEcriture, d.DelegationRepo)).Delete("/devis/{id}/lignes/{ligneId}", d.Devis.DeleteLigne)
                         }
 
-                        // Phase 4 — Contrats (commercial)
+                        // Phase 4 — Contrats (finance — les contrats ont une dimension financière)
                         if d.Contrat != nil {
                                 r.Get("/contrats", d.Contrat.List)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/contrats", d.Contrat.Create)
+                                r.With(middleware.RequireAccess(model.DomainFinance, model.PermEcriture, d.DelegationRepo)).Post("/contrats", d.Contrat.Create)
                                 r.Get("/contrats/{id}", d.Contrat.Get)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Put("/contrats/{id}", d.Contrat.Update)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Delete("/contrats/{id}", d.Contrat.Delete)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/contrats/{id}/statut", d.Contrat.ChangeStatut)
+                                r.With(middleware.RequireAccess(model.DomainFinance, model.PermEcriture, d.DelegationRepo)).Put("/contrats/{id}", d.Contrat.Update)
+                                r.With(middleware.RequireAccess(model.DomainFinance, model.PermEcriture, d.DelegationRepo)).Delete("/contrats/{id}", d.Contrat.Delete)
+                                r.With(middleware.RequireAccess(model.DomainFinance, model.PermEcriture, d.DelegationRepo)).Post("/contrats/{id}/statut", d.Contrat.ChangeStatut)
                         }
 
-                        // Phase 4 — Facturation (commercial)
+                        // Phase 4 — Facturation (finance)
                         if d.Facturation != nil {
                                 // Static route first (stats avant /{id})
                                 r.Get("/facturation/stats", d.Facturation.Stats)
                                 r.Get("/facturation", d.Facturation.List)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/facturation", d.Facturation.Create)
+                                r.With(middleware.RequireAccess(model.DomainFinance, model.PermEcriture, d.DelegationRepo)).Post("/facturation", d.Facturation.Create)
                                 r.Get("/facturation/{id}", d.Facturation.Get)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Put("/facturation/{id}", d.Facturation.Update)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Delete("/facturation/{id}", d.Facturation.Delete)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/facturation/{id}/statut", d.Facturation.ChangeStatut)
+                                r.With(middleware.RequireAccess(model.DomainFinance, model.PermEcriture, d.DelegationRepo)).Put("/facturation/{id}", d.Facturation.Update)
+                                r.With(middleware.RequireAccess(model.DomainFinance, model.PermEcriture, d.DelegationRepo)).Delete("/facturation/{id}", d.Facturation.Delete)
+                                r.With(middleware.RequireAccess(model.DomainFinance, model.PermEcriture, d.DelegationRepo)).Post("/facturation/{id}/statut", d.Facturation.ChangeStatut)
                                 r.Get("/facturation/{id}/paiements", d.Facturation.ListPaiements)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/facturation/{id}/paiements", d.Facturation.CreatePaiement)
+                                r.With(middleware.RequireAccess(model.DomainFinance, model.PermEcriture, d.DelegationRepo)).Post("/facturation/{id}/paiements", d.Facturation.CreatePaiement)
                         }
 
-                        // Phase 5 — Sous-traitants (peripheral)
+                        // Phase 5 — Sous-traitants (peripheral — logistique selon EndpointDomain)
                         if d.SousTraitant != nil {
                                 r.Get("/sous-traitants", d.SousTraitant.List)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/sous-traitants", d.SousTraitant.Create)
+                                r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Post("/sous-traitants", d.SousTraitant.Create)
                                 r.Get("/sous-traitants/{id}", d.SousTraitant.Get)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/sous-traitants/{id}", d.SousTraitant.Update)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/sous-traitants/{id}", d.SousTraitant.Delete)
+                                r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Put("/sous-traitants/{id}", d.SousTraitant.Update)
+                                r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Delete("/sous-traitants/{id}", d.SousTraitant.Delete)
                                 r.Get("/sous-traitants/{id}/contrats", d.SousTraitant.ListContrats)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/sous-traitants/{id}/contrats", d.SousTraitant.CreateContrat)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/sous-traitants/{id}/contrats/{contratId}", d.SousTraitant.UpdateContrat)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/sous-traitants/{id}/contrats/{contratId}", d.SousTraitant.DeleteContrat)
+                                r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Post("/sous-traitants/{id}/contrats", d.SousTraitant.CreateContrat)
+                                r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Put("/sous-traitants/{id}/contrats/{contratId}", d.SousTraitant.UpdateContrat)
+                                r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Delete("/sous-traitants/{id}/contrats/{contratId}", d.SousTraitant.DeleteContrat)
                         }
 
-                        // Phase 5 — Documents (peripheral)
+                        // Phase 5 — Documents (peripheral — domaine DOCUMENTS)
                         if d.Document != nil {
                                 r.Get("/documents", d.Document.List)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/documents", d.Document.Create)
+                                r.With(middleware.RequireAccess(model.DomainDocuments, model.PermEcriture, d.DelegationRepo)).Post("/documents", d.Document.Create)
                                 r.Get("/documents/{id}", d.Document.Get)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/documents/{id}", d.Document.Update)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/documents/{id}", d.Document.Delete)
+                                r.With(middleware.RequireAccess(model.DomainDocuments, model.PermEcriture, d.DelegationRepo)).Put("/documents/{id}", d.Document.Update)
+                                r.With(middleware.RequireAccess(model.DomainDocuments, model.PermEcriture, d.DelegationRepo)).Delete("/documents/{id}", d.Document.Delete)
 
                                 // Photos — auth-seul OK (suivi terrain : tout user peut prendre une photo)
                                 r.Get("/photos", d.Document.ListPhotos)
                                 r.Post("/photos", d.Document.CreatePhoto)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/photos/{id}", d.Document.DeletePhoto)
+                                r.With(middleware.RequireAccess(model.DomainDocuments, model.PermEcriture, d.DelegationRepo)).Delete("/photos/{id}", d.Document.DeletePhoto)
 
                                 // Rapports journaliers
                                 r.Get("/rapports", d.Document.ListRapports)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/rapports", d.Document.CreateRapport)
+                                r.With(middleware.RequireAccess(model.DomainDocuments, model.PermEcriture, d.DelegationRepo)).Post("/rapports", d.Document.CreateRapport)
                                 r.Get("/rapports/{id}", d.Document.GetRapport)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/rapports/{id}", d.Document.UpdateRapport)
+                                r.With(middleware.RequireAccess(model.DomainDocuments, model.PermEcriture, d.DelegationRepo)).Put("/rapports/{id}", d.Document.UpdateRapport)
                         }
 
                         // Phase 5 — Support (peripheral)

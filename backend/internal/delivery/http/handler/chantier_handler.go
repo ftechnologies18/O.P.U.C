@@ -133,9 +133,7 @@ func writeChantierError(w http.ResponseWriter, log *slog.Logger, op string, err 
                 WriteError(w, http.StatusConflict, err.Error())
         default:
                 log.Error(op, "err", err)
-                // TEMPORAIRE (debug Phase 1) : retourne l'erreur réelle pour diagnostic.
-                // TODO: revenir à "internal error" une fois le bug résolu.
-                WriteError(w, http.StatusInternalServerError, "internal error: "+err.Error())
+                WriteError(w, http.StatusInternalServerError, "internal error")
         }
 }
 

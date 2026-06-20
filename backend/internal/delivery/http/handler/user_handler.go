@@ -70,8 +70,7 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
         users, total, err := h.uc.List(r.Context(), au, filter)
         if err != nil {
                 h.log.Error("users.List", "err", err)
-                // TEMPORAIRE (debug Phase 1) : retourner l'erreur réelle pour diagnostic
-                WriteError(w, http.StatusInternalServerError, "internal error: "+err.Error())
+                WriteError(w, http.StatusInternalServerError, "internal error")
                 return
         }
 
@@ -269,9 +268,7 @@ func writeIAMError(w http.ResponseWriter, log *slog.Logger, op string, err error
                 WriteError(w, http.StatusBadRequest, err.Error())
         default:
                 log.Error(op, "err", err)
-                // TEMPORAIRE (debug Phase 1) : retourne l'erreur réelle pour diagnostic.
-                // TODO: revenir à "internal error" une fois le bug résolu.
-                WriteError(w, http.StatusInternalServerError, "internal error: "+err.Error())
+                WriteError(w, http.StatusInternalServerError, "internal error")
         }
 }
 

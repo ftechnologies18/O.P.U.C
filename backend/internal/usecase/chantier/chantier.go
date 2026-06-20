@@ -117,8 +117,7 @@ func (uc *Usecase) List(ctx context.Context, auth *database.AuthUser, in ListInp
         chantiers, _, jourCounts, err := uc.repo.ListWithMeta(ctx, auth, in)
         if err != nil {
                 uc.log.Error("chantier.List: ListWithMeta", "err", err, "auth_uid", auth.UserID)
-                // TEMPORAIRE (debug Phase 1) : wrapper l'erreur réelle pour diagnostic
-                return nil, fmt.Errorf("chantier.List: ListWithMeta: %w", err)
+                return nil, domain.ErrInternal
         }
 
         // 2. Pour chaque chantier : avancement + phaseCount depuis Phases préloadées
