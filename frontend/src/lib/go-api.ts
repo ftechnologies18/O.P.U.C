@@ -66,6 +66,8 @@ export interface GoUser {
   active: boolean
   entrepriseId?: string
   twoFactorEnabled: boolean
+  /** true si l'utilisateur est co-gérant (CHEF_PROJET promu). */
+  isCoGerant?: boolean
 }
 
 export interface LoginResponse {

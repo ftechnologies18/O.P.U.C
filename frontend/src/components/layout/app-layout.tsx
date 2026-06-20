@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAppStore, type SidebarMode } from '@/store/app-store'
@@ -41,6 +42,8 @@ import {
   Headphones,
   CreditCard,
   LifeBuoy,
+  KeyRound,
+  Crown,
 } from 'lucide-react'
 import { useSession } from '@/lib/auth-session'
 import { canAccessPage } from '@/lib/rbac'
@@ -54,6 +57,12 @@ import { OpucLogo } from './opuc-logo'
    Navigation grouping — sidebar categories
    ═══════════════════════════════════════════════ */
 
+/** Predicate pour autoriser l'affichage d'un item selon le contexte utilisateur (role + isCoGerant). */
+interface NavVisibilityContext {
+  role?: UserRole
+  isCoGerant?: boolean
+}
+
 interface NavItem {
   id: string
   label: string
@@ -62,11 +71,31 @@ interface NavItem {
   href?: string
   /** Restrict to specific roles. If omitted, RBAC `canAccessPage` is used (when id maps to an AppPage). */
   requiredRoles?: UserRole[]
+  /** Predicate customisé pour l'affichage (ex: GERANT principal uniquement). */
+  canShow?: (ctx: NavVisibilityContext) => boolean
 }
 
 interface NavSection {
   group: string
   items: NavItem[]
+}
+
+/** Mapping domaine → modules de la sidebar. Utilisé pour afficher le badge "D". */
+const DOMAIN_MODULES: Record<string, string[]> = {
+  FINANCE: ['facturation', 'contrats', 'paie', 'budget'],
+  RH: ['personnel', 'pointage', 'paie'],
+  LOGISTIQUE: ['stocks', 'carburant', 'engins', 'sous-traitants'],
+  COMMERCIAL: ['clients', 'devis', 'contrats'],
+  CHANTIER: ['chantiers', 'planning'],
+  DOCUMENTS: ['documents', 'photos', 'rapports'],
+}
+
+interface DelegationLite {
+  id: string
+  domain: string
+  permissions: string
+  statut: string
+  expiresLe: string | null
 }
 
 const navSections: NavSection[] = [
@@ -134,6 +163,26 @@ const navSections: NavSection[] = [
     items: [
       { id: 'gestion-acces', label: 'Gestion des Accès', icon: ShieldCheck },
       { id: 'acces-support', label: 'Accès Support', href: '/parametres/acces-support', icon: Shield, requiredRoles: ['GERANT', 'SUPER_ADMIN'] },
+      {
+        id: 'delegations',
+        label: 'Délégations',
+        href: '/parametres/delegations',
+        icon: KeyRound,
+        canShow: (ctx) => {
+          // GERANT, SUPER_ADMIN, ou co-GERANT (CHEF_PROJET avec isCoGerant=true)
+          return ctx.role === 'GERANT' || ctx.role === 'SUPER_ADMIN' || ctx.isCoGerant === true
+        },
+      },
+      {
+        id: 'co-gerant',
+        label: 'Co-Gérant',
+        href: '/parametres/co-gerant',
+        icon: Crown,
+        canShow: (ctx) => {
+          // GERANT principal uniquement (pas un co-GERANT, pas SUPER_ADMIN)
+          return ctx.role === 'GERANT' && !ctx.isCoGerant
+        },
+      },
       { id: 'parametres', label: 'Paramètres', icon: Settings },
     ],
   },
@@ -152,24 +201,42 @@ interface AppLayoutProps {
 function SidebarContent({
   mode,
   onNavigate,
+  myDelegations = [],
 }: {
   mode: 'expanded' | 'compact'
   onNavigate: () => void
+  myDelegations?: DelegationLite[]
 }) {
   const pathname = usePathname()
   const { data: session } = useSession()
   const userRole = (session?.user as any)?.role as UserRole | undefined
+  const isCoGerant = (session?.user as any)?.isCoGerant === true
   const compact = mode === 'compact'
 
+  // Calcule l'ensemble des module-ids couverts par au moins une délégation active.
+  const delegatedModuleIds = useMemo(() => {
+    const set = new Set<string>()
+    for (const d of myDelegations) {
+      if (d.statut !== 'ACTIF') continue
+      // expire si date passée → on ignore (le backend marquera EXPIRE plus tard)
+      if (d.expiresLe && new Date(d.expiresLe).getTime() < Date.now()) continue
+      const mods = DOMAIN_MODULES[d.domain]
+      if (mods) mods.forEach((m) => set.add(m))
+    }
+    return set
+  }, [myDelegations])
+
   // Filter nav sections based on user's role + RBAC permissions.
-  // - If `requiredRoles` is set on the item, the user's role must be in that list.
-  // - Otherwise, fall back to `canAccessPage` (works for legacy AppPage ids).
-  // - Items without requiredRoles and with unknown ids (no AppPage mapping) are shown.
+  // - Si `canShow` est défini, il a la priorité sur tout.
+  // - Si `requiredRoles` est défini, le rôle doit être dans la liste.
+  // - Sinon, fallback `canAccessPage` (AppPage connus).
+  // - Items sans requiredRoles et sans AppPage mapping → visibles par défaut.
   const filteredSections = navSections
     .map(section => ({
       ...section,
       items: section.items.filter(item => {
         if (!userRole) return false
+        if (item.canShow) return item.canShow({ role: userRole, isCoGerant })
         if (item.requiredRoles) return item.requiredRoles.includes(userRole)
         // Try RBAC if the id maps to an AppPage
         const knownPages: string[] = [
@@ -228,6 +295,7 @@ function SidebarContent({
                   const itemHref = item.href || `/${item.id}`
                   const isActive =
                     pathname === itemHref || pathname.startsWith(`${itemHref}/`)
+                  const hasDelegation = delegatedModuleIds.has(item.id)
                   return (
                     <Tooltip key={item.id} delayDuration={0}>
                       <TooltipTrigger asChild>
@@ -237,7 +305,7 @@ function SidebarContent({
                           className={cn(
                             'w-full flex items-center rounded-lg transition-all duration-200',
                             compact
-                              ? 'justify-center px-0 py-2 mx-auto w-10 h-10'
+                              ? 'justify-center px-0 py-2 mx-auto w-10 h-10 relative'
                               : 'gap-3 px-3 py-1.5 text-[14px]',
                             isActive
                               ? 'bg-gradient-to-r from-amber-500/20 to-amber-500/5 text-amber-300 font-medium shadow-sm border border-amber-500/10'
@@ -257,14 +325,35 @@ function SidebarContent({
                           {!compact && (
                             <>
                               <span className="truncate">{item.label}</span>
-                              {isActive && <ChevronRight className="w-4 h-4 ml-auto text-amber-400/50" />}
+                              {hasDelegation && (
+                                <Tooltip delayDuration={0}>
+                                  <TooltipTrigger asChild>
+                                    <span className="ml-auto inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500/20 text-amber-400 text-[9px] font-bold border border-amber-500/30">
+                                      D
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="right" sideOffset={4}>
+                                    <p>Module délégué</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                              {!hasDelegation && isActive && (
+                                <ChevronRight className="w-4 h-4 ml-auto text-amber-400/50" />
+                              )}
                             </>
+                          )}
+                          {compact && hasDelegation && (
+                            <span
+                              className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-400 border border-sidebar"
+                              aria-label="Module délégué"
+                            />
                           )}
                         </Link>
                       </TooltipTrigger>
                       {compact && (
                         <TooltipContent side="right" sideOffset={8} className="font-medium text-[15px]">
                           {item.label}
+                          {hasDelegation && ' (délégué)'}
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -363,6 +452,39 @@ function SidebarToggleFloat() {
 export function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname()
   const { sidebarOpen, setSidebarOpen, toggleSidebar, sidebarMode, setSidebarMode } = useAppStore()
+  const { data: session } = useSession()
+
+  // Fetch des délégations reçues par l'utilisateur courant (pour le badge "D").
+  // On ne fetch qu'une seule fois au montage, et on refetch quand l'utilisateur
+  // revient sur une page de l'app (focus + intervalle léger).
+  const [myDelegations, setMyDelegations] = useState<DelegationLite[]>([])
+  useEffect(() => {
+    if (!session?.user) return
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await fetch('/api/v1/delegations/my', { credentials: 'same-origin' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        // L'API peut retourner soit un tableau, soit { delegations: [...] }, soit { data: [...] }
+        const list: any[] = Array.isArray(data)
+          ? data
+          : data?.delegations || data?.data || []
+        setMyDelegations(list.map((d: any) => ({
+          id: d.id,
+          domain: d.domain,
+          permissions: d.permissions,
+          statut: d.statut,
+          expiresLe: d.expiresLe,
+        })))
+      } catch {
+        // Silencieux : le badge n'est qu'une convenance visuelle.
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [session?.user])
 
   // Derive the current page from the URL — App Router is now the source of
   // truth for navigation (replaces the old `currentView` Zustand state).
@@ -388,7 +510,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           )}
           style={{ width: sidebarW }}
         >
-          <SidebarContent mode={isCompact ? 'compact' : 'expanded'} onNavigate={() => {}} />
+          <SidebarContent mode={isCompact ? 'compact' : 'expanded'} onNavigate={() => {}} myDelegations={myDelegations} />
         </aside>
       )}
 
@@ -417,7 +539,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             <X className="w-4 h-4" />
           </Button>
         </div>
-        <SidebarContent mode="expanded" onNavigate={() => setSidebarOpen(false)} />
+        <SidebarContent mode="expanded" onNavigate={() => setSidebarOpen(false)} myDelegations={myDelegations} />
       </aside>
 
       {/* Main content area */}

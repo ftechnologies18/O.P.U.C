@@ -26,6 +26,8 @@ export interface SessionUser {
   telephone?: string
   entrepriseId?: string
   twoFactorEnabled?: boolean
+  /** true si l'utilisateur est co-gérant (CHEF_PROJET promu). */
+  isCoGerant?: boolean
 }
 
 export interface Session {
@@ -69,6 +71,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
               telephone: u.telephone,
               entrepriseId: u.entrepriseId,
               twoFactorEnabled: u.twoFactorEnabled,
+              isCoGerant: u.isCoGerant,
             },
           })
           setStatus('authenticated')
