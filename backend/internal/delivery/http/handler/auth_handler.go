@@ -116,5 +116,6 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
                 Active:       user.Active,
                 EntrepriseID: user.EntrepriseID,
                 TwoFAEnabled: user.TwoFactorEnabled,
+                IsCoGerant:   user.IsCoGerant,
         })
 }

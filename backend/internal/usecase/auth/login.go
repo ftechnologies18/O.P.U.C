@@ -100,6 +100,7 @@ func (uc *Usecase) Login(ctx context.Context, in LoginInput, clientIP string) (*
                         Role:          user.Role,
                         EntrepriseID:  derefString(user.EntrepriseID),
                         TwoFAVerified: false,
+                        IsCoGerant:    user.IsCoGerant,
                 })
                 if err != nil {
                         uc.log.Error("sign jwt (2fa pending)", "err", err)
@@ -120,6 +121,7 @@ func (uc *Usecase) Login(ctx context.Context, in LoginInput, clientIP string) (*
                 Role:          user.Role,
                 EntrepriseID:  derefString(user.EntrepriseID),
                 TwoFAVerified: true,
+                IsCoGerant:    user.IsCoGerant,
         })
         if err != nil {
                 uc.log.Error("sign jwt", "err", err)

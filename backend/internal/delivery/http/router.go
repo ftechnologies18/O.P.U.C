@@ -183,6 +183,11 @@ type Deps struct {
         Storage *handler.StorageHandler
         // Phase 6 — SaaS handler (admin + support-access)
         SaaS *handler.SaaSHandler
+        // Phase 7 — Delegation handler (delegations + co-gerants)
+        // DelegationRepo may be nil — it's only used by middleware.RequireAccess
+        // for future use on business routes (pointage/paie/stocks/etc).
+        Delegation     *handler.DelegationHandler
+        DelegationRepo middleware.DelegationChecker
         // Common
         Signer *appjwt.Signer
         Log    *slog.Logger
@@ -509,6 +514,52 @@ func NewRouter(d Deps) http.Handler {
                                         r.With(middleware.RequireRole("GERANT")).Post("/support-access/{id}/refuse", d.SaaS.RefuseSupportAccess)
                                         r.With(middleware.RequireRole("GERANT")).Post("/support-access/{id}/revoke", d.SaaS.RevokeMySupportAccess)
                                 })
+                        }
+
+                        // ── Phase 7 — Delegation endpoints ───────────────
+                        //
+                        // /delegations/* — gestion des délégations de domaines fonctionnels
+                        //   GET    /delegations                  — list (GERANT sees all, user sees own)
+                        //   POST   /delegations                  — create (GERANT/co-GERANT/SUPER_ADMIN only)
+                        //   GET    /delegations/my               — my received delegations (any auth user)
+                        //   GET    /delegations/{id}             — detail
+                        //   PUT    /delegations/{id}             — update (GERANT/co-GERANT/SUPER_ADMIN only)
+                        //   POST   /delegations/{id}/revoke      — revoke (GERANT/co-GERANT/SUPER_ADMIN or self)
+                        //
+                        // /users/* — co-GERANT management
+                        //   GET    /users/co-gerants             — list co-gerants (GERANT/co-GERANT/SUPER_ADMIN)
+                        //   POST   /users/{id}/promote-co-gerant — principal GERANT or SUPER_ADMIN only
+                        //   POST   /users/{id}/demote-co-gerant  — principal GERANT or SUPER_ADMIN only
+                        //
+                        // Toutes les autorisations sont faites côté usecase (rôle + ownership).
+                        // Pas de middleware.RequireRole sur /delegations/* (co-GERANTS doivent pouvoir
+                        // créer/modifier des délégations). Promote/Demote sont bloqués pour les
+                        // co-GERANTS via le usecase (isPrincipalGerant check).
+                        if d.Delegation != nil {
+                                // /delegations/*
+                                r.Route("/delegations", func(r chi.Router) {
+                                        // Static route first (évite que /my soit matché par /{id})
+                                        r.Get("/my", d.Delegation.ListMy)
+
+                                        // List + Create
+                                        r.Get("/", d.Delegation.List)
+                                        r.Post("/", d.Delegation.Create)
+
+                                        // /{id} subroute
+                                        r.Route("/{id}", func(r chi.Router) {
+                                                r.Get("/", d.Delegation.Get)
+                                                r.Put("/", d.Delegation.Update)
+                                                r.Post("/revoke", d.Delegation.Revoke)
+                                        })
+                                })
+
+                                // /users/co-gerants — declared BEFORE /users/{id} to take precedence
+                                // (chi does radix-based routing, but explicit ordering avoids edge cases).
+                                // Since /users/{id} is registered conditionally by the User handler
+                                // above, we register /users/co-gerants here in a separate Group.
+                                r.Get("/users/co-gerants", d.Delegation.ListCoGerants)
+                                r.Post("/users/{id}/promote-co-gerant", d.Delegation.PromoteCoGerant)
+                                r.Post("/users/{id}/demote-co-gerant", d.Delegation.DemoteCoGerant)
                         }
                 })
         })

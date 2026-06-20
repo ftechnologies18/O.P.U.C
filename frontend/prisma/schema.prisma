@@ -10,98 +10,104 @@ datasource db {
 
 // Enterprise/Company (multi-tenant)
 model Entreprise {
-  id          String   @id @default(cuid())
-  nom         String
-  adresse     String?
-  telephone   String?
-  email       String?
-  status      String   @default("active") // active, suspended, inactive
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  users       User[]
-  chantiers   Chantier[]
-  journaliers Journalier[]
-  equipements Equipement[]
-  sousTraitants SousTraitant[]
-  systemSettings  SystemSetting[]
-  subscription      Subscription?
+  id               String            @id @default(cuid())
+  nom              String
+  adresse          String?
+  telephone        String?
+  email            String?
+  status           String            @default("active") // active, suspended, inactive
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  users            User[]
+  chantiers        Chantier[]
+  journaliers      Journalier[]
+  equipements      Equipement[]
+  sousTraitants    SousTraitant[]
+  systemSettings   SystemSetting[]
+  subscription     Subscription?
   supportAccesses  SupportAccess[]
+  delegations      Delegation[]
   invitationTokens InvitationToken[]
-  clients     Client[]
-  devis       Devis[]
-  contrats    Contrat[]
-  factures    Facture[]
-  tickets     TicketSupport[]
+  clients          Client[]
+  devis            Devis[]
+  contrats         Contrat[]
+  factures         Facture[]
+  tickets          TicketSupport[]
 }
 
 // User with RBAC roles
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String?
-  name          String
-  role          String    @default("CHEF_PROJET") // SUPER_ADMIN, GERANT, CHEF_PROJET, SOUS_TRAITANT
-  telephone     String?
-  active        Boolean   @default(true)
+  id           String  @id @default(cuid())
+  email        String  @unique
+  password     String?
+  name         String
+  role         String  @default("CHEF_PROJET") // SUPER_ADMIN, GERANT, CHEF_PROJET, SOUS_TRAITANT
+  telephone    String?
+  active       Boolean @default(true)
   entrepriseId String?
 
   // 2FA fields
-  twoFactorEnabled  Boolean   @default(false)
-  twoFactorSecret   String?               // encrypted TOTP secret
-  twoFactorBackupCodes String?            // JSON array of backup codes (encrypted)
+  twoFactorEnabled     Boolean @default(false)
+  twoFactorSecret      String? // encrypted TOTP secret
+  twoFactorBackupCodes String? // JSON array of backup codes (encrypted)
 
   // Security
-  loginAttempts     Int       @default(0)
-  lockedUntil       DateTime?              // auto-unlock timestamp
-  lastLoginAt       DateTime?
-  lastLoginIp       String?
-  passwordChangedAt DateTime  @default(now())
-  premiereConnexion Boolean   @default(true) // force password change on first login
+  loginAttempts           Int             @default(0)
+  lockedUntil             DateTime? // auto-unlock timestamp
+  lastLoginAt             DateTime?
+  lastLoginIp             String?
+  passwordChangedAt       DateTime        @default(now())
+  premiereConnexion       Boolean         @default(true) // force password change on first login
   // SupportAccess relations (SAAS platform)
   supportAccessRequested  SupportAccess[] @relation("SupportAccessSuperAdmin")
   supportAccessAuthorized SupportAccess[] @relation("SupportAccessAutorisePar")
-  supportAccessRevoked   SupportAccess[] @relation("SupportAccessRevoquePar")
+  supportAccessRevoked    SupportAccess[] @relation("SupportAccessRevoquePar")
+  // Delegation relations
+  delegationsGiven        Delegation[]    @relation("DelegationFromUser")
+  delegationsReceived     Delegation[]    @relation("DelegationToUser")
 
   // Invitation
-  invitedById       String?               // who invited this user
+  invitedById          String? // who invited this user
   invitationAcceptedAt DateTime?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  entreprise    Entreprise? @relation(fields: [entrepriseId], references: [id])
-  pointages     Pointage[]  @relation("PointageChef")
-  photos        Photo[]
-  rapports      RapportJournalier[]
-  taches        Tache[]
-  documents     DocumentChantier[]
-  paiementsValides PaiementHebdo[] @relation("PaiementValidateur")
-  salairesValides    SalaireMensuel[] @relation("SalaireValidateur")
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  entreprise       Entreprise?         @relation(fields: [entrepriseId], references: [id])
+  pointages        Pointage[]          @relation("PointageChef")
+  photos           Photo[]
+  rapports         RapportJournalier[]
+  taches           Tache[]
+  documents        DocumentChantier[]
+  paiementsValides PaiementHebdo[]     @relation("PaiementValidateur")
+  salairesValides  SalaireMensuel[]    @relation("SalaireValidateur")
 
-  passwordResetTokens    PasswordResetToken[]
-  invitationTokens      InvitationToken[]
-  loginAttemptLogs       LoginAttemptLog[]
+  passwordResetTokens PasswordResetToken[]
+  invitationTokens    InvitationToken[]
+  loginAttemptLogs    LoginAttemptLog[]
 
   // Accounts and sessions for NextAuth
-  accounts      Account[]
-  sessions      Session[]
-  notifications Notification[]
-  auditLogs     AuditLog[]
-  chantierAccess UserChantierAccess[]
-  ticketsAssigned     TicketSupport[] @relation("TicketAssignee")
-  ticketsResolved     TicketSupport[] @relation("TicketResolver")
-  ticketMessages      TicketMessage[]
+  accounts        Account[]
+  sessions        Session[]
+  notifications   Notification[]
+  auditLogs       AuditLog[]
+  chantierAccess  UserChantierAccess[]
+  ticketsAssigned TicketSupport[]      @relation("TicketAssignee")
+  ticketsResolved TicketSupport[]      @relation("TicketResolver")
+  ticketMessages  TicketMessage[]
+
   @@index([entrepriseId])
   @@index([role])
 }
 
 // User → Chantier access mapping
 model UserChantierAccess {
-  id         String   @id @default(cuid())
-  userId     String
-  chantierId String
-  roleAcces  String   @default("LECTURE") // LECTURE, ECRITURE, GESTION
-  utilisateur User    @relation(fields: [userId], references: [id])
-  chantier     Chantier @relation(fields: [chantierId], references: [id])
+  id          String   @id @default(cuid())
+  userId      String
+  chantierId  String
+  roleAcces   String   @default("LECTURE") // LECTURE, ECRITURE, GESTION
+  utilisateur User     @relation(fields: [userId], references: [id])
+  chantier    Chantier @relation(fields: [chantierId], references: [id])
+
   @@unique([userId, chantierId])
 }
 
@@ -120,6 +126,7 @@ model Account {
   id_token          String?
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([provider, providerAccountId])
 }
 
@@ -129,6 +136,7 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
@@ -136,45 +144,47 @@ model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
+
   @@unique([identifier, token])
 }
 
 // Construction Sites
 model Chantier {
-  id                  String       @id @default(cuid())
-  nom                 String
-  adresse             String?
-  maitreOuvrage       String?
-  dateDebut           DateTime?
-  dateFinPrevue       DateTime?
-  budgetPrevisionnel  Float        @default(0)
-  statut              String       @default("EN_PREPARATION") // EN_PREPARATION, EN_COURS, EN_PAUSE, TERMINE, RECEPTIONNE
-  description         String?
-  entrepriseId        String?
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
-  entreprise         Entreprise?  @relation(fields: [entrepriseId], references: [id])
-  phases              Phase[]
-  journaliers         JournalierAffectation[]
-  pointages           Pointage[]
-  stocks              StockMateriel[]
-  entreesStock        EntreeStock[]
-  sortiesStock        SortieStock[]
-  photos              Photo[]
-  rapports            RapportJournalier[]
-  equipements         EquipementAffectation[]
-  contratsST          ContratST[]
-  locationsEngins     LocationEngin[]
-  documents           DocumentChantier[]
-  modeCarburant       String  @default("STOCK_PHYSIQUE") // STOCK_PHYSIQUE, ACHAT_DIRECT
-  stocksCarburant     StockCarburant[]
-  entreesCarburant    EntreeCarburant[]
-  sortiesCarburant    SortieCarburant[]
-  achatsCarburant     BonAchatCarburant[]
+  id                 String                  @id @default(cuid())
+  nom                String
+  adresse            String?
+  maitreOuvrage      String?
+  dateDebut          DateTime?
+  dateFinPrevue      DateTime?
+  budgetPrevisionnel Float                   @default(0)
+  statut             String                  @default("EN_PREPARATION") // EN_PREPARATION, EN_COURS, EN_PAUSE, TERMINE, RECEPTIONNE
+  description        String?
+  entrepriseId       String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  entreprise         Entreprise?             @relation(fields: [entrepriseId], references: [id])
+  phases             Phase[]
+  journaliers        JournalierAffectation[]
+  pointages          Pointage[]
+  stocks             StockMateriel[]
+  entreesStock       EntreeStock[]
+  sortiesStock       SortieStock[]
+  photos             Photo[]
+  rapports           RapportJournalier[]
+  equipements        EquipementAffectation[]
+  contratsST         ContratST[]
+  locationsEngins    LocationEngin[]
+  documents          DocumentChantier[]
+  modeCarburant      String                  @default("STOCK_PHYSIQUE") // STOCK_PHYSIQUE, ACHAT_DIRECT
+  stocksCarburant    StockCarburant[]
+  entreesCarburant   EntreeCarburant[]
+  sortiesCarburant   SortieCarburant[]
+  achatsCarburant    BonAchatCarburant[]
   relevesCompteur    ReleveCompteurEngin[]
   userAccess         UserChantierAccess[]
-  clientId            String?
-  client              Client?            @relation(fields: [clientId], references: [id])
+  clientId           String?
+  client             Client?                 @relation(fields: [clientId], references: [id])
+
   @@index([entrepriseId])
   @@index([statut])
   @@index([clientId])
@@ -182,62 +192,65 @@ model Chantier {
 
 // Workers / Personnel (Journaliers + Salariés sous contrat)
 model Journalier {
-  id                String    @id @default(cuid())
-  nom               String
-  prenom            String
-  telephone         String?
-  specialite        String?   // maçon, ferrailleur, électricien...
-  photo             String?   // URL to photo
-  typeContrat       String    @default("JOURNALIER") // JOURNALIER, CDD, CDI, STAGIAIRE
-  tauxJournalier    Float?    // Taux journalier (pour JOURNALIER)
-  salaireMensuel    Float?    // Salaire mensuel fixe (pour CDD/CDI)
-  dateDebutContrat  DateTime? // Date de début du contrat
-  dateFinContrat    DateTime? // Date de fin du contrat (pour CDD)
-  statutContrat     String    @default("ACTIF") // ACTIF, ESSAI, TERMINE, SUSPENDU
-  numeroCNPS        String?   // Numéro de sécurité sociale / CNPS
-  nbCongesRestants  Int       @default(0) // Jours de congés restants
-  poste             String?   // Intitulé du poste
-  departement      String?   // Département (ex: direction, technique)
-  entrepriseId      String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  entreprise        Entreprise?        @relation(fields: [entrepriseId], references: [id])
-  affectations      JournalierAffectation[]
-  pointages         Pointage[]
-  salaires          SalaireMensuel[]
+  id               String                  @id @default(cuid())
+  nom              String
+  prenom           String
+  telephone        String?
+  specialite       String? // maçon, ferrailleur, électricien...
+  photo            String? // URL to photo
+  typeContrat      String                  @default("JOURNALIER") // JOURNALIER, CDD, CDI, STAGIAIRE
+  tauxJournalier   Float? // Taux journalier (pour JOURNALIER)
+  salaireMensuel   Float? // Salaire mensuel fixe (pour CDD/CDI)
+  dateDebutContrat DateTime? // Date de début du contrat
+  dateFinContrat   DateTime? // Date de fin du contrat (pour CDD)
+  statutContrat    String                  @default("ACTIF") // ACTIF, ESSAI, TERMINE, SUSPENDU
+  numeroCNPS       String? // Numéro de sécurité sociale / CNPS
+  nbCongesRestants Int                     @default(0) // Jours de congés restants
+  poste            String? // Intitulé du poste
+  departement      String? // Département (ex: direction, technique)
+  entrepriseId     String?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  entreprise       Entreprise?             @relation(fields: [entrepriseId], references: [id])
+  affectations     JournalierAffectation[]
+  pointages        Pointage[]
+  salaires         SalaireMensuel[]
+
   @@index([entrepriseId])
   @@index([statutContrat])
 }
 
 // Journalier assignment to a site
 model JournalierAffectation {
-  id            String     @id @default(cuid())
-  journalierId  String
-  chantierId    String
-  dateDebut     DateTime
-  dateFin       DateTime?
-  actif         Boolean    @default(true)
-  journalier    Journalier  @relation(fields: [journalierId], references: [id])
-  chantier      Chantier    @relation(fields: [chantierId], references: [id])
+  id           String     @id @default(cuid())
+  journalierId String
+  chantierId   String
+  dateDebut    DateTime
+  dateFin      DateTime?
+  actif        Boolean    @default(true)
+  journalier   Journalier @relation(fields: [journalierId], references: [id])
+  chantier     Chantier   @relation(fields: [chantierId], references: [id])
+
   @@unique([journalierId, chantierId, dateDebut])
 }
 
 // Daily attendance (Pointage)
 model Pointage {
-  id              String    @id @default(cuid())
-  journalierId    String
-  chantierId      String
-  chefChantierId  String
-  dateTravail     DateTime
-  tauxJournalier  Float
-  present         Boolean   @default(true)
-  observation     String?
-  valide          Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  journalier      Journalier @relation(fields: [journalierId], references: [id])
-  chantier        Chantier   @relation(fields: [chantierId], references: [id])
-  chef            User       @relation("PointageChef", fields: [chefChantierId], references: [id])
+  id             String     @id @default(cuid())
+  journalierId   String
+  chantierId     String
+  chefChantierId String
+  dateTravail    DateTime
+  tauxJournalier Float
+  present        Boolean    @default(true)
+  observation    String?
+  valide         Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  journalier     Journalier @relation(fields: [journalierId], references: [id])
+  chantier       Chantier   @relation(fields: [chantierId], references: [id])
+  chef           User       @relation("PointageChef", fields: [chefChantierId], references: [id])
+
   @@unique([journalierId, chantierId, dateTravail])
   @@index([chantierId, dateTravail])
   @@index([journalierId, dateTravail])
@@ -245,278 +258,279 @@ model Pointage {
 
 // Weekly payments (PaiementHebdo)
 model PaiementHebdo {
-  id                  String    @id @default(cuid())
-  journalierId        String
-  chantierId          String
-  semaineDebut        DateTime  // Monday of the week
-  semaineFin          DateTime  // Sunday of the week
-  montantCalcule      Float
-  montantVerse        Float?
-  modePaiement        String?   // ESPECES, MOBILE_MONEY, VIREMENT
-  datePaiement        DateTime?
-  statut              String    @default("EN_ATTENTE") // EN_ATTENTE, VALIDÉ, PARTIELLEMENT_VERSE
-  valideParId         String?
-  differenceComment   String?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  validePar           User?     @relation("PaiementValidateur", fields: [valideParId], references: [id])
+  id                String    @id @default(cuid())
+  journalierId      String
+  chantierId        String
+  semaineDebut      DateTime // Monday of the week
+  semaineFin        DateTime // Sunday of the week
+  montantCalcule    Float
+  montantVerse      Float?
+  modePaiement      String? // ESPECES, MOBILE_MONEY, VIREMENT
+  datePaiement      DateTime?
+  statut            String    @default("EN_ATTENTE") // EN_ATTENTE, VALIDÉ, PARTIELLEMENT_VERSE
+  valideParId       String?
+  differenceComment String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  validePar         User?     @relation("PaiementValidateur", fields: [valideParId], references: [id])
 }
 
 // Phases of a construction site
 model Phase {
-  id           String   @id @default(cuid())
-  nom          String
-  ordre        Int
-  description  String?
-  avancement   Float    @default(0) // 0-100 percentage
-  dateDebut    DateTime?
-  dateFin      DateTime?
-  chantierId   String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  chantier     Chantier @relation(fields: [chantierId], references: [id])
-  taches       Tache[]
-  photos       Photo[]
-  documents    DocumentChantier[]
+  id          String             @id @default(cuid())
+  nom         String
+  ordre       Int
+  description String?
+  avancement  Float              @default(0) // 0-100 percentage
+  dateDebut   DateTime?
+  dateFin     DateTime?
+  chantierId  String
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  chantier    Chantier           @relation(fields: [chantierId], references: [id])
+  taches      Tache[]
+  photos      Photo[]
+  documents   DocumentChantier[]
 }
 
 // Tasks within a phase
 model Tache {
-  id                 String    @id @default(cuid())
-  nom                String
-  description        String?
-  ordre              Int
-  avancement         Float     @default(0)
-  statut             String    @default("PLANIFIEE") // PLANIFIEE, EN_COURS, TERMINEE, EN_RETARD
-  dateDebut          DateTime?
-  dateFin            DateTime?
-  responsableId      String?
-  phaseId            String
-  tachePrecedenteId  String?   // dependency
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  phase              Phase     @relation(fields: [phaseId], references: [id])
-  responsable        User?     @relation(fields: [responsableId], references: [id])
-  tachePrecedente    Tache?    @relation("TacheDependance", fields: [tachePrecedenteId], references: [id])
-  tacheSuivante      Tache[]   @relation("TacheDependance")
-  sortiesStock       SortieStock[]
-  photos             Photo[]
+  id                String        @id @default(cuid())
+  nom               String
+  description       String?
+  ordre             Int
+  avancement        Float         @default(0)
+  statut            String        @default("PLANIFIEE") // PLANIFIEE, EN_COURS, TERMINEE, EN_RETARD
+  dateDebut         DateTime?
+  dateFin           DateTime?
+  responsableId     String?
+  phaseId           String
+  tachePrecedenteId String? // dependency
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  phase             Phase         @relation(fields: [phaseId], references: [id])
+  responsable       User?         @relation(fields: [responsableId], references: [id])
+  tachePrecedente   Tache?        @relation("TacheDependance", fields: [tachePrecedenteId], references: [id])
+  tacheSuivante     Tache[]       @relation("TacheDependance")
+  sortiesStock      SortieStock[]
+  photos            Photo[]
 }
 
 // Stock materials catalog
 model StockMateriel {
-  id            String   @id @default(cuid())
-  reference     String
-  designation   String
-  categorie     String?  // gros_oeuvre, finition, electricite, plomberie
-  unite         String   // m3, kg, sac, ml, u
-  seuilAlerte   Float    @default(0)
-  chantierId    String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  chantier      Chantier @relation(fields: [chantierId], references: [id])
-  entrees       EntreeStock[]
-  sorties       SortieStock[]
+  id          String        @id @default(cuid())
+  reference   String
+  designation String
+  categorie   String? // gros_oeuvre, finition, electricite, plomberie
+  unite       String // m3, kg, sac, ml, u
+  seuilAlerte Float         @default(0)
+  chantierId  String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  chantier    Chantier      @relation(fields: [chantierId], references: [id])
+  entrees     EntreeStock[]
+  sorties     SortieStock[]
 }
 
 // Stock entries (deliveries)
 model EntreeStock {
-  id              String   @id @default(cuid())
-  stockId         String
-  chantierId      String
-  quantite        Float
-  prixUnitaire    Float
-  fournisseur     String?
-  numeroBL        String?  // Bon de livraison
-  dateEntree      DateTime @default(now())
-  photoBLUrl      String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  stock           StockMateriel @relation(fields: [stockId], references: [id])
-  chantier        Chantier    @relation(fields: [chantierId], references: [id])
+  id           String        @id @default(cuid())
+  stockId      String
+  chantierId   String
+  quantite     Float
+  prixUnitaire Float
+  fournisseur  String?
+  numeroBL     String? // Bon de livraison
+  dateEntree   DateTime      @default(now())
+  photoBLUrl   String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  stock        StockMateriel @relation(fields: [stockId], references: [id])
+  chantier     Chantier      @relation(fields: [chantierId], references: [id])
 }
 
 // Stock exits (consumption)
 model SortieStock {
-  id            String   @id @default(cuid())
-  stockId       String
-  chantierId    String
-  quantite      Float
-  tacheId       String?
-  operateur     String?
-  motif         String?
-  dateSortie    DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  stock         StockMateriel @relation(fields: [stockId], references: [id])
-  chantier      Chantier    @relation(fields: [chantierId], references: [id])
-  tache         Tache?      @relation(fields: [tacheId], references: [id])
+  id         String        @id @default(cuid())
+  stockId    String
+  chantierId String
+  quantite   Float
+  tacheId    String?
+  operateur  String?
+  motif      String?
+  dateSortie DateTime      @default(now())
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  stock      StockMateriel @relation(fields: [stockId], references: [id])
+  chantier   Chantier      @relation(fields: [chantierId], references: [id])
+  tache      Tache?        @relation(fields: [tacheId], references: [id])
 }
 
 // Equipment
 model Equipement {
-  id              String   @id @default(cuid())
-  designation     String
-  typeEquipement  String?  // pelleteuse, grue, bulldozer, betonniere, camion, compresseur...
-  marque          String?  // Caterpillar, Komatsu, Volvo...
-  modele          String?  // 320D, PC200...
-  immatriculation String?
-  etat            String   @default("BON") // BON, EN_REPARATION, HORS_SERVICE
-  typeLocation    String?  // PROPRE, LOUE
-  entrepriseId    String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  entreprise      Entreprise? @relation(fields: [entrepriseId], references: [id])
-  affectations    EquipementAffectation[]
-  locations       LocationEngin[]
-  compteurHeuresActuel Float @default(0) // Compteur d'heures actuel
-  sortiesCarburant    SortieCarburant[]
-  achatsCarburant     BonAchatCarburant[]
-  relevesCompteur    ReleveCompteurEngin[]
+  id                   String                  @id @default(cuid())
+  designation          String
+  typeEquipement       String? // pelleteuse, grue, bulldozer, betonniere, camion, compresseur...
+  marque               String? // Caterpillar, Komatsu, Volvo...
+  modele               String? // 320D, PC200...
+  immatriculation      String?
+  etat                 String                  @default("BON") // BON, EN_REPARATION, HORS_SERVICE
+  typeLocation         String? // PROPRE, LOUE
+  entrepriseId         String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  entreprise           Entreprise?             @relation(fields: [entrepriseId], references: [id])
+  affectations         EquipementAffectation[]
+  locations            LocationEngin[]
+  compteurHeuresActuel Float                   @default(0) // Compteur d'heures actuel
+  sortiesCarburant     SortieCarburant[]
+  achatsCarburant      BonAchatCarburant[]
+  relevesCompteur      ReleveCompteurEngin[]
 }
 
 model EquipementAffectation {
-  id            String    @id @default(cuid())
-  equipementId  String
-  chantierId    String
-  dateDebut     DateTime
-  dateRetour    DateTime?
-  observations   String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  equipement    Equipement @relation(fields: [equipementId], references: [id])
-  chantier      Chantier   @relation(fields: [chantierId], references: [id])
+  id           String     @id @default(cuid())
+  equipementId String
+  chantierId   String
+  dateDebut    DateTime
+  dateRetour   DateTime?
+  observations String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  equipement   Equipement @relation(fields: [equipementId], references: [id])
+  chantier     Chantier   @relation(fields: [chantierId], references: [id])
 }
 
 model LocationEngin {
-  id                String   @id @default(cuid())
-  equipementId      String
-  fournisseurId     String?  // Lien vers un sous-traitant de type FOURNISSEUR
-  fournisseurNom    String?  // Nom du fournisseur (si pas lié)
-  fournisseurTel    String?  // Téléphone du fournisseur
-  numeroContrat     String?  // N° du contrat de location
-  chantierId        String?  // Chantier qui utilise l'engin
-  coutJournalier    Float
-  coutTransport     Float    @default(0)  // Frais de transport
-  coutOperateur     Float    @default(0)  // Coût opérateur/jour
-  caution           Float    @default(0)  // Montant de la caution
-  dateDebut         DateTime
-  dateFin           DateTime?
-  statut            String   @default("EN_COURS") // EN_COURS, TERMINE, ANNULE
-  conditions        String?  // Observations, assurances...
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  equipement        Equipement    @relation(fields: [equipementId], references: [id])
-  fournisseur       SousTraitant? @relation("LocationFournisseur", fields: [fournisseurId], references: [id])
-  chantier          Chantier?    @relation(fields: [chantierId], references: [id])
+  id             String        @id @default(cuid())
+  equipementId   String
+  fournisseurId  String? // Lien vers un sous-traitant de type FOURNISSEUR
+  fournisseurNom String? // Nom du fournisseur (si pas lié)
+  fournisseurTel String? // Téléphone du fournisseur
+  numeroContrat  String? // N° du contrat de location
+  chantierId     String? // Chantier qui utilise l'engin
+  coutJournalier Float
+  coutTransport  Float         @default(0) // Frais de transport
+  coutOperateur  Float         @default(0) // Coût opérateur/jour
+  caution        Float         @default(0) // Montant de la caution
+  dateDebut      DateTime
+  dateFin        DateTime?
+  statut         String        @default("EN_COURS") // EN_COURS, TERMINE, ANNULE
+  conditions     String? // Observations, assurances...
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  equipement     Equipement    @relation(fields: [equipementId], references: [id])
+  fournisseur    SousTraitant? @relation("LocationFournisseur", fields: [fournisseurId], references: [id])
+  chantier       Chantier?     @relation(fields: [chantierId], references: [id])
 }
 
 // Subcontractors (Entreprise or Particulier)
 model SousTraitant {
-  id                    String   @id @default(cuid())
-  type                  String   @default("ENTREPRISE") // ENTREPRISE, PARTICULIER, FOURNISSEUR
-  raisonSociale         String?
-  nom                   String?  // Pour les particuliers
-  prenom                String?  // Pour les particuliers
-  rccm                  String?  // Registre du Commerce (entreprises)
-  nif                   String?  // Numéro d'Identification Fiscale (entreprises)
-  typePieceIdentite     String?  // CNI, Passeport, Attestation... (particuliers)
-  numeroPieceIdentite   String?  // Numéro de la pièce d'identité (particuliers)
-  contact               String?
-  email                 String?
-  adresse               String?
-  specialite            String?
-  rib                   String?
-  entrepriseId          String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  entreprise            Entreprise? @relation(fields: [entrepriseId], references: [id])
-  contrats              ContratST[]
-  locationsEngins       LocationEngin[] @relation("LocationFournisseur")
+  id                  String          @id @default(cuid())
+  type                String          @default("ENTREPRISE") // ENTREPRISE, PARTICULIER, FOURNISSEUR
+  raisonSociale       String?
+  nom                 String? // Pour les particuliers
+  prenom              String? // Pour les particuliers
+  rccm                String? // Registre du Commerce (entreprises)
+  nif                 String? // Numéro d'Identification Fiscale (entreprises)
+  typePieceIdentite   String? // CNI, Passeport, Attestation... (particuliers)
+  numeroPieceIdentite String? // Numéro de la pièce d'identité (particuliers)
+  contact             String?
+  email               String?
+  adresse             String?
+  specialite          String?
+  rib                 String?
+  entrepriseId        String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  entreprise          Entreprise?     @relation(fields: [entrepriseId], references: [id])
+  contrats            ContratST[]
+  locationsEngins     LocationEngin[] @relation("LocationFournisseur")
 }
 
 model ContratST {
-  id              String   @id @default(cuid())
-  sousTraitantId  String
-  chantierId      String
-  objetTravaux    String
-  montantHT       Float
-  dateDebut       DateTime?
-  dateFin         DateTime?
-  conditions      String?
-  statut          String   @default("EN_COURS") // EN_COURS, RECEPTIONNE, SOLDE, ANNULE
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  sousTraitant    SousTraitant @relation(fields: [sousTraitantId], references: [id])
-  chantier        Chantier     @relation(fields: [chantierId], references: [id])
+  id             String       @id @default(cuid())
+  sousTraitantId String
+  chantierId     String
+  objetTravaux   String
+  montantHT      Float
+  dateDebut      DateTime?
+  dateFin        DateTime?
+  conditions     String?
+  statut         String       @default("EN_COURS") // EN_COURS, RECEPTIONNE, SOLDE, ANNULE
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  sousTraitant   SousTraitant @relation(fields: [sousTraitantId], references: [id])
+  chantier       Chantier     @relation(fields: [chantierId], references: [id])
 }
 
 // Monthly salaries (for CDD/CDI/STAGIAIRE)
 model SalaireMensuel {
-  id                String    @id @default(cuid())
+  id                String     @id @default(cuid())
   journalierId      String
-  mois              Int       // 1-12
-  annee             Int       // 2025, 2026...
-  salaireBase       Float     // Salaire mensuel de base
-  primes            Float     @default(0)  // Primes diverses
-  heuresSupp        Float     @default(0)  // Nombre d'heures supplémentaires
-  montantHeuresSupp Float     @default(0)  // Montant des heures sup
-  retenuesCNPS      Float     @default(0)  // Cotisations CNPS
-  retenuesIR        Float     @default(0)  // Impôt sur le revenu
-  avances           Float     @default(0)  // Avances déduites
-  absences          Int       @default(0)  // Jours d'absence
-  retenueAbsences   Float     @default(0)  // Montant retenu pour absences
-  netAPayer         Float     // Montant net à payer
-  statut            String    @default("EN_ATTENTE") // EN_ATTENTE, PAYE, PARTIEL
+  mois              Int // 1-12
+  annee             Int // 2025, 2026...
+  salaireBase       Float // Salaire mensuel de base
+  primes            Float      @default(0) // Primes diverses
+  heuresSupp        Float      @default(0) // Nombre d'heures supplémentaires
+  montantHeuresSupp Float      @default(0) // Montant des heures sup
+  retenuesCNPS      Float      @default(0) // Cotisations CNPS
+  retenuesIR        Float      @default(0) // Impôt sur le revenu
+  avances           Float      @default(0) // Avances déduites
+  absences          Int        @default(0) // Jours d'absence
+  retenueAbsences   Float      @default(0) // Montant retenu pour absences
+  netAPayer         Float // Montant net à payer
+  statut            String     @default("EN_ATTENTE") // EN_ATTENTE, PAYE, PARTIEL
   datePaiement      DateTime?
-  modePaiement      String?   // ESPECES, VIREMENT, MOBILE_MONEY
+  modePaiement      String? // ESPECES, VIREMENT, MOBILE_MONEY
   observation       String?
   valideParId       String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
   journalier        Journalier @relation(fields: [journalierId], references: [id])
-  validePar         User?     @relation("SalaireValidateur", fields: [valideParId], references: [id])
+  validePar         User?      @relation("SalaireValidateur", fields: [valideParId], references: [id])
+
   @@unique([journalierId, mois, annee])
 }
 
 // Photos
 model Photo {
-  id               String   @id @default(cuid())
-  chantierId       String
-  phaseId          String?
-  tacheId          String?
-  rapportId        String?
-  priseParId       String
-  datePrise        DateTime
-  legende          String?
-  categorie        String   @default("avancement") // avancement, incident, reception, materiau, document
-  urlOriginale     String
-  urlThumbnail     String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  chantier         Chantier            @relation(fields: [chantierId], references: [id])
-  phase            Phase?              @relation(fields: [phaseId], references: [id])
-  tache            Tache?              @relation(fields: [tacheId], references: [id])
-  rapport          RapportJournalier?  @relation(fields: [rapportId], references: [id])
-  prisePar         User                @relation(fields: [priseParId], references: [id])
+  id           String             @id @default(cuid())
+  chantierId   String
+  phaseId      String?
+  tacheId      String?
+  rapportId    String?
+  priseParId   String
+  datePrise    DateTime
+  legende      String?
+  categorie    String             @default("avancement") // avancement, incident, reception, materiau, document
+  urlOriginale String
+  urlThumbnail String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  chantier     Chantier           @relation(fields: [chantierId], references: [id])
+  phase        Phase?             @relation(fields: [phaseId], references: [id])
+  tache        Tache?             @relation(fields: [tacheId], references: [id])
+  rapport      RapportJournalier? @relation(fields: [rapportId], references: [id])
+  prisePar     User               @relation(fields: [priseParId], references: [id])
 }
 
 // Daily reports
 model RapportJournalier {
-  id             String   @id @default(cuid())
-  chantierId     String
-  auteurId       String
-  dateRapport    DateTime
-  meteo          String?  // ensoleillé, nuageux, pluie, arret_intemperie
+  id              String   @id @default(cuid())
+  chantierId      String
+  auteurId        String
+  dateRapport     DateTime
+  meteo           String? // ensoleillé, nuageux, pluie, arret_intemperie
   effectifPresent Int?
   travauxRealises String
-  incidents      String?
-  observations   String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  chantier       Chantier  @relation(fields: [chantierId], references: [id])
-  auteur         User      @relation(fields: [auteurId], references: [id])
-  photos         Photo[]
+  incidents       String?
+  observations    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  chantier        Chantier @relation(fields: [chantierId], references: [id])
+  auteur          User     @relation(fields: [auteurId], references: [id])
+  photos          Photo[]
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -525,89 +539,89 @@ model RapportJournalier {
 
 // Fuel stock per chantier (for STOCK_PHYSIQUE mode)
 model StockCarburant {
-  id            String   @id @default(cuid())
+  id            String            @id @default(cuid())
   chantierId    String
-  typeCarburant String   @default("GASOIL") // GASOIL, ESSENCE
-  capacite      Float    @default(5000)     // Capacity in liters
-  seuilAlerte   Float    @default(500)      // Alert threshold
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  chantier      Chantier        @relation(fields: [chantierId], references: [id])
+  typeCarburant String            @default("GASOIL") // GASOIL, ESSENCE
+  capacite      Float             @default(5000) // Capacity in liters
+  seuilAlerte   Float             @default(500) // Alert threshold
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  chantier      Chantier          @relation(fields: [chantierId], references: [id])
   entrees       EntreeCarburant[]
   sorties       SortieCarburant[]
 }
 
 // Fuel supply entries (for STOCK_PHYSIQUE mode)
 model EntreeCarburant {
-  id              String   @id @default(cuid())
+  id               String         @id @default(cuid())
   stockCarburantId String
-  chantierId      String
-  dateEntree      DateTime @default(now())
-  quantite        Float    // Liters
-  prixUnitaire    Float    // FCFA per liter
-  prixTotal       Float    // Total cost
-  fournisseur     String?
-  numeroBL        String?  // Bon de livraison
-  observation     String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  stock           StockCarburant @relation(fields: [stockCarburantId], references: [id])
-  chantier        Chantier      @relation(fields: [chantierId], references: [id])
+  chantierId       String
+  dateEntree       DateTime       @default(now())
+  quantite         Float // Liters
+  prixUnitaire     Float // FCFA per liter
+  prixTotal        Float // Total cost
+  fournisseur      String?
+  numeroBL         String? // Bon de livraison
+  observation      String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  stock            StockCarburant @relation(fields: [stockCarburantId], references: [id])
+  chantier         Chantier       @relation(fields: [chantierId], references: [id])
 }
 
 // Fuel distribution from stock (for STOCK_PHYSIQUE mode)
 model SortieCarburant {
-  id                String    @id @default(cuid())
-  stockCarburantId  String
-  chantierId        String
-  equipementId      String?   // Which equipment received fuel
-  dateSortie        DateTime  @default(now())
-  quantite          Float     // Liters
-  operateur         String?
-  compteurHeuresAvant  Float?  // Hour meter before fueling
-  compteurHeuresApres  Float?  // Hour meter after fueling
-  observation       String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  stock             StockCarburant @relation(fields: [stockCarburantId], references: [id])
-  chantier          Chantier      @relation(fields: [chantierId], references: [id])
-  equipement        Equipement?  @relation(fields: [equipementId], references: [id])
+  id                  String         @id @default(cuid())
+  stockCarburantId    String
+  chantierId          String
+  equipementId        String? // Which equipment received fuel
+  dateSortie          DateTime       @default(now())
+  quantite            Float // Liters
+  operateur           String?
+  compteurHeuresAvant Float? // Hour meter before fueling
+  compteurHeuresApres Float? // Hour meter after fueling
+  observation         String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  stock               StockCarburant @relation(fields: [stockCarburantId], references: [id])
+  chantier            Chantier       @relation(fields: [chantierId], references: [id])
+  equipement          Equipement?    @relation(fields: [equipementId], references: [id])
 }
 
 // Direct purchase from gas station (for ACHAT_DIRECT mode)
 model BonAchatCarburant {
-  id                  String    @id @default(cuid())
+  id                  String      @id @default(cuid())
   chantierId          String
-  dateAchat           DateTime  @default(now())
-  typeCarburant       String    @default("GASOIL")
-  quantite            Float     // Liters
-  prixUnitaire        Float     // FCFA per liter
-  prixTotal           Float     // Total cost
-  stationService      String?   // Gas station name
-  numeroRecu          String?   // Receipt number
-  equipementId        String?   // Which equipment was fueled
+  dateAchat           DateTime    @default(now())
+  typeCarburant       String      @default("GASOIL")
+  quantite            Float // Liters
+  prixUnitaire        Float // FCFA per liter
+  prixTotal           Float // Total cost
+  stationService      String? // Gas station name
+  numeroRecu          String? // Receipt number
+  equipementId        String? // Which equipment was fueled
   operateur           String?
-  compteurHeuresAvant  Float?
-  compteurHeuresApres  Float?
+  compteurHeuresAvant Float?
+  compteurHeuresApres Float?
   observation         String?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  chantier            Chantier     @relation(fields: [chantierId], references: [id])
-  equipement          Equipement?  @relation(fields: [equipementId], references: [id])
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  chantier            Chantier    @relation(fields: [chantierId], references: [id])
+  equipement          Equipement? @relation(fields: [equipementId], references: [id])
 }
 
 // Hour meter readings per equipment
 model ReleveCompteurEngin {
-  id            String    @id @default(cuid())
-  equipementId  String
-  chantierId    String
-  dateReleve    DateTime  @default(now())
-  heuresKm      Float     // Current reading
-  observation    String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  equipement    Equipement @relation(fields: [equipementId], references: [id])
-  chantier      Chantier   @relation(fields: [chantierId], references: [id])
+  id           String     @id @default(cuid())
+  equipementId String
+  chantierId   String
+  dateReleve   DateTime   @default(now())
+  heuresKm     Float // Current reading
+  observation  String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  equipement   Equipement @relation(fields: [equipementId], references: [id])
+  chantier     Chantier   @relation(fields: [chantierId], references: [id])
 }
 
 // Audit Log — tracks all important actions
@@ -616,13 +630,14 @@ model AuditLog {
   userId       String
   utilisateur  User     @relation(fields: [userId], references: [id])
   entrepriseId String?
-  action       String   // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, BLOCK, UNBLOCK, ROLE_CHANGE, PASSWORD_RESET, VALIDATE
-  module       String   // chantiers, personnel, pointage, stocks, carburant, engins, etc.
-  entityId     String?  // ID of the modified entity
-  entityType   String?  // Chantier, Journalier, Equipement, User, etc.
-  details      String?  // Description / old values JSON
+  action       String // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, BLOCK, UNBLOCK, ROLE_CHANGE, PASSWORD_RESET, VALIDATE
+  module       String // chantiers, personnel, pointage, stocks, carburant, engins, etc.
+  entityId     String? // ID of the modified entity
+  entityType   String? // Chantier, Journalier, Equipement, User, etc.
+  details      String? // Description / old values JSON
   adresseIp    String?
   createdAt    DateTime @default(now())
+
   @@index([createdAt])
   @@index([userId])
   @@index([entrepriseId])
@@ -640,15 +655,16 @@ model PermissionConfig {
 
 // Notifications
 model Notification {
-  id            String   @id @default(cuid())
-  userId        String
-  titre         String
-  message       String
-  type          String?  // STOCK_ALERT, BUDGET_ALERT, PAIEMENT, TACHE_RETARD, DOCUMENT
-  lu            Boolean  @default(false)
-  lien          String?  // optional link to related resource
-  createdAt     DateTime @default(now())
-  user          User     @relation(fields: [userId], references: [id])
+  id        String   @id @default(cuid())
+  userId    String
+  titre     String
+  message   String
+  type      String? // STOCK_ALERT, BUDGET_ALERT, PAIEMENT, TACHE_RETARD, DOCUMENT
+  lu        Boolean  @default(false)
+  lien      String? // optional link to related resource
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
   @@index([userId, lu])
 }
 
@@ -659,14 +675,14 @@ model DocumentChantier {
   type            String    @default("autre") // plan, permis, contrat, pv_reception, facture, technique, rapport, autre
   categorie       String?
   numeroReference String?
-  fichierNom      String    // original file name
-  fichierUrl      String    // storage path or URL
+  fichierNom      String // original file name
+  fichierUrl      String // storage path or URL
   fichierTaille   Int       @default(0) // bytes
-  fichierType     String?   // MIME type
+  fichierType     String? // MIME type
   version         Int       @default(1)
   description     String?
   statut          String    @default("brouillon") // brouillon, valide, archive
-  tags            String?   // comma-separated tags
+  tags            String? // comma-separated tags
   chantierId      String
   phaseId         String?
   auteurId        String
@@ -684,44 +700,44 @@ model DocumentChantier {
 
 // Password reset tokens
 model PasswordResetToken {
-  id        String   @id @default(cuid())
-  email     String
-  token     String   @unique
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime @default(now())
-  utilisateur User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
+  id          String    @id @default(cuid())
+  email       String
+  token       String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+  utilisateur User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
 }
 
 // Email invitation tokens for onboarding
 model InvitationToken {
-  id          String   @id @default(cuid())
-  token       String   @unique
-  email       String
-  role        String   @default("CHEF_PROJET")
-  nom         String?
-  prenom      String?
+  id           String      @id @default(cuid())
+  token        String      @unique
+  email        String
+  role         String      @default("CHEF_PROJET")
+  nom          String?
+  prenom       String?
   entrepriseId String?
-  invitedBy   String?
-  expiresAt   DateTime
-  acceptedAt  DateTime?
-  createdAt   DateTime @default(now())
-  utilisateur User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String?  @unique // nullable until accepted
-  entreprise  Entreprise? @relation(fields: [entrepriseId], references: [id])
+  invitedBy    String?
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  createdAt    DateTime    @default(now())
+  utilisateur  User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String?     @unique // nullable until accepted
+  entreprise   Entreprise? @relation(fields: [entrepriseId], references: [id])
 }
 
 // Login attempt logging for lockout tracking
 model LoginAttemptLog {
-  id        String   @id @default(cuid())
-  userId    String
-  email     String
-  ipAddress String?
-  success   Boolean
-  reason    String?  // "invalid_password", "account_locked", "2fa_required", "inactive"
-  createdAt DateTime @default(now())
-  utilisateur User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  userId      String
+  email       String
+  ipAddress   String?
+  success     Boolean
+  reason      String? // "invalid_password", "account_locked", "2fa_required", "inactive"
+  createdAt   DateTime @default(now())
+  utilisateur User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -730,7 +746,7 @@ model LoginAttemptLog {
 
 // Clients (Maitres d'ouvrage)
 model Client {
-  id            String   @id @default(cuid())
+  id            String          @id @default(cuid())
   raisonSociale String
   nomContact    String?
   telephone     String?
@@ -738,18 +754,19 @@ model Client {
   adresse       String?
   rccm          String?
   nif           String?
-  type          String   @default("ENTREPRISE") // ENTREPRISE, PARTICULIER, INSTITUTION
-  statut        String   @default("ACTIF") // ACTIF, INACTIF, PROSPECT
+  type          String          @default("ENTREPRISE") // ENTREPRISE, PARTICULIER, INSTITUTION
+  statut        String          @default("ACTIF") // ACTIF, INACTIF, PROSPECT
   notes         String?
   entrepriseId  String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  entreprise    Entreprise?  @relation(fields: [entrepriseId], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  entreprise    Entreprise?     @relation(fields: [entrepriseId], references: [id])
   chantiers     Chantier[]
   devis         Devis[]
   contrats      Contrat[]
   factures      Facture[]
   tickets       TicketSupport[]
+
   @@index([entrepriseId])
   @@index([statut])
   @@index([type])
@@ -757,25 +774,26 @@ model Client {
 
 // Devis (Quotes/Estimates)
 model Devis {
-  id              String       @id @default(cuid())
-  numero          String
-  clientId        String
-  statut          String       @default("BROUILLON") // BROUILLON, ENVOYE, ACCEPTE, REFUSE, EXPIRE
-  dateEmission    DateTime     @default(now())
-  dateValidite    DateTime?
-  conditions      String?
-  remiseGlobale   Float        @default(0) // percentage
-  totalHT         Float        @default(0)
-  tauxTVA         Float        @default(18) // 18% in CI
-  montantTVA      Float        @default(0)
-  totalTTC        Float        @default(0)
-  notes           String?
-  entrepriseId    String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  client          Client       @relation(fields: [clientId], references: [id])
-  entreprise      Entreprise?  @relation(fields: [entrepriseId], references: [id])
-  lignes          LigneDevis[]
+  id            String       @id @default(cuid())
+  numero        String
+  clientId      String
+  statut        String       @default("BROUILLON") // BROUILLON, ENVOYE, ACCEPTE, REFUSE, EXPIRE
+  dateEmission  DateTime     @default(now())
+  dateValidite  DateTime?
+  conditions    String?
+  remiseGlobale Float        @default(0) // percentage
+  totalHT       Float        @default(0)
+  tauxTVA       Float        @default(18) // 18% in CI
+  montantTVA    Float        @default(0)
+  totalTTC      Float        @default(0)
+  notes         String?
+  entrepriseId  String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  client        Client       @relation(fields: [clientId], references: [id])
+  entreprise    Entreprise?  @relation(fields: [entrepriseId], references: [id])
+  lignes        LigneDevis[]
+
   @@index([entrepriseId])
   @@index([clientId])
   @@index([statut])
@@ -783,40 +801,42 @@ model Devis {
 
 // Lignes de devis
 model LigneDevis {
-  id            String   @id @default(cuid())
-  devisId       String
-  designation   String
-  description   String?
-  quantite      Float
-  unite         String
-  prixUnitaire  Float
-  totalHT       Float
-  ordre         Int      @default(0)
-  devis         Devis    @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  id           String  @id @default(cuid())
+  devisId      String
+  designation  String
+  description  String?
+  quantite     Float
+  unite        String
+  prixUnitaire Float
+  totalHT      Float
+  ordre        Int     @default(0)
+  devis        Devis   @relation(fields: [devisId], references: [id], onDelete: Cascade)
+
   @@index([devisId])
 }
 
 // Contrats client
 model Contrat {
-  id              String       @id @default(cuid())
-  numero          String
-  clientId        String
-  objet           String
-  typeContrat     String       @default("TRAVAUX") // TRAVAUX, FOURNITURE, SERVICE, MIXTE
-  montantHT       Float        @default(0)
-  tauxTVA         Float        @default(18)
-  montantTTC      Float        @default(0)
-  dateDebut       DateTime?
-  dateFin         DateTime?
-  conditions      String?
-  statut          String       @default("EN_PREPARATION") // EN_PREPARATION, ACTIF, EXPIRE, RESILIE, TERMINE
-  penaltyRetard   Float        @default(0) // % penalty per day of delay
-  entrepriseId    String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  client          Client       @relation(fields: [clientId], references: [id])
-  entreprise      Entreprise?  @relation(fields: [entrepriseId], references: [id])
-  factures        Facture[]
+  id            String      @id @default(cuid())
+  numero        String
+  clientId      String
+  objet         String
+  typeContrat   String      @default("TRAVAUX") // TRAVAUX, FOURNITURE, SERVICE, MIXTE
+  montantHT     Float       @default(0)
+  tauxTVA       Float       @default(18)
+  montantTTC    Float       @default(0)
+  dateDebut     DateTime?
+  dateFin       DateTime?
+  conditions    String?
+  statut        String      @default("EN_PREPARATION") // EN_PREPARATION, ACTIF, EXPIRE, RESILIE, TERMINE
+  penaltyRetard Float       @default(0) // % penalty per day of delay
+  entrepriseId  String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  client        Client      @relation(fields: [clientId], references: [id])
+  entreprise    Entreprise? @relation(fields: [entrepriseId], references: [id])
+  factures      Facture[]
+
   @@index([entrepriseId])
   @@index([clientId])
   @@index([statut])
@@ -824,30 +844,31 @@ model Contrat {
 
 // Factures
 model Facture {
-  id              String       @id @default(cuid())
-  numero          String
-  clientId        String
-  contratId       String?
-  devisId         String?
-  typeFacture     String       @default("FACTURE") // FACTURE, ACOMPTE, SITUATION, SOLDE
-  statut          String       @default("BROUILLON") // BROUILLON, ENVOYE, PAYEE, PARTIELLEMENT_PAYEE, ANNULEE, EN_RETARD
-  dateEmission    DateTime     @default(now())
-  dateEcheance    DateTime?
-  datePaiement    DateTime?
-  montantHT       Float        @default(0)
-  tauxTVA         Float        @default(18)
-  montantTVA      Float        @default(0)
-  totalTTC        Float        @default(0)
-  montantPaye     Float        @default(0)
-  modePaiement    String?      // ESPECES, VIREMENT, MOBILE_MONEY, CHEQUE
-  notes           String?
-  entrepriseId    String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  client          Client       @relation(fields: [clientId], references: [id])
-  contrat         Contrat?     @relation(fields: [contratId], references: [id])
-  entreprise      Entreprise?  @relation(fields: [entrepriseId], references: [id])
-  paiements       PaiementFacture[]
+  id           String            @id @default(cuid())
+  numero       String
+  clientId     String
+  contratId    String?
+  devisId      String?
+  typeFacture  String            @default("FACTURE") // FACTURE, ACOMPTE, SITUATION, SOLDE
+  statut       String            @default("BROUILLON") // BROUILLON, ENVOYE, PAYEE, PARTIELLEMENT_PAYEE, ANNULEE, EN_RETARD
+  dateEmission DateTime          @default(now())
+  dateEcheance DateTime?
+  datePaiement DateTime?
+  montantHT    Float             @default(0)
+  tauxTVA      Float             @default(18)
+  montantTVA   Float             @default(0)
+  totalTTC     Float             @default(0)
+  montantPaye  Float             @default(0)
+  modePaiement String? // ESPECES, VIREMENT, MOBILE_MONEY, CHEQUE
+  notes        String?
+  entrepriseId String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  client       Client            @relation(fields: [clientId], references: [id])
+  contrat      Contrat?          @relation(fields: [contratId], references: [id])
+  entreprise   Entreprise?       @relation(fields: [entrepriseId], references: [id])
+  paiements    PaiementFacture[]
+
   @@index([entrepriseId])
   @@index([clientId])
   @@index([statut])
@@ -855,38 +876,40 @@ model Facture {
 
 // Paiements de factures
 model PaiementFacture {
-  id              String   @id @default(cuid())
-  factureId       String
-  montant         Float
-  datePaiement    DateTime @default(now())
-  modePaiement    String   // ESPECES, VIREMENT, MOBILE_MONEY, CHEQUE
-  reference       String?  // reference du paiement
-  notes           String?
-  createdAt       DateTime @default(now())
-  facture         Facture  @relation(fields: [factureId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  factureId    String
+  montant      Float
+  datePaiement DateTime @default(now())
+  modePaiement String // ESPECES, VIREMENT, MOBILE_MONEY, CHEQUE
+  reference    String? // reference du paiement
+  notes        String?
+  createdAt    DateTime @default(now())
+  facture      Facture  @relation(fields: [factureId], references: [id], onDelete: Cascade)
+
   @@index([factureId])
 }
 
 // Tickets de support client
 model TicketSupport {
-  id              String       @id @default(cuid())
-  titre           String
-  description     String
-  priorite        String       @default("MOYENNE") // BASSE, MOYENNE, HAUTE, URGENTE
-  statut          String       @default("OUVERT") // OUVERT, EN_COURS, RESOLU, FERME
-  clientId        String?
-  categorie       String?      // TECHNIQUE, FACTURATION, PLANNING, AUTRE
-  assigneAId      String?
-  entrepriseId    String?
-  resoluLe        DateTime?
-  resoluParId     String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  client          Client?      @relation(fields: [clientId], references: [id])
-  assigneA        User?        @relation("TicketAssignee", fields: [assigneAId], references: [id])
-  resoluPar       User?        @relation("TicketResolver", fields: [resoluParId], references: [id])
-  entreprise      Entreprise?  @relation(fields: [entrepriseId], references: [id])
-  messages        TicketMessage[]
+  id           String          @id @default(cuid())
+  titre        String
+  description  String
+  priorite     String          @default("MOYENNE") // BASSE, MOYENNE, HAUTE, URGENTE
+  statut       String          @default("OUVERT") // OUVERT, EN_COURS, RESOLU, FERME
+  clientId     String?
+  categorie    String? // TECHNIQUE, FACTURATION, PLANNING, AUTRE
+  assigneAId   String?
+  entrepriseId String?
+  resoluLe     DateTime?
+  resoluParId  String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  client       Client?         @relation(fields: [clientId], references: [id])
+  assigneA     User?           @relation("TicketAssignee", fields: [assigneAId], references: [id])
+  resoluPar    User?           @relation("TicketResolver", fields: [resoluParId], references: [id])
+  entreprise   Entreprise?     @relation(fields: [entrepriseId], references: [id])
+  messages     TicketMessage[]
+
   @@index([entrepriseId])
   @@index([clientId])
   @@index([statut])
@@ -895,26 +918,28 @@ model TicketSupport {
 
 // Messages de ticket
 model TicketMessage {
-  id            String          @id @default(cuid())
-  ticketId      String
-  auteurId      String?
-  contenu       String
-  pieceJointe   String?
-  createdAt     DateTime        @default(now())
-  ticket        TicketSupport   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  auteur        User?           @relation(fields: [auteurId], references: [id])
+  id          String        @id @default(cuid())
+  ticketId    String
+  auteurId    String?
+  contenu     String
+  pieceJointe String?
+  createdAt   DateTime      @default(now())
+  ticket      TicketSupport @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  auteur      User?         @relation(fields: [auteurId], references: [id])
+
   @@index([ticketId])
 }
 
 // Per-tenant system settings (key-value store)
 model SystemSetting {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   entrepriseId String
-  cle          String   // e.g. "security.maxLoginAttempts", "security.passwordMinLength"
-  valeur       String   // JSON string for complex values
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  entreprise  Entreprise @relation(fields: [entrepriseId], references: [id])
+  cle          String // e.g. "security.maxLoginAttempts", "security.passwordMinLength"
+  valeur       String // JSON string for complex values
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id])
+
   @@unique([entrepriseId, cle])
 }
 
@@ -926,25 +951,25 @@ model SystemSetting {
 // Le GERANT doit obligatoirement autoriser (consentement explicite)
 // Durée max: 4h, auto-expiration, traçabilité complète
 model SupportAccess {
-  id              String    @id @default(cuid())
-  superAdminId    String    // Qui demande l'accès (User SUPER_ADMIN)
-  entrepriseId    String    // Quelle entreprise
-  raison          String    // Motif (bug, config, audit)
-  statut          String    @default("DEMANDE") // DEMANDE, AUTORISE, REFUSE, EXPIRE, REVOQUE
-  demandeLe       DateTime  @default(now())
-  autoriseLe      DateTime?
-  autoriseParId   String?   // GERANT qui a autorisé
-  expireLe        DateTime? // Auto-expiration (max 4h après autorisation)
-  revoqueLe       DateTime?
-  revoqueParId    String?
-  actionsLog      String?   // JSON des actions effectuées par le support
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  superAdminId  String // Qui demande l'accès (User SUPER_ADMIN)
+  entrepriseId  String // Quelle entreprise
+  raison        String // Motif (bug, config, audit)
+  statut        String    @default("DEMANDE") // DEMANDE, AUTORISE, REFUSE, EXPIRE, REVOQUE
+  demandeLe     DateTime  @default(now())
+  autoriseLe    DateTime?
+  autoriseParId String? // GERANT qui a autorisé
+  expireLe      DateTime? // Auto-expiration (max 4h après autorisation)
+  revoqueLe     DateTime?
+  revoqueParId  String?
+  actionsLog    String? // JSON des actions effectuées par le support
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  superAdmin      User      @relation("SupportAccessSuperAdmin", fields: [superAdminId], references: [id])
-  entreprise      Entreprise @relation(fields: [entrepriseId], references: [id])
-  autorisePar     User?     @relation("SupportAccessAutorisePar", fields: [autoriseParId], references: [id])
-  revoquePar      User?     @relation("SupportAccessRevoquePar", fields: [revoqueParId], references: [id])
+  superAdmin  User       @relation("SupportAccessSuperAdmin", fields: [superAdminId], references: [id])
+  entreprise  Entreprise @relation(fields: [entrepriseId], references: [id])
+  autorisePar User?      @relation("SupportAccessAutorisePar", fields: [autoriseParId], references: [id])
+  revoquePar  User?      @relation("SupportAccessRevoquePar", fields: [revoqueParId], references: [id])
 
   @@index([entrepriseId])
   @@index([superAdminId])
@@ -953,23 +978,53 @@ model SupportAccess {
 
 // Subscription — Abonnement SaaS d'une entreprise
 model Subscription {
-  id                  String    @id @default(cuid())
-  entrepriseId        String    @unique
-  plan                String    @default("STARTER") // STARTER, PRO, ENTERPRISE
-  statut              String    @default("TRIAL") // TRIAL, ACTIVE, PAST_DUE, CANCELED, EXPIRED
-  trialEndsAt         DateTime? // 14 jours après création
-  currentPeriodStart  DateTime?
-  currentPeriodEnd    DateTime?
-  amount              Float     @default(0) // FCFA/mois
-  currency            String    @default("XOF")
-  maxUsers            Int       @default(5)
-  maxChantiers        Int       @default(3)
-  maxStorageMB        Int       @default(500)
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  entrepriseId       String    @unique
+  plan               String    @default("STARTER") // STARTER, PRO, ENTERPRISE
+  statut             String    @default("TRIAL") // TRIAL, ACTIVE, PAST_DUE, CANCELED, EXPIRED
+  trialEndsAt        DateTime? // 14 jours après création
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  amount             Float     @default(0) // FCFA/mois
+  currency           String    @default("XOF")
+  maxUsers           Int       @default(5)
+  maxChantiers       Int       @default(3)
+  maxStorageMB       Int       @default(500)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  entreprise          Entreprise @relation(fields: [entrepriseId], references: [id])
+  entreprise Entreprise @relation(fields: [entrepriseId], references: [id])
 
   @@index([statut])
   @@index([plan])
+}
+
+// ═══════════════════════════════════════════════════════════
+// DELEGATION SYSTEM (Phase 1-4)
+// ═══════════════════════════════════════════════════════════
+
+// Delegation — Délégation de domaine fonctionnel par le GERANT
+// Le GERANT peut déléguer un domaine (FINANCE, RH, etc.) à un user
+// avec un niveau de permission (LECTURE, ECRITURE, GESTION)
+model Delegation {
+  id           String    @id @default(cuid())
+  entrepriseId String // tenant
+  fromUserId   String // GERANT qui délègue
+  toUserId     String // User qui reçoit la délégation
+  domain       String // FINANCE, RH, LOGISTIQUE, COMMERCIAL, CHANTIER, DOCUMENTS
+  permissions  String    @default("LECTURE") // LECTURE, ECRITURE, GESTION
+  statut       String    @default("ACTIF") // ACTIF, REVOCQUE, EXPIRE
+  expiresLe    DateTime? // null = pas d'expiration
+  raison       String? // motif de la délégation
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  fromUser   User       @relation("DelegationFromUser", fields: [fromUserId], references: [id])
+  toUser     User       @relation("DelegationToUser", fields: [toUserId], references: [id])
+  entreprise Entreprise @relation(fields: [entrepriseId], references: [id])
+
+  @@unique([toUserId, domain, entrepriseId]) // une délégation par domaine par user
+  @@index([entrepriseId])
+  @@index([toUserId])
+  @@index([statut])
 }

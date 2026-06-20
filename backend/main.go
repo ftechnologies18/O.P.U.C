@@ -31,6 +31,7 @@ import (
         "opuc/internal/usecase/client"
         "opuc/internal/usecase/contrat"
         "opuc/internal/usecase/dashboard"
+        "opuc/internal/usecase/delegation"
         "opuc/internal/usecase/devis"
         "opuc/internal/usecase/document"
         "opuc/internal/usecase/facturation"
@@ -141,6 +142,12 @@ func main() {
         subscriptionRepo := gorm.NewSubscriptionRepo(dbm.Migrations)
         adminEntrepriseRepo := gorm.NewAdminEntrepriseRepo(dbm.Migrations)
 
+        // Phase 7 — repository délégation (Runtime + Migrations)
+        //   - CRUD tenant-scoped via Runtime+WithTenant (Create, List, Get, Update, Revoke…)
+        //   - Cross-tenant via Migrations pour GetActive (middleware), ExpireOld (cron),
+        //     CountCoGerants / PromoteCoGerant / DemoteCoGerant / GetCoGerants / GetUserByID
+        delegationRepo := gorm.NewDelegationRepository(dbm.Runtime, dbm.Migrations)
+
         // ── 6. Usecases ─────────────────────────────────────────────
         authUC := auth.NewUsecase(userRepo, signer, log)
         usersUC := iam.NewUsersUsecase(userRepo, log)
@@ -174,6 +181,9 @@ func main() {
                 AdminEntreprise: adminEntrepriseRepo,
         }, log)
 
+        // Phase 7 — usecase délégation (delegations + co-gerants)
+        delegationUC := delegation.NewUsecase(delegationRepo, log)
+
         // ── 7. Handlers ─────────────────────────────────────────────
         authHandler := handler.NewAuthHandler(authUC, signer, log)
         userHandler := handler.NewUserHandler(usersUC, log)
@@ -203,6 +213,9 @@ func main() {
 
         // Phase 6 — handler SaaS (admin + support-access approval flow)
         saasHandler := handler.NewSaaSHandler(saasUC, log)
+
+        // Phase 7 — handler délégation
+        delegationHandler := handler.NewDelegationHandler(delegationUC, log)
 
         // ── R2 Storage (Cloudflare) ─────────────────────────────────
         var storageHandler *handler.StorageHandler
@@ -242,6 +255,9 @@ func main() {
                 Storage:      storageHandler,
                 // Phase 6 — SaaS handler
                 SaaS:         saasHandler,
+                // Phase 7 — Delegation handler + repo (pour middleware.RequireAccess futur)
+                Delegation:     delegationHandler,
+                DelegationRepo: delegationRepo,
                 Signer:       signer,
                 Log:          log,
         })

@@ -43,6 +43,7 @@ func Auth(signer *appjwt.Signer) func(http.Handler) http.Handler {
                                 Role:          claims.Role,
                                 EntrepriseID:  claims.EntrepriseID,
                                 TwoFAVerified: claims.TwoFAVerified,
+                                IsCoGerant:    claims.IsCoGerant,
                         }
                         ctx := context.WithValue(r.Context(), database.CtxUserKey, au)
                         next.ServeHTTP(w, r.WithContext(ctx))

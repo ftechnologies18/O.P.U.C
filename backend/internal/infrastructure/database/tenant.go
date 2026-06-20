@@ -31,6 +31,7 @@ type AuthUser struct {
         Role          string
         EntrepriseID  string // "" pour SUPER_ADMIN
         TwoFAVerified bool
+        IsCoGerant    bool // true si co-gérant (mêmes droits que GERANT sauf promote/demote)
 }
 
 // FromContext extrait l'AuthUser du context (ou nil).
