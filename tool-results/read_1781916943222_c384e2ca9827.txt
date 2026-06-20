@@ -1,0 +1,458 @@
+     1→// Package http — router.go
+     2→// Monte le routeur chi avec tous les middlewares et handlers.
+     3→//
+     4→// Structure des routes (Phase 1) :
+     5→//   GET  /api/v1/health                          — healthcheck (public)
+     6→//   POST /api/v1/auth/login                      — login (public)
+     7→//   POST /api/v1/auth/logout                     — logout (public)
+     8→//   GET  /api/v1/auth/me                         — user courant (auth requis)
+     9→//   POST /api/v1/auth/2fa/setup                  — setup TOTP (auth requis)
+    10→//   POST /api/v1/auth/2fa/verify                 — verify code TOTP (JWT 2fa=false OK)
+    11→//   POST /api/v1/auth/2fa/disable                — disable 2FA (auth requis)
+    12→//   GET  /api/v1/users                           — list paginée (SUPER_ADMIN, GERANT)
+    13→//   POST /api/v1/users                           — create (SUPER_ADMIN, GERANT)
+    14→//   GET  /api/v1/users/{id}                      — get by id (auth requis)
+    15→//   PUT  /api/v1/users/{id}                      — update (auth requis)
+    16→//   DELETE /api/v1/users/{id}                    — soft delete (SUPER_ADMIN)
+    17→//   POST /api/v1/users/{id}/toggle-active        — toggle active (SUPER_ADMIN, GERANT)
+    18→//   POST /api/v1/users/{id}/reset-password       — reset password (SUPER_ADMIN, GERANT)
+    19→//
+    20→// Phase 2 — lecture métier :
+    21→//   GET  /api/v1/chantiers                        — list + KPI (auth requis)
+    22→//   GET  /api/v1/chantiers/{id}                   — détail + phases + taches (auth requis)
+    23→//   GET  /api/v1/dashboard                        — KPIs agrégés (auth requis)
+    24→//   GET  /api/v1/notifications                    — notifs user courant (auth requis)
+    25→//   GET  /api/v1/permissions                      — liste PermissionConfig (SUPER_ADMIN, GERANT)
+    26→//   GET  /api/v1/audit-logs                       — logs d'audit paginés (SUPER_ADMIN, GERANT)
+    27→//
+    28→// Phase 3 — write métier :
+    29→//   Pointage :
+    30→//     GET    /api/v1/pointage                     — list paginée (auth requis)
+    31→//     GET    /api/v1/pointage/summary             — agrégats par chantier + date range
+    32→//     GET    /api/v1/pointage/{id}                — get by id
+    33→//     POST   /api/v1/pointage                     — create (CHEF_PROJET, GERANT, SUPER_ADMIN)
+    34→//     PUT    /api/v1/pointage/{id}                — update (CHEF_PROJET, GERANT, SUPER_ADMIN)
+    35→//     DELETE /api/v1/pointage/{id}                — delete (CHEF_PROJET, GERANT, SUPER_ADMIN)
+    36→//     POST   /api/v1/pointage/{id}/validate       — set valide=true (CHEF_PROJET, GERANT, SUPER_ADMIN)
+    37→//   Paie :
+    38→//     GET    /api/v1/paie/paiements-hebdo         — list (auth requis)
+    39→//     POST   /api/v1/paie/paiements-hebdo/generate — generate from pointages (GERANT, SUPER_ADMIN)
+    40→//     PUT    /api/v1/paie/paiements-hebdo/{id}    — update (GERANT, SUPER_ADMIN)
+    41→//     GET    /api/v1/paie/salaires                — list (auth requis)
+    42→//     POST   /api/v1/paie/salaires/generate       — generate SalaireMensuel (GERANT, SUPER_ADMIN)
+    43→//     PUT    /api/v1/paie/salaires/{id}           — update (GERANT, SUPER_ADMIN)
+    44→//   Stock :
+    45→//     GET    /api/v1/stocks                       — list avec quantiteDisponible
+    46→//     POST   /api/v1/stocks                       — create (CHEF_PROJET, GERANT, SUPER_ADMIN)
+    47→//     GET    /api/v1/stocks/{id}                  — détail + entrees + sorties
+    48→//     PUT    /api/v1/stocks/{id}                  — update (CHEF_PROJET, GERANT, SUPER_ADMIN)
+    49→//     DELETE /api/v1/stocks/{id}                  — delete (CHEF_PROJET, GERANT, SUPER_ADMIN)
+    50→//     GET    /api/v1/stocks/entrees               — list entrees
+    51→//     POST   /api/v1/stocks/entrees               — create entree
+    52→//     GET    /api/v1/stocks/sorties               — list sorties
+    53→//     POST   /api/v1/stocks/sorties               — create sortie
+    54→//   Carburant :
+    55→//     GET    /api/v1/carburant/stock              — list (avec quantiteDisponible)
+    56→//     POST   /api/v1/carburant/stock              — create (CHEF_PROJET, GERANT, SUPER_ADMIN)
+    57→//     GET    /api/v1/carburant/stock/{id}         — détail
+    58→//     PUT    /api/v1/carburant/stock/{id}         — update (CHEF_PROJET, GERANT, SUPER_ADMIN)
+    59→//     DELETE /api/v1/carburant/stock/{id}         — delete (CHEF_PROJET, GERANT, SUPER_ADMIN)
+    60→//     GET    /api/v1/carburant/entrees            — list entrees carburant
+    61→//     POST   /api/v1/carburant/entrees            — create entree (prixTotal computed)
+    62→//     GET    /api/v1/carburant/sorties            — list sorties carburant
+    63→//     POST   /api/v1/carburant/sorties            — create sortie
+    64→//     GET    /api/v1/carburant/achats             — list bons d'achat
+    65→//     POST   /api/v1/carburant/achats             — create bon d'achat (prixTotal computed)
+    66→//     GET    /api/v1/carburant/releves            — list relevés compteur
+    67→//     POST   /api/v1/carburant/releves            — create relevé
+    68→//     GET    /api/v1/carburant/stats              — stats (total par type, totaux mensuels, alertes)
+    69→//
+    70→// Phase 4 — commercial endpoints :
+    71→//   Clients :
+    72→//     GET    /api/v1/clients                       — list paginée (auth requis)
+    73→//     POST   /api/v1/clients                       — create (CHEF_PROJET, GERANT, SUPER_ADMIN)
+    74→//     GET    /api/v1/clients/stats                 — stats (total, byType, byStatut, recentCount)
+    75→//     GET    /api/v1/clients/{id}                  — détail avec compteurs (chantiers/devis/factures)
+    76→//     PUT    /api/v1/clients/{id}                  — update (CHEF_PROJET, GERANT, SUPER_ADMIN)
+    77→//     DELETE /api/v1/clients/{id}                  — delete (409 si devis/contrats/factures liés)
+    78→//   Devis :
+    79→//     GET    /api/v1/devis                         — list paginée avec Client préloadé
+    80→//     POST   /api/v1/devis                         — create (numero auto, lignes, compute totals)
+    81→//     GET    /api/v1/devis/{id}                    — détail avec Client + Lignes
+    82→//     PUT    /api/v1/devis/{id}                    — update (recompute totals si remise/tauxTVA)
+    83→//     DELETE /api/v1/devis/{id}                    — delete + cascade lignes
+    84→//     POST   /api/v1/devis/{id}/statut             — change statut
+    85→//     POST   /api/v1/devis/{id}/lignes             — add ligne + recompute totals
+    86→//     PUT    /api/v1/devis/{id}/lignes/{ligneId}   — update ligne + recompute totals
+    87→//     DELETE /api/v1/devis/{id}/lignes/{ligneId}   — delete ligne + recompute totals
+    88→//   Contrats :
+    89→//     GET    /api/v1/contrats                      — list paginée avec Client préloadé
+    90→//     POST   /api/v1/contrats                      — create (numero auto, compute montantTTC)
+    91→//     GET    /api/v1/contrats/{id}                 — détail avec Client + Factures
+    92→//     PUT    /api/v1/contrats/{id}                 — update (recompute montantTTC si besoin)
+    93→//     DELETE /api/v1/contrats/{id}                 — delete (409 si factures liés)
+    94→//     POST   /api/v1/contrats/{id}/statut          — change statut
+    95→//   Facturation :
+    96→//     GET    /api/v1/facturation                   — list paginée avec Client + Contrat préloadés
+    97→//     POST   /api/v1/facturation                   — create (numero auto, compute montantTVA+totalTTC)
+    98→//     GET    /api/v1/facturation/stats             — stats (total, byStatut, totalTTC, totalPaye, totalImpaye, enRetardCount)
+    99→//     GET    /api/v1/facturation/{id}              — détail avec Client + Contrat + Paiements
+   100→//     PUT    /api/v1/facturation/{id}              — update (dateEcheance, notes, modePaiement)
+   101→//     DELETE /api/v1/facturation/{id}              — delete (409 si paiements liés)
+   102→//     POST   /api/v1/facturation/{id}/statut       — change statut
+   103→//     GET    /api/v1/facturation/{id}/paiements    — list paiements
+   104→//     POST   /api/v1/facturation/{id}/paiements    — add paiement (update montantPaye + statut)
+   105→//
+   106→// Phase 5 — peripheral endpoints :
+   107→//   Sous-traitants :
+   108→//     GET    /api/v1/sous-traitants                          — list paginée (auth requis)
+   109→//     POST   /api/v1/sous-traitants                          — create (CHEF_PROJET, GERANT, SUPER_ADMIN)
+   110→//     GET    /api/v1/sous-traitants/{id}                     — détail avec contrats
+   111→//     PUT    /api/v1/sous-traitants/{id}                     — update (CHEF_PROJET, GERANT, SUPER_ADMIN)
+   112→//     DELETE /api/v1/sous-traitants/{id}                     — delete (409 si contrats liés)
+   113→//     GET    /api/v1/sous-traitants/{id}/contrats            — list contrats
+   114→//     POST   /api/v1/sous-traitants/{id}/contrats            — create contrat (CHEF_PROJET, GERANT, SUPER_ADMIN)
+   115→//     PUT    /api/v1/sous-traitants/{id}/contrats/{contratId} — update contrat
+   116→//     DELETE /api/v1/sous-traitants/{id}/contrats/{contratId} — delete contrat
+   117→//   Documents :
+   118→//     GET    /api/v1/documents                               — list paginée (auth requis)
+   119→//     POST   /api/v1/documents                               — create (auth requis)
+   120→//     GET    /api/v1/documents/{id}                          — détail
+   121→//     PUT    /api/v1/documents/{id}                          — update (CHEF_PROJET, GERANT, SUPER_ADMIN)
+   122→//     DELETE /api/v1/documents/{id}                          — delete (CHEF_PROJET, GERANT, SUPER_ADMIN)
+   123→//   Photos :
+   124→//     GET    /api/v1/photos                                  — list paginée
+   125→//     POST   /api/v1/photos                                  — create (auth requis)
+   126→//     DELETE /api/v1/photos/{id}                             — delete (CHEF_PROJET, GERANT, SUPER_ADMIN)
+   127→//   Rapports :
+   128→//     GET    /api/v1/rapports                                — list paginée
+   129→//     POST   /api/v1/rapports                                — create (auth requis)
+   130→//     GET    /api/v1/rapports/{id}                           — détail avec photos
+   131→//     PUT    /api/v1/rapports/{id}                           — update (CHEF_PROJET, GERANT, SUPER_ADMIN)
+   132→//   Support :
+   133→//     GET    /api/v1/support                                 — list paginée (auth requis)
+   134→//     POST   /api/v1/support                                 — create ticket (auth requis)
+   135→//     GET    /api/v1/support/stats                           — stats (total, byStatut, byPriorite, byCategorie, openCount, resolvedCount)
+   136→//     GET    /api/v1/support/{id}                            — détail avec messages
+   137→//     PUT    /api/v1/support/{id}                            — update ticket (GERANT, SUPER_ADMIN)
+   138→//     POST   /api/v1/support/{id}/statut                     — change statut (GERANT, SUPER_ADMIN)
+   139→//     GET    /api/v1/support/{id}/messages                   — list messages
+   140→//     POST   /api/v1/support/{id}/messages                   — add message (auth requis)
+   141→//   Sync :
+   142→//     POST   /api/v1/sync                                    — sync offline mutations (auth requis)
+   143→package http
+   144→
+   145→import (
+   146→        "log/slog"
+   147→        "net/http"
+   148→
+   149→        "github.com/go-chi/chi/v5"
+   150→        chimw "github.com/go-chi/chi/v5/middleware"
+   151→        "github.com/go-chi/cors"
+   152→
+   153→        "opuc/internal/delivery/http/handler"
+   154→        "opuc/internal/delivery/http/middleware"
+   155→        appjwt "opuc/internal/infrastructure/jwt"
+   156→)
+   157→
+   158→// Deps — dépendances injectées pour monter le router.
+   159→type Deps struct {
+   160→        Auth         *handler.AuthHandler
+   161→        User         *handler.UserHandler
+   162→        TwoFA        *handler.TwoFAHandler
+   163→        Health       *handler.HealthHandler
+   164→        Chantier     *handler.ChantierHandler
+   165→        Dashboard    *handler.DashboardHandler
+   166→        Notification *handler.NotificationHandler
+   167→        Permission   *handler.PermissionHandler
+   168→        AuditLog     *handler.AuditLogHandler
+   169→        Pointage     *handler.PointageHandler
+   170→        Paie         *handler.PaieHandler
+   171→        Stock        *handler.StockHandler
+   172→        Carburant    *handler.CarburantHandler
+   173→        Client       *handler.ClientHandler
+   174→        Devis        *handler.DevisHandler
+   175→        Contrat      *handler.ContratHandler
+   176→        Facturation  *handler.FacturationHandler
+   177→        // Phase 5 — peripheral handlers
+   178→        SousTraitant *handler.SousTraitantHandler
+   179→        Document     *handler.DocumentHandler
+   180→        Support      *handler.SupportHandler
+   181→        Sync         *handler.SyncHandler
+   182→        // R2 storage handler
+   183→        Storage      *handler.StorageHandler
+   184→        Signer       *appjwt.Signer
+   185→        Log          *slog.Logger
+   186→}
+   187→
+   188→// NewRouter monte le routeur chi complet.
+   189→func NewRouter(d Deps) http.Handler {
+   190→        r := chi.NewRouter()
+   191→
+   192→        // ── Middlewares globaux ─────────────────────────────────────
+   193→        r.Use(chimw.RequestID)
+   194→        r.Use(chimw.RealIP)
+   195→        r.Use(middleware.RequestID)
+   196→        r.Use(middleware.Logger(d.Log))
+   197→        r.Use(middleware.Recover(d.Log))
+   198→        r.Use(cors.Handler(cors.Options{
+   199→                AllowedOrigins:   []string{"http://localhost:3000", "https://opuc.vercel.app", "https://opuc.freelancetechnologies-ci.workers.dev"},
+   200→                AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+   201→                AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+   202→                ExposedHeaders:   []string{"X-Request-ID"},
+   203→                AllowCredentials: true, // nécessaire pour les cookies cross-origin
+   204→                MaxAge:           300,
+   205→        }))
+   206→
+   207→        // ── Routes ──────────────────────────────────────────────────
+   208→        r.Route("/api/v1", func(r chi.Router) {
+   209→                // Health (public)
+   210→                r.Get("/health", d.Health.Health)
+   211→
+   212→                // Auth (public + auth-required)
+   213→                r.Route("/auth", func(r chi.Router) {
+   214→                        // Public
+   215→                        r.Post("/login", d.Auth.Login)
+   216→                        r.Post("/logout", d.Auth.Logout)
+   217→
+   218→                        // Auth-required
+   219→                        r.Group(func(r chi.Router) {
+   220→                                r.Use(middleware.Auth(d.Signer))
+   221→                                r.Get("/me", d.Auth.Me)
+   222→
+   223→                                // 2FA — auth requis.
+   224→                                // NOTE : /2fa/verify est accessible même avec un JWT "pending 2FA"
+   225→                                // (login flow). Les autres routes 2FA nécessitent 2FA déjà vérifiée.
+   226→                                // Le middleware.Auth gère ce bypass via is2FAPath().
+   227→                                if d.TwoFA != nil {
+   228→                                        r.Post("/2fa/setup", d.TwoFA.Setup)
+   229→                                        r.Post("/2fa/verify", d.TwoFA.Verify)
+   230→                                        r.Post("/2fa/disable", d.TwoFA.Disable)
+   231→                                }
+   232→                        })
+   233→                })
+   234→
+   235→                // Users — auth-required (RBAC au niveau des routes individuelles)
+   236→                if d.User != nil {
+   237→                        r.Group(func(r chi.Router) {
+   238→                                r.Use(middleware.Auth(d.Signer))
+   239→                                r.Route("/users", func(r chi.Router) {
+   240→                                        // List + Create : SUPER_ADMIN ou GERANT
+   241→                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Get("/", d.User.List)
+   242→                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/", d.User.Create)
+   243→
+   244→                                        // Sous-route /{id}
+   245→                                        r.Route("/{id}", func(r chi.Router) {
+   246→                                                r.Get("/", d.User.Get)                                                       // tous authentifiés
+   247→                                                r.Put("/", d.User.Update)                                                    // tous authentifiés (auto-update possible)
+   248→                                                r.With(middleware.RequireRole("SUPER_ADMIN")).Delete("/", d.User.Delete)     // soft delete
+   249→                                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/toggle-active", d.User.ToggleActive)
+   250→                                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/reset-password", d.User.ResetPassword)
+   251→                                        })
+   252→                                })
+   253→                        })
+   254→                }
+   255→
+   256→                // Phase 2 — lecture métier (chantiers, dashboard, notifications, permissions, audit-logs)
+   257→                r.Group(func(r chi.Router) {
+   258→                        r.Use(middleware.Auth(d.Signer))
+   259→
+   260→                        if d.Chantier != nil {
+   261→                                r.Get("/chantiers", d.Chantier.List)
+   262→                                r.Get("/chantiers/{id}", d.Chantier.Get)
+   263→                        }
+   264→
+   265→                        if d.Dashboard != nil {
+   266→                                r.Get("/dashboard", d.Dashboard.Get)
+   267→                        }
+   268→
+   269→                        if d.Notification != nil {
+   270→                                r.Get("/notifications", d.Notification.List)
+   271→                        }
+   272→
+   273→                        if d.Permission != nil {
+   274→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Get("/permissions", d.Permission.List)
+   275→                        }
+   276→
+   277→                        if d.AuditLog != nil {
+   278→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Get("/audit-logs", d.AuditLog.List)
+   279→                        }
+   280→
+   281→                        // Phase 3 — Pointage (write métier)
+   282→                        if d.Pointage != nil {
+   283→                                // Static routes declared first to avoid chi matching them as {id}
+   284→                                r.Get("/pointage/summary", d.Pointage.Summary)
+   285→                                r.Get("/pointage", d.Pointage.List)
+   286→                                r.Post("/pointage", d.Pointage.Create)
+   287→                                r.Get("/pointage/{id}", d.Pointage.Get)
+   288→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/pointage/{id}", d.Pointage.Update)
+   289→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/pointage/{id}", d.Pointage.Delete)
+   290→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/pointage/{id}/validate", d.Pointage.Validate)
+   291→                        }
+   292→
+   293→                        // Phase 3 — Paie (write métier)
+   294→                        if d.Paie != nil {
+   295→                                r.Route("/paie", func(r chi.Router) {
+   296→                                        r.Get("/paiements-hebdo", d.Paie.ListPaiementHebdo)
+   297→                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/paiements-hebdo/generate", d.Paie.GeneratePaiementHebdo)
+   298→                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Put("/paiements-hebdo/{id}", d.Paie.UpdatePaiementHebdo)
+   299→
+   300→                                        r.Get("/salaires", d.Paie.ListSalaireMensuel)
+   301→                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/salaires/generate", d.Paie.GenerateSalaireMensuel)
+   302→                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Put("/salaires/{id}", d.Paie.UpdateSalaireMensuel)
+   303→                                })
+   304→                        }
+   305→
+   306→                        // Phase 3 — Stock (write métier)
+   307→                        if d.Stock != nil {
+   308→                                // Static routes declared first to avoid chi matching them as {id}
+   309→                                r.Get("/stocks/entrees", d.Stock.ListEntrees)
+   310→                                r.Post("/stocks/entrees", d.Stock.CreateEntree)
+   311→                                r.Get("/stocks/sorties", d.Stock.ListSorties)
+   312→                                r.Post("/stocks/sorties", d.Stock.CreateSortie)
+   313→                                r.Get("/stocks", d.Stock.List)
+   314→                                r.Post("/stocks", d.Stock.Create)
+   315→                                r.Get("/stocks/{id}", d.Stock.Get)
+   316→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/stocks/{id}", d.Stock.Update)
+   317→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/stocks/{id}", d.Stock.Delete)
+   318→                        }
+   319→
+   320→                        // Phase 3 — Carburant (write métier)
+   321→                        if d.Carburant != nil {
+   322→                                r.Route("/carburant", func(r chi.Router) {
+   323→                                        // Static routes first
+   324→                                        r.Get("/entrees", d.Carburant.ListEntrees)
+   325→                                        r.Post("/entrees", d.Carburant.CreateEntree)
+   326→                                        r.Get("/sorties", d.Carburant.ListSorties)
+   327→                                        r.Post("/sorties", d.Carburant.CreateSortie)
+   328→                                        r.Get("/achats", d.Carburant.ListAchats)
+   329→                                        r.Post("/achats", d.Carburant.CreateAchat)
+   330→                                        r.Get("/releves", d.Carburant.ListReleves)
+   331→                                        r.Post("/releves", d.Carburant.CreateReleve)
+   332→                                        r.Get("/stats", d.Carburant.Stats)
+   333→
+   334→                                        r.Get("/stock", d.Carburant.ListStock)
+   335→                                        r.Post("/stock", d.Carburant.CreateStock)
+   336→                                        r.Get("/stock/{id}", d.Carburant.GetStock)
+   337→                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/stock/{id}", d.Carburant.UpdateStock)
+   338→                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/stock/{id}", d.Carburant.DeleteStock)
+   339→                                })
+   340→                        }
+   341→
+   342→                        // Phase 4 — Clients (commercial)
+   343→                        if d.Client != nil {
+   344→                                // Static route first (stats avant /{id})
+   345→                                r.Get("/clients/stats", d.Client.Stats)
+   346→                                r.Get("/clients", d.Client.List)
+   347→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/clients", d.Client.Create)
+   348→                                r.Get("/clients/{id}", d.Client.Get)
+   349→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/clients/{id}", d.Client.Update)
+   350→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/clients/{id}", d.Client.Delete)
+   351→                        }
+   352→
+   353→                        // Phase 4 — Devis (commercial)
+   354→                        if d.Devis != nil {
+   355→                                r.Get("/devis", d.Devis.List)
+   356→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/devis", d.Devis.Create)
+   357→                                r.Get("/devis/{id}", d.Devis.Get)
+   358→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/devis/{id}", d.Devis.Update)
+   359→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/devis/{id}", d.Devis.Delete)
+   360→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/devis/{id}/statut", d.Devis.ChangeStatut)
+   361→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/devis/{id}/lignes", d.Devis.AddLigne)
+   362→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/devis/{id}/lignes/{ligneId}", d.Devis.UpdateLigne)
+   363→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/devis/{id}/lignes/{ligneId}", d.Devis.DeleteLigne)
+   364→                        }
+   365→
+   366→                        // Phase 4 — Contrats (commercial)
+   367→                        if d.Contrat != nil {
+   368→                                r.Get("/contrats", d.Contrat.List)
+   369→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/contrats", d.Contrat.Create)
+   370→                                r.Get("/contrats/{id}", d.Contrat.Get)
+   371→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Put("/contrats/{id}", d.Contrat.Update)
+   372→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Delete("/contrats/{id}", d.Contrat.Delete)
+   373→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/contrats/{id}/statut", d.Contrat.ChangeStatut)
+   374→                        }
+   375→
+   376→                        // Phase 4 — Facturation (commercial)
+   377→                        if d.Facturation != nil {
+   378→                                // Static route first (stats avant /{id})
+   379→                                r.Get("/facturation/stats", d.Facturation.Stats)
+   380→                                r.Get("/facturation", d.Facturation.List)
+   381→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/facturation", d.Facturation.Create)
+   382→                                r.Get("/facturation/{id}", d.Facturation.Get)
+   383→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Put("/facturation/{id}", d.Facturation.Update)
+   384→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Delete("/facturation/{id}", d.Facturation.Delete)
+   385→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/facturation/{id}/statut", d.Facturation.ChangeStatut)
+   386→                                r.Get("/facturation/{id}/paiements", d.Facturation.ListPaiements)
+   387→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/facturation/{id}/paiements", d.Facturation.CreatePaiement)
+   388→                        }
+   389→
+   390→                        // Phase 5 — Sous-traitants (peripheral)
+   391→                        if d.SousTraitant != nil {
+   392→                                r.Get("/sous-traitants", d.SousTraitant.List)
+   393→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/sous-traitants", d.SousTraitant.Create)
+   394→                                r.Get("/sous-traitants/{id}", d.SousTraitant.Get)
+   395→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/sous-traitants/{id}", d.SousTraitant.Update)
+   396→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/sous-traitants/{id}", d.SousTraitant.Delete)
+   397→                                r.Get("/sous-traitants/{id}/contrats", d.SousTraitant.ListContrats)
+   398→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Post("/sous-traitants/{id}/contrats", d.SousTraitant.CreateContrat)
+   399→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/sous-traitants/{id}/contrats/{contratId}", d.SousTraitant.UpdateContrat)
+   400→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/sous-traitants/{id}/contrats/{contratId}", d.SousTraitant.DeleteContrat)
+   401→                        }
+   402→
+   403→                        // Phase 5 — Documents (peripheral)
+   404→                        if d.Document != nil {
+   405→                                r.Get("/documents", d.Document.List)
+   406→                                r.Post("/documents", d.Document.Create)
+   407→                                r.Get("/documents/{id}", d.Document.Get)
+   408→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/documents/{id}", d.Document.Update)
+   409→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/documents/{id}", d.Document.Delete)
+   410→
+   411→                                // Photos
+   412→                                r.Get("/photos", d.Document.ListPhotos)
+   413→                                r.Post("/photos", d.Document.CreatePhoto)
+   414→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Delete("/photos/{id}", d.Document.DeletePhoto)
+   415→
+   416→                                // Rapports journaliers
+   417→                                r.Get("/rapports", d.Document.ListRapports)
+   418→                                r.Post("/rapports", d.Document.CreateRapport)
+   419→                                r.Get("/rapports/{id}", d.Document.GetRapport)
+   420→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET")).Put("/rapports/{id}", d.Document.UpdateRapport)
+   421→                        }
+   422→
+   423→                        // Phase 5 — Support (peripheral)
+   424→                        if d.Support != nil {
+   425→                                // Static route first (stats avant /{id})
+   426→                                r.Get("/support/stats", d.Support.Stats)
+   427→                                r.Get("/support", d.Support.List)
+   428→                                r.Post("/support", d.Support.Create)
+   429→                                r.Get("/support/{id}", d.Support.Get)
+   430→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Put("/support/{id}", d.Support.Update)
+   431→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/support/{id}/statut", d.Support.ChangeStatut)
+   432→                                r.Get("/support/{id}/messages", d.Support.ListMessages)
+   433→                                r.Post("/support/{id}/messages", d.Support.CreateMessage)
+   434→                        }
+   435→
+   436→                        // Phase 5 — Sync (peripheral)
+   437→                        if d.Sync != nil {
+   438→                                r.Post("/sync", d.Sync.Sync)
+   439→                        }
+   440→
+   441→                        // R2 Storage — upload/download files
+   442→                        if d.Storage != nil {
+   443→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET", "SOUS_TRAITANT")).Post("/upload", d.Storage.Upload)
+   444→                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET", "SOUS_TRAITANT")).Delete("/files/*", d.Storage.DeleteFile)
+   445→                                // Download accessible à tous les authentifiés (lecture)
+   446→                                r.Get("/files/*", d.Storage.Download)
+   447→                        }
+   448→                })
+   449→        })
+   450→
+   451→        // 404 JSON
+   452→        r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+   453→                handler.WriteError(w, http.StatusNotFound, "route not found")
+   454→        })
+   455→
+   456→        return r
+   457→}
+   458→
