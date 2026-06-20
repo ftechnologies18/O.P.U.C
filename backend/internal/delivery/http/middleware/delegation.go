@@ -87,7 +87,9 @@ func RequireAccess(domain, level string, delRepo DelegationChecker) func(http.Ha
 // DOCUMENTS (full = GESTION), et accès limité à RH (ECRITURE max : pointage mais
 // pas de gestion de la paie).
 //
-// SOUS_TRAITANT a accès lecture seule à tous les domaines (LECTURE max).
+// EMPLOYE a accès lecture seule à tous les domaines (LECTURE max).
+// (Phase 1 : SOUS_TRAITANT a été renommé EMPLOYE — on garde le case legacy
+// le temps de la migration des données.)
 //
 // Ces règles préservent la compatibilité avec le RBAC existant : un CHEF_PROJET
 // peut toujours faire son travail quotidien sans avoir besoin d'une délégation
@@ -104,7 +106,7 @@ func hasRoleAccess(role, domain, level string) bool {
                         // Can create pointage (ECRITURE) but not manage paie (GESTION)
                         return model.PermLevel(level) <= model.PermLevel(model.PermEcriture)
                 }
-        case "SOUS_TRAITANT":
+        case "EMPLOYE", "SOUS_TRAITANT": // SOUS_TRAITANT = legacy, à retirer après migration
                 // Read-only access to all domains
                 return model.PermLevel(level) <= model.PermLevel(model.PermLecture)
         }

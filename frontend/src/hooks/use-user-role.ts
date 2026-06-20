@@ -4,7 +4,11 @@ import { type UserRole, canAccessPage, canAccessFeature, getAccessiblePages, get
 
 export function useUserRole() {
   const { data: session, status } = useSession()
+  // `role` is typed as the canonical UserRole union, but legacy sessions may
+  // still carry the pre-Phase-1 'SOUS_TRAITANT' value until the backend
+  // migration completes. We widen to string for the legacy comparisons below.
   const role = (session?.user as any)?.role as UserRole | undefined
+  const roleStr = (session?.user as any)?.role as string | undefined
 
   return {
     role: role ?? ('CHEF_PROJET' as UserRole),
@@ -19,9 +23,9 @@ export function useUserRole() {
     isGerant: role === 'GERANT',
     isAdmin: role === 'GERANT' || role === 'SUPER_ADMIN',
     isChefProjet: role === 'CHEF_PROJET',
-    isSousTraitant: role === 'SOUS_TRAITANT',
-    // Alias forward-compat (Phase 1: SOUS_TRAITANT interne sera renommé EMPLOYE)
-    isEmploye: role === 'SOUS_TRAITANT',
-    isOperationnel: role === 'CHEF_PROJET' || role === 'SOUS_TRAITANT',
+    // deprecated alias, use isEmploye — kept for legacy sessions still carrying SOUS_TRAITANT
+    isSousTraitant: roleStr === 'SOUS_TRAITANT' || role === 'EMPLOYE',
+    isEmploye: roleStr === 'SOUS_TRAITANT' || role === 'EMPLOYE',
+    isOperationnel: role === 'CHEF_PROJET' || roleStr === 'SOUS_TRAITANT' || role === 'EMPLOYE',
   }
 }

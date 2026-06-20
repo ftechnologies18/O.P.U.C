@@ -534,3 +534,47 @@ Stage Summary:
 - Fonctionnalité : CRUD Chantier complet (POST/PUT/DELETE) — les boutons frontend "Créer/Éditer/Supprimer" de /chantiers ne retournent plus 404.
 - Dépendances : aucun nouveau package, juste `time` ajouté aux imports de chantier_repo.go et chantier usecase.
 - Prêt pour commit + push vers GitHub (déploiement auto Vercel + Render).
+
+---
+Task ID: PHASE-1-FRONTEND
+Agent: general-purpose
+Task: Renommage SOUS_TRAITANT → EMPLOYE + ajout champ fonction côté frontend.
+
+Work Log:
+- Lu /home/z/my-project/opuc/worklog.md pour contexte (ONBOARDING, AUDIT-RBAC, PHASE-0).
+- Vérifié la distinction critique : `SOUS_TRAITANT` comme User.role (→ EMPLOYE) ≠ module/entité `sous-traitants` (inchangé). Les fichiers `src/app/(app)/sous-traitants/page.tsx` et `src/components/sous-traitants/sous-traitants-view.tsx` n'ont PAS été touchés.
+- Modifié `src/lib/rbac.ts` (fichier central, modifié en premier) : type `UserRole` (4 occurrences du type union + 1 clé), `ROLE_LEVELS`, `MODULE_PERMISSIONS`, `ROLE_LABELS`, `DEFAULT_PAGES` (changement de landing page : `EMPLOYE: 'dashboard'` au lieu de `'chantiers'`), `ROLE_BADGE_CLASSES` (slate au lieu de stone), `ALL_ROLES`, `ENTERPRISE_ROLES`, `ROLES_LIST`, `DEFAULT_PERMISSIONS`. Ajouté `UserFonction` (type union de 8 valeurs BTP), `ALL_FONCTIONS`, `FONCTION_LABELS`, `FONCTION_BADGE_CLASSES` (emerald/amber/violet/rose/cyan/orange/slate/teal — pas d'indigo/blue primaire), `getFonctionLabel()` et `getFonctionBadgeClass()` helpers.
+- Modifié `src/hooks/use-user-role.ts` : `isEmploye` devient l'API principale (catche `EMPLOYE` + `SOUS_TRAITANT` legacy), `isSousTraitant` devient alias déprécié (même logique pour ne pas casser les consommateurs existants), `isOperationnel` inclut `EMPLOYE`. Introduit `roleStr` (typé `string`) pour les comparaisons legacy afin d'éviter une erreur TS "no overlap" entre `UserRole` et `'SOUS_TRAITANT'`.
+- Modifié `prisma/schema.prisma` : ajout `fonction String?` sur `model User` (nullable pour users legacy) + màj du commentaire de `role`. Commentaire du `model PermissionConfig.role` mis à jour aussi.
+- Modifié `prisma/seed.ts` : compte demo renommé `sous-traitant@opuc.demo` → `employe@opuc.demo` (ancien email gardé en commentaire pour la transition), `role: 'EMPLOYE'`, `fonction: 'CHARGE_LOGISTIQUE'` (exemple concret). Màj tableau récapitulatif final et liste `roles` pour `PermissionConfig`.
+- Renommé `'SOUS_TRAITANT'` / `SOUS_TRAITANT` en `'EMPLOYE'` / `EMPLOYE` et labels `'Sous-traitant'` → `'Employé'` dans :
+  • `src/components/admin-plateforme/admin-plateforme-view.tsx` (2 occ.) — ROLE_CONFIG + ROLE_OPTIONS
+  • `src/components/dashboard/dashboard-view.tsx` (1 occ.) — roleLabels
+  • `src/components/layout/user-menu.tsx` (2 occ.) — roleLabels + roleColors
+  • `src/app/(app)/admin/entreprises/[id]/page.tsx` (2 occ.) — ROLE_LABELS + ROLE_BADGES
+  • `src/app/(app)/parametres/co-gerant/page.tsx` (1 occ.) — commentaire
+  • `src/app/(app)/parametres/acces-support/page.tsx` (2 occ.) — garde RBAC double (EMPLOYE + SOUS_TRAITANT legacy) pour éviter un trou de sécurité pendant la migration
+  • `src/components/parametres/parametres-view.tsx` (2 occ.) — roleLabels + roleColors
+  • `src/lib/go-api.ts` (1 occ.) — type union `GoUser.role` élargi pour inclure EMPLOYE + SOUS_TRAITANT legacy + ajout `fonction?: string`
+  • `src/components/auth/login-form.tsx` (1 occ.) — compte demo (email + label)
+- Modifié `src/components/gestion-acces/gestion-acces-view.tsx` (3 occ. SOUS_TRAITANT renommés + ajout fonctionnalité complète) :
+  • Imports de `ALL_FONCTIONS`, `getFonctionLabel`, type `UserFonction` depuis `@/lib/rbac`
+  • `User` interface : ajout `fonction?: string | null`
+  • `UserFormData` interface : ajout `fonction: string`
+  • `EMPTY_USER_FORM` : ajout `fonction: ''`
+  • `openEdit()` : alimenter `fonction: user.fonction || ''`
+  • `handleSubmit()` : payload POST/PUT inclut `fonction` (envoyé seulement si `role === 'EMPLOYE'`, sinon `null` pour permettre au backend de clearer en cas de changement de rôle)
+  • Form Dialog : ajout d'un `<Select>` "Fonction" (optionnel) conditionnel `{form.role === 'EMPLOYE' && ...}` après le sélecteur de rôle, avec description. Le `onValueChange` du sélecteur de rôle reset `fonction` à `''` quand on quitte EMPLOYE.
+  • Table users : ajout d'un badge "Fonction" à côté du badge de rôle quand `user.role === 'EMPLOYE' && user.fonction`.
+- Fichiers mentionnés dans la liste E mais sans occurrence de `SOUS_TRAITANT` (vérifiés via grep) : `placeholder-view.tsx`, `engins-view.tsx`, `store/app-store.ts`, `layout/app-layout.tsx`, `layout/search-command.tsx`, `budget/budget-view.tsx`, `chantiers/chantier-detail-view.tsx` — ces fichiers ne référencent que l'identifiant de module `'sous-traitants'` (route B2B externe) qui ne doit PAS être touché. Aucune modification nécessaire.
+- Vérification finale : `bun run lint` (frontend) → OK (exit 0, 0 erreur, 0 warning).
+
+Stage Summary:
+- 11 fichiers modifiés côté frontend (rbac.ts, use-user-role.ts, go-api.ts, login-form.tsx, admin-plateforme-view.tsx, dashboard-view.tsx, user-menu.tsx, parametres-view.tsx, gestion-acces-view.tsx, acces-support/page.tsx, co-gerant/page.tsx, admin/entreprises/[id]/page.tsx) + 2 fichiers prisma (schema.prisma, seed.ts).
+- Nouveau système de Fonction BTP : type `UserFonction` (8 valeurs) + `ALL_FONCTIONS` + `FONCTION_LABELS` + `FONCTION_BADGE_CLASSES` (palette slate/emerald/amber/violet/rose/cyan/orange/teal) + helpers `getFonctionLabel`/`getFonctionBadgeClass`. Aucun indigo/blue primaire utilisé.
+- Migration EMPLOYE : ~15 occurrences de `SOUS_TRAITANT` (User.role) remplacées par `EMPLOYE` dans 9 fichiers frontend. Compatibilité legacy assurée via `use-user-role.ts` (isEmploye + isSousTraitant alias), `go-api.ts` (type union étendu) et `acces-support/page.tsx` (garde RBAC double).
+- Landing page EMPLOYE : `dashboard` (au lieu de `chantiers` pour SOUS_TRAITANT) — l'employé atterrit sur le dashboard maintenant.
+- Formulaire gestion-acces : champ "Fonction" (Select, 8 options BTP, optionnel) ajouté, conditionnel à `role === 'EMPLOYE'`. Payload POST/PUT `/api/v1/users` inclut `fonction` quand applicable. Le backend (Phase 1 backend, traité en parallèle par le tuteur) gérera la persistance Prisma + GORM.
+- Module B2B `/sous-traitants` (page + composant) INTACT — règle absolue respectée.
+- Résultat lint final : `bun run lint` → exit 0, 0 erreur, 0 warning. ✅
+- Non commit/push — en attente de validation backend (Phase 1 backend) + frontend par le tuteur.

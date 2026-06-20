@@ -442,7 +442,7 @@ export function LoginForm({ onForgotPassword, onBack }: { onForgotPassword?: () 
                         { role: 'Super Admin', email: 'superadmin@opuc.demo', pwd: 'Admin@123456' },
                         { role: 'Gérant', email: 'gerant@opuc.demo', pwd: 'demo123' },
                         { role: 'Chef Projet', email: 'chef-projet@opuc.demo', pwd: 'demo123' },
-                        { role: 'Sous-traitant', email: 'sous-traitant@opuc.demo', pwd: 'demo123' },
+                        { role: 'Employé', email: 'employe@opuc.demo', pwd: 'demo123' },
                       ].map((acc) => (
                         <div key={acc.role} className="flex justify-between items-center">
                           <span className="font-medium">{acc.role}</span>

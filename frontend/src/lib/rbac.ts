@@ -12,7 +12,58 @@ export type UserRole =
   | 'SUPER_ADMIN'
   | 'GERANT'
   | 'CHEF_PROJET'
-  | 'SOUS_TRAITANT'
+  | 'EMPLOYE'
+
+// ─────────────────────────────────────────────────────────────
+// FONCTION (BTP functional role for EMPLOYE users)
+// Fixed enum of 8 BTP specialisations. Optional on User (nullable
+// for legacy users). Used by the GERANT to qualify the employé's
+// domain of intervention within the company.
+// ─────────────────────────────────────────────────────────────
+
+export type UserFonction =
+  | 'CHARGE_LOGISTIQUE'
+  | 'CHARGE_CARBURANT'
+  | 'CHARGE_PLANNING'
+  | 'CHARGE_QUALITE'
+  | 'CHARGE_DOCUMENTATION'
+  | 'CHARGE_COMMERCIAL'
+  | 'CHARGE_RH'
+  | 'CHEF_CHANTIER'
+
+export const ALL_FONCTIONS: UserFonction[] = [
+  'CHARGE_LOGISTIQUE',
+  'CHARGE_CARBURANT',
+  'CHARGE_PLANNING',
+  'CHARGE_QUALITE',
+  'CHARGE_DOCUMENTATION',
+  'CHARGE_COMMERCIAL',
+  'CHARGE_RH',
+  'CHEF_CHANTIER',
+]
+
+const FONCTION_LABELS: Record<UserFonction, string> = {
+  CHARGE_LOGISTIQUE: 'Chargé de la Logistique',
+  CHARGE_CARBURANT: 'Chargé du Carburant',
+  CHARGE_PLANNING: 'Chargé du Planning',
+  CHARGE_QUALITE: 'Chargé de la Qualité',
+  CHARGE_DOCUMENTATION: 'Chargé de la Documentation',
+  CHARGE_COMMERCIAL: 'Chargé du Commercial',
+  CHARGE_RH: 'Chargé des RH',
+  CHEF_CHANTIER: 'Chef de Chantier',
+}
+
+// Tailwind badge classes per fonction. No indigo/blue primary per project rule.
+export const FONCTION_BADGE_CLASSES: Record<UserFonction, string> = {
+  CHARGE_LOGISTIQUE: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+  CHARGE_CARBURANT: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+  CHARGE_PLANNING: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400 border-violet-200 dark:border-violet-800',
+  CHARGE_QUALITE: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200 dark:border-rose-800',
+  CHARGE_DOCUMENTATION: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800',
+  CHARGE_COMMERCIAL: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-800',
+  CHARGE_RH: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400 border-slate-200 dark:border-slate-800',
+  CHEF_CHANTIER: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400 border-teal-200 dark:border-teal-800',
+}
 
 export type PermissionLevel = 'AUCUN' | 'LECTURE' | 'ECRITURE' | 'GESTION'
 
@@ -61,7 +112,7 @@ export type AppFeature =
 // ═══════════════════════════════════════════════════════════
 
 const ROLE_LEVELS: Record<UserRole, number> = {
-  SOUS_TRAITANT: 1,
+  EMPLOYE: 1,
   CHEF_PROJET: 2,
   GERANT: 3,
   SUPER_ADMIN: 4,
@@ -230,7 +281,7 @@ const MODULE_PERMISSIONS: Record<UserRole, Record<AppModule, PermissionLevel>> =
     'admin-plateforme': 'AUCUN',
   },
 
-  SOUS_TRAITANT: {
+  EMPLOYE: {
     chantiers: 'LECTURE',
     planning: 'LECTURE',
     pointage: 'LECTURE',
@@ -263,7 +314,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   SUPER_ADMIN: 'Super Administrateur',
   GERANT: 'Gérant',
   CHEF_PROJET: 'Chef de Projet',
-  SOUS_TRAITANT: 'Sous-traitant',
+  EMPLOYE: 'Employé',
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -274,7 +325,7 @@ const DEFAULT_PAGES: Record<UserRole, string> = {
   SUPER_ADMIN: 'admin-plateforme',
   GERANT: 'dashboard',
   CHEF_PROJET: 'pointage',
-  SOUS_TRAITANT: 'chantiers',
+  EMPLOYE: 'dashboard',
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -285,18 +336,18 @@ const ROLE_BADGE_CLASSES: Record<UserRole, string> = {
   SUPER_ADMIN: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800',
   GERANT: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800',
   CHEF_PROJET: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
-  SOUS_TRAITANT: 'bg-stone-100 text-stone-800 dark:bg-stone-900/30 dark:text-stone-400 border-stone-200 dark:border-stone-800',
+  EMPLOYE: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400 border-slate-200 dark:border-slate-800',
 }
 
 // ═══════════════════════════════════════════════════════════
 // ALL EXPORTED ROLE CONSTANTS (for UI components)
 // ═══════════════════════════════════════════════════════════
 
-export const ALL_ROLES: UserRole[] = ['SUPER_ADMIN', 'GERANT', 'CHEF_PROJET', 'SOUS_TRAITANT']
+export const ALL_ROLES: UserRole[] = ['SUPER_ADMIN', 'GERANT', 'CHEF_PROJET', 'EMPLOYE']
 
-export const ENTERPRISE_ROLES: UserRole[] = ['GERANT', 'CHEF_PROJET', 'SOUS_TRAITANT']
+export const ENTERPRISE_ROLES: UserRole[] = ['GERANT', 'CHEF_PROJET', 'EMPLOYE']
 
-export const ROLES_LIST: string[] = ['GERANT', 'CHEF_PROJET', 'SOUS_TRAITANT']
+export const ROLES_LIST: string[] = ['GERANT', 'CHEF_PROJET', 'EMPLOYE']
 
 export const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
   GERANT: {
@@ -315,7 +366,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     contrats: 'ECRITURE', facturation: 'ECRITURE', support: 'ECRITURE', parametres: 'LECTURE',
     'gestion-acces': 'AUCUN',
   },
-  SOUS_TRAITANT: {
+  EMPLOYE: {
     dashboard: 'LECTURE', chantiers: 'LECTURE', planning: 'LECTURE', pointage: 'LECTURE',
     personnel: 'AUCUN', paie: 'AUCUN', 'sous-traitants': 'LECTURE', budget: 'LECTURE',
     stocks: 'LECTURE', engins: 'LECTURE', carburant: 'LECTURE', rapports: 'LECTURE',
@@ -407,6 +458,22 @@ export function getRoleLabel(role: string): string {
  */
 export function getRoleBadgeClass(role: string): string {
   return (ROLE_BADGE_CLASSES as Record<string, string>)[role] || 'bg-gray-100 text-gray-800 border-gray-200'
+}
+
+/**
+ * Get the French display label for a given fonction.
+ * Falls back to a humanised version of the raw string if unknown.
+ */
+export function getFonctionLabel(f: string): string {
+  return (FONCTION_LABELS as Record<string, string>)[f] || f.replace(/_/g, ' ')
+}
+
+/**
+ * Get Tailwind CSS badge classes for a given fonction.
+ * Returns classes for a bordered badge with fonction-specific colours.
+ */
+export function getFonctionBadgeClass(f: string): string {
+  return (FONCTION_BADGE_CLASSES as Record<string, string>)[f] || 'bg-gray-100 text-gray-800 border-gray-200'
 }
 
 /**

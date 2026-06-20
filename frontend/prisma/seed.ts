@@ -124,15 +124,17 @@ async function main() {
   })
   console.log(`   ✅ CHEF_PROJET: ${chefProjet.email}\n`)
 
-  // ─── 6. Create SOUS_TRAITANT ────────────────────────────────
-  console.log('👤 Creating SOUS_TRAITANT...')
+  // ─── 6. Create EMPLOYE ────────────────────────────────────
+  console.log('👤 Creating EMPLOYE...')
   const stPassword = await hashPassword('demo123')
+  // Email previously was 'sous-traitant@opuc.demo' (legacy, kept here for migration notes).
   const sousTraitant = await prisma.user.create({
     data: {
-      email: 'sous-traitant@opuc.demo',
+      email: 'employe@opuc.demo',
       name: 'Aliou Diop',
       password: stPassword,
-      role: 'SOUS_TRAITANT',
+      role: 'EMPLOYE',
+      fonction: 'CHARGE_LOGISTIQUE',
       entrepriseId: entreprise.id,
       active: true,
       twoFactorEnabled: false,
@@ -140,7 +142,7 @@ async function main() {
       telephone: '+225 07 30 00 00',
     },
   })
-  console.log(`   ✅ SOUS_TRAITANT: ${sousTraitant.email}\n`)
+  console.log(`   ✅ EMPLOYE: ${sousTraitant.email}\n`)
 
   // ─── 7. Create demo chantier ────────────────────────────────
   console.log('🏗️  Creating demo chantier...')
@@ -203,7 +205,7 @@ async function main() {
 
   // ─── 10. Create default permission configs ──────────────────
   console.log('🔐 Creating default permission configs...')
-  const roles = ['SUPER_ADMIN', 'GERANT', 'CHEF_PROJET', 'SOUS_TRAITANT']
+  const roles = ['SUPER_ADMIN', 'GERANT', 'CHEF_PROJET', 'EMPLOYE']
   for (const role of roles) {
     await prisma.permissionConfig.upsert({
       where: { role },
@@ -254,7 +256,7 @@ async function main() {
   console.log('   │ Super Admin         │ superadmin@opuc.demo       │ Admin@1234 │')
   console.log('   │ Gérant              │ gerant@opuc.demo           │ demo123    │')
   console.log('   │ Chef de Projet      │ chef-projet@opuc.demo      │ demo123    │')
-  console.log('   │ Sous-traitant       │ sous-traitant@opuc.demo    │ demo123    │')
+  console.log('   │ Employé             │ employe@opuc.demo          │ demo123    │')
   console.log('   └─────────────────────┴───────────────────────────┴────────────┘')
   console.log('')
   console.log(`🏢 Entreprise: ${entreprise.nom}`)

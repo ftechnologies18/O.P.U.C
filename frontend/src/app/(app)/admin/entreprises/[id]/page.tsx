@@ -158,14 +158,14 @@ const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: 'Super Admin',
   GERANT: 'Gérant',
   CHEF_PROJET: 'Chef de Projet',
-  SOUS_TRAITANT: 'Sous-traitant',
+  EMPLOYE: 'Employé',
 }
 
 const ROLE_BADGES: Record<string, string> = {
   SUPER_ADMIN: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400',
   GERANT: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400',
   CHEF_PROJET: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400',
-  SOUS_TRAITANT: 'bg-stone-100 text-stone-700 border-stone-200 dark:bg-stone-900/30 dark:text-stone-400',
+  EMPLOYE: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/30 dark:text-slate-400',
 }
 
 function formatFCFA(n: number): string {

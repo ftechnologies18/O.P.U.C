@@ -39,14 +39,14 @@ const roleLabels: Record<string, string> = {
   SUPER_ADMIN: 'Super Administrateur',
   GERANT: 'Gérant',
   CHEF_PROJET: 'Chef de Projet',
-  SOUS_TRAITANT: 'Sous-traitant',
+  EMPLOYE: 'Employé',
 }
 
 const roleColors: Record<string, string> = {
   SUPER_ADMIN: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
   GERANT: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',
   CHEF_PROJET: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',
-  SOUS_TRAITANT: 'bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-400',
+  EMPLOYE: 'bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-400',
 }
 
 type PanelTab = 'profil' | 'notifications' | 'securite' | 'apparence'

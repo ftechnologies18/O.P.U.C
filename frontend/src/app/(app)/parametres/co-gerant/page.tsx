@@ -241,7 +241,7 @@ export default function CoGerantPage() {
   if (!isPrincipalGerant) {
     // Si l'utilisateur est co-GERANT, on affiche un message l'informant
     // qu'il ne peut pas gérer les co-gérants. Sinon (CHEF_PROJET normal,
-    // SOUS_TRAITANT), on affiche un message d'accès refusé.
+    // EMPLOYE), on affiche un message d'accès refusé.
     const isCoGerantUser = isCoGerant
     return (
       <div className="space-y-6">

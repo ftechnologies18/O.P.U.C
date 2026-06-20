@@ -21,6 +21,7 @@ type CreateUserRequest struct {
         Name         string  `json:"name" validate:"required"`
         Role         string  `json:"role" validate:"required"`
         Password     string  `json:"password" validate:"required,min=6"`
+        Fonction     string  `json:"fonction,omitempty"` // Phase 1 : fonction BTP (uniquement pour EMPLOYE)
         Telephone    *string `json:"telephone,omitempty"`
         EntrepriseID *string `json:"entrepriseId,omitempty"`
 }
@@ -31,6 +32,7 @@ type UpdateUserRequest struct {
         Name      *string `json:"name,omitempty"`
         Telephone *string `json:"telephone,omitempty"`
         Role      *string `json:"role,omitempty"`
+        Fonction  *string `json:"fonction,omitempty"` // Phase 1 : fonction BTP (nullable, envoyer null pour clearer)
         Active    *bool   `json:"active,omitempty"`
 }
 
@@ -46,6 +48,7 @@ type UserResponse struct {
         Email             string     `json:"email"`
         Name              string     `json:"name"`
         Role              string     `json:"role"`
+        Fonction          string     `json:"fonction,omitempty"` // Phase 1 : fonction BTP (vide si non-EMPLOYE)
         Telephone         *string    `json:"telephone,omitempty"`
         Active            bool       `json:"active"`
         EntrepriseID      *string    `json:"entrepriseId,omitempty"`
@@ -63,6 +66,7 @@ type UserSummary struct {
         Email            string     `json:"email"`
         Name             string     `json:"name"`
         Role             string     `json:"role"`
+        Fonction         string     `json:"fonction,omitempty"` // Phase 1 : fonction BTP (vide si non-EMPLOYE)
         Telephone        *string    `json:"telephone,omitempty"`
         Active           bool       `json:"active"`
         EntrepriseID     *string    `json:"entrepriseId,omitempty"`
@@ -132,6 +136,7 @@ func UserToResponse(u *model.User) UserResponse {
                 Email:             u.Email,
                 Name:              u.Name,
                 Role:              u.Role,
+                Fonction:          u.Fonction,
                 Telephone:         u.Telephone,
                 Active:            u.Active,
                 EntrepriseID:      u.EntrepriseID,
@@ -150,6 +155,7 @@ func UserToSummary(u *model.User) UserSummary {
                 Email:            u.Email,
                 Name:             u.Name,
                 Role:             u.Role,
+                Fonction:         u.Fonction,
                 Telephone:        u.Telephone,
                 Active:           u.Active,
                 EntrepriseID:     u.EntrepriseID,

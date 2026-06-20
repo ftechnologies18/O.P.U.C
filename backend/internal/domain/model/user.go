@@ -2,11 +2,16 @@ package model
 
 import "time"
 
-// User — utilisateur avec RBAC (4 rôles) + 2FA + sécurité.
+// User — utilisateur avec RBAC (4 rôles) + 2FA + sécurité + fonction BTP.
 //
 // IMPORTANT : les noms de colonnes GORM correspondent EXACTEMENT aux colonnes
 // Prisma existantes (camelCase : entrepriseId, twoFactorEnabled, loginAttempts...).
 // Ne PAS utiliser snake_case (login_attempts) — ça casserait les requêtes.
+//
+// Phase 1 : le rôle "SOUS_TRAITANT" (utilisateur interne) a été renommé en
+// "EMPLOYE". L'entité model.SousTraitant (fiche B2B externe) reste inchangée.
+// Le champ Fonction (nullable) découple la fonction BTP du rôle : un EMPLOYE
+// peut être "CHARGE_LOGISTIQUE", "CHEF_CHANTIER", etc.
 type User struct {
         ID    string `gorm:"primaryKey;type:varchar(30)" json:"id"`
         Email string `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
@@ -14,6 +19,7 @@ type User struct {
         Password  *string `gorm:"type:varchar(255)" json:"-"`
         Name      string  `gorm:"type:varchar(255);not null" json:"name"`
         Role      string  `gorm:"type:varchar(30);default:CHEF_PROJET" json:"role"`
+        Fonction  string  `gorm:"type:varchar(30);column:fonction" json:"fonction,omitempty"` // Phase 1 : fonction BTP (nullable)
         Telephone *string `gorm:"type:varchar(30)" json:"telephone,omitempty"`
         Active    bool    `gorm:"default:true" json:"active"`
 
@@ -62,3 +68,8 @@ func (u *User) IsSuperAdmin() bool { return u.Role == "SUPER_ADMIN" }
 
 // IsGerant retourne true si le user est GERANT ou co-GERANT (mêmes droits).
 func (u *User) IsGerant() bool { return u.Role == "GERANT" || u.IsCoGerant }
+
+// IsEmploye retourne true si le user a le rôle EMPLOYE (ou SOUS_TRAITANT legacy).
+// Phase 1 : SOUS_TRAITANT a été renommé en EMPLOYE — on accepte les deux valeurs
+// le temps de la migration des données existantes.
+func (u *User) IsEmploye() bool { return u.Role == "EMPLOYE" || u.Role == "SOUS_TRAITANT" }

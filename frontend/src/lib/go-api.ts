@@ -61,7 +61,8 @@ export interface GoUser {
   id: string
   email: string
   name: string
-  role: 'SUPER_ADMIN' | 'GERANT' | 'CHEF_PROJET' | 'SOUS_TRAITANT'
+  role: 'SUPER_ADMIN' | 'GERANT' | 'CHEF_PROJET' | 'EMPLOYE' | 'SOUS_TRAITANT' // EMPLOYE = nouveau nom (Phase 1); SOUS_TRAITANT gardé pour compat legacy sessions
+  fonction?: string
   telephone?: string
   active: boolean
   entrepriseId?: string

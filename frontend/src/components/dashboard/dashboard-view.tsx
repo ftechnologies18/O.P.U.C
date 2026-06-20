@@ -260,7 +260,7 @@ export function DashboardView() {
     SUPER_ADMIN: 'Super Administrateur',
     GERANT: 'Gérant',
     CHEF_PROJET: 'Chef de Projet',
-    SOUS_TRAITANT: 'Sous-traitant',
+    EMPLOYE: 'Employé',
   }
 
   return (

@@ -41,7 +41,8 @@ model User {
   email        String  @unique
   password     String?
   name         String
-  role         String  @default("CHEF_PROJET") // SUPER_ADMIN, GERANT, CHEF_PROJET, SOUS_TRAITANT
+  role         String  @default("CHEF_PROJET") // SUPER_ADMIN, GERANT, CHEF_PROJET, EMPLOYE
+  fonction     String? // BTP functional role for EMPLOYE users (CHARGE_LOGISTIQUE, CHARGE_CARBURANT, CHARGE_PLANNING, CHARGE_QUALITE, CHARGE_DOCUMENTATION, CHARGE_COMMERCIAL, CHARGE_RH, CHEF_CHANTIER)
   telephone    String?
   active       Boolean @default(true)
   entrepriseId String?
@@ -647,7 +648,7 @@ model AuditLog {
 model PermissionConfig {
   id           String   @id @default(cuid())
   entrepriseId String?
-  role         String   @unique // SUPER_ADMIN, GERANT, CHEF_PROJET, SOUS_TRAITANT
+  role         String   @unique // SUPER_ADMIN, GERANT, CHEF_PROJET, EMPLOYE
   permissions  String   @default("{}") // JSON: { "chantiers": "GESTION", "stocks": "ECRITURE", ... }
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

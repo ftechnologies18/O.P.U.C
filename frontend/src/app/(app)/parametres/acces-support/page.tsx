@@ -145,7 +145,7 @@ export default function AccesSupportPage() {
   }, [])
 
   useEffect(() => {
-    if (userRole && userRole !== 'SOUS_TRAITANT') load()
+    if (userRole && userRole !== 'SOUS_TRAITANT' && userRole !== 'EMPLOYE') load()
   }, [userRole, load])
 
   const handleAction = async () => {
@@ -180,7 +180,7 @@ export default function AccesSupportPage() {
   }, [requests])
 
   // RBAC guard
-  if (userRole && userRole === 'SOUS_TRAITANT') {
+  if (userRole && (userRole === 'SOUS_TRAITANT' || userRole === 'EMPLOYE')) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
         <ShieldAlert className="w-12 h-12 text-amber-500" />

@@ -454,8 +454,9 @@ func NewRouter(d Deps) http.Handler {
 
                         // R2 Storage — upload/download files
                         if d.Storage != nil {
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET", "SOUS_TRAITANT")).Post("/upload", d.Storage.Upload)
-                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET", "SOUS_TRAITANT")).Delete("/files/*", d.Storage.DeleteFile)
+                                // Phase 1 : EMPLOYE (anciennement SOUS_TRAITANT) peut upload/delete files
+                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET", "EMPLOYE", "SOUS_TRAITANT")).Post("/upload", d.Storage.Upload)
+                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT", "CHEF_PROJET", "EMPLOYE", "SOUS_TRAITANT")).Delete("/files/*", d.Storage.DeleteFile)
                                 // Download accessible à tous les authentifiés (lecture)
                                 r.Get("/files/*", d.Storage.Download)
                         }

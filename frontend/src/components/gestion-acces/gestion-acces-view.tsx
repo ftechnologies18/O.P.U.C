@@ -87,6 +87,7 @@ import {
 } from '@/components/ui/tooltip'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
+import { ALL_FONCTIONS, getFonctionLabel, type UserFonction } from '@/lib/rbac'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -95,6 +96,7 @@ interface User {
   email: string
   name: string
   role: string
+  fonction?: string | null
   telephone: string | null
   active: boolean
   entrepriseId: string | null
@@ -111,6 +113,7 @@ interface UserFormData {
   password: string
   telephone: string
   role: string
+  fonction: string
 }
 
 interface AuditLog {
@@ -167,8 +170,8 @@ const ROLE_CONFIG: Record<string, { label: string; className: string }> = {
     label: 'Chef de Projet',
     className: 'bg-emerald-100 text-emerald-700 border-emerald-200',
   },
-  SOUS_TRAITANT: {
-    label: 'Sous-traitant',
+  EMPLOYE: {
+    label: 'Employé',
     className: 'bg-slate-100 text-slate-700 border-slate-200',
   },
 }
@@ -290,12 +293,12 @@ const PERMISSION_MODULES: { key: string; label: string }[] = [
   { key: 'gestion-acces', label: 'Gestion Accès' },
 ]
 
-const ROLES_LIST = ['GERANT', 'CHEF_PROJET', 'SOUS_TRAITANT']
+const ROLES_LIST = ['GERANT', 'CHEF_PROJET', 'EMPLOYE']
 
 const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
   GERANT: { dashboard: 'GESTION', chantiers: 'GESTION', planning: 'GESTION', pointage: 'GESTION', personnel: 'GESTION', paie: 'GESTION', 'sous-traitants': 'GESTION', budget: 'GESTION', stocks: 'GESTION', engins: 'GESTION', carburant: 'GESTION', rapports: 'GESTION', photos: 'GESTION', documents: 'GESTION', clients: 'GESTION', devis: 'GESTION', contrats: 'GESTION', facturation: 'GESTION', support: 'GESTION', parametres: 'GESTION', 'gestion-acces': 'GESTION' },
   CHEF_PROJET: { dashboard: 'ECRITURE', chantiers: 'ECRITURE', planning: 'ECRITURE', pointage: 'ECRITURE', personnel: 'LECTURE', paie: 'LECTURE', 'sous-traitants': 'LECTURE', budget: 'LECTURE', stocks: 'ECRITURE', engins: 'ECRITURE', carburant: 'ECRITURE', rapports: 'ECRITURE', photos: 'ECRITURE', documents: 'ECRITURE', clients: 'ECRITURE', devis: 'ECRITURE', contrats: 'ECRITURE', facturation: 'ECRITURE', support: 'ECRITURE', parametres: 'LECTURE', 'gestion-acces': 'AUCUN' },
-  SOUS_TRAITANT: { dashboard: 'LECTURE', chantiers: 'LECTURE', planning: 'LECTURE', pointage: 'LECTURE', personnel: 'AUCUN', paie: 'AUCUN', 'sous-traitants': 'LECTURE', budget: 'LECTURE', stocks: 'LECTURE', engins: 'LECTURE', carburant: 'LECTURE', rapports: 'LECTURE', photos: 'LECTURE', documents: 'LECTURE', clients: 'LECTURE', devis: 'LECTURE', contrats: 'LECTURE', facturation: 'LECTURE', support: 'LECTURE', parametres: 'AUCUN', 'gestion-acces': 'AUCUN' },
+  EMPLOYE: { dashboard: 'LECTURE', chantiers: 'LECTURE', planning: 'LECTURE', pointage: 'LECTURE', personnel: 'AUCUN', paie: 'AUCUN', 'sous-traitants': 'LECTURE', budget: 'LECTURE', stocks: 'LECTURE', engins: 'LECTURE', carburant: 'LECTURE', rapports: 'LECTURE', photos: 'LECTURE', documents: 'LECTURE', clients: 'LECTURE', devis: 'LECTURE', contrats: 'LECTURE', facturation: 'LECTURE', support: 'LECTURE', parametres: 'AUCUN', 'gestion-acces': 'AUCUN' },
 }
 
 const EMPTY_USER_FORM: UserFormData = {
@@ -304,6 +307,7 @@ const EMPTY_USER_FORM: UserFormData = {
   password: '',
   telephone: '',
   role: 'CONDUCTEUR',
+  fonction: '',
 }
 
 const AUDIT_MODULE_FILTERS = [
@@ -548,6 +552,7 @@ function UsersTab({ session }: { session: any }) {
       password: '',
       telephone: user.telephone || '',
       role: user.role,
+      fonction: user.fonction || '',
     })
     setShowPassword(false)
     setFormOpen(true)
@@ -578,22 +583,33 @@ function UsersTab({ session }: { session: any }) {
           role: form.role,
           telephone: form.telephone.trim() || null,
         }
+        // Fonction is only meaningful for EMPLOYE — send it only in that case
+        // (and send null otherwise so backend can clear it if role changed).
+        if (form.role === 'EMPLOYE') {
+          body.fonction = form.fonction || null
+        } else {
+          body.fonction = null
+        }
         res = await fetch(`/api/v1/users/${editingUser.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         })
       } else {
+        const createBody: any = {
+          name: form.name.trim(),
+          email: form.email.trim(),
+          password: form.password,
+          role: form.role,
+          telephone: form.telephone.trim() || null,
+        }
+        if (form.role === 'EMPLOYE') {
+          createBody.fonction = form.fonction || null
+        }
         res = await fetch('/api/v1/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: form.name.trim(),
-            email: form.email.trim(),
-            password: form.password,
-            role: form.role,
-            telephone: form.telephone.trim() || null,
-          }),
+          body: JSON.stringify(createBody),
         })
       }
 
@@ -932,9 +948,16 @@ function UsersTab({ session }: { session: any }) {
                           {user.telephone || '—'}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={cn('text-xs', roleBadge.className)}>
-                            {roleBadge.label}
-                          </Badge>
+                          <div className="flex flex-wrap items-center gap-1">
+                            <Badge variant="outline" className={cn('text-xs', roleBadge.className)}>
+                              {roleBadge.label}
+                            </Badge>
+                            {user.role === 'EMPLOYE' && user.fonction && (
+                              <Badge variant="outline" className="text-xs bg-slate-50 text-slate-600 border-slate-200">
+                                {getFonctionLabel(user.fonction)}
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge
@@ -1115,7 +1138,7 @@ function UsersTab({ session }: { session: any }) {
               <Label htmlFor="user-role">Rôle</Label>
               <Select
                 value={form.role}
-                onValueChange={(value) => setForm({ ...form, role: value })}
+                onValueChange={(value) => setForm({ ...form, role: value, fonction: value === 'EMPLOYE' ? form.fonction : '' })}
               >
                 <SelectTrigger id="user-role">
                   <SelectValue placeholder="Sélectionner un rôle" />
@@ -1129,6 +1152,32 @@ function UsersTab({ session }: { session: any }) {
                 </SelectContent>
               </Select>
             </div>
+            {form.role === 'EMPLOYE' && (
+              <div className="grid gap-2">
+                <Label htmlFor="user-fonction">
+                  Fonction
+                  <span className="text-xs text-muted-foreground font-normal ml-1">(optionnel)</span>
+                </Label>
+                <Select
+                  value={form.fonction}
+                  onValueChange={(value) => setForm({ ...form, fonction: value })}
+                >
+                  <SelectTrigger id="user-fonction">
+                    <SelectValue placeholder="Sélectionner une fonction BTP" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALL_FONCTIONS.map((f: UserFonction) => (
+                      <SelectItem key={f} value={f}>
+                        {getFonctionLabel(f)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Spécialisation BTP de l'employé (logistique, carburant, planning, qualité, etc.).
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>
