@@ -39,6 +39,8 @@ import {
   FileSignature,
   Receipt,
   Headphones,
+  CreditCard,
+  LifeBuoy,
 } from 'lucide-react'
 import { useSession } from '@/lib/auth-session'
 import { canAccessPage } from '@/lib/rbac'
@@ -51,7 +53,23 @@ import { OpucLogo } from './opuc-logo'
 /* ═══════════════════════════════════════════════
    Navigation grouping — sidebar categories
    ═══════════════════════════════════════════════ */
-const navSections = [
+
+interface NavItem {
+  id: string
+  label: string
+  icon: React.ElementType
+  /** Custom href (defaults to `/${id}`). Used for nested routes like /admin/entreprises. */
+  href?: string
+  /** Restrict to specific roles. If omitted, RBAC `canAccessPage` is used (when id maps to an AppPage). */
+  requiredRoles?: UserRole[]
+}
+
+interface NavSection {
+  group: string
+  items: NavItem[]
+}
+
+const navSections: NavSection[] = [
   {
     group: 'Principal',
     items: [
@@ -102,17 +120,27 @@ const navSections = [
     ],
   },
   {
+    // 🏢 Plateforme — SUPER_ADMIN only (filtered via requiredRoles)
+    group: 'Plateforme',
+    items: [
+      { id: 'admin-plateforme', label: 'Dashboard', icon: LayoutDashboard, requiredRoles: ['SUPER_ADMIN'] },
+      { id: 'admin-entreprises', label: 'Entreprises', href: '/admin/entreprises', icon: Building2, requiredRoles: ['SUPER_ADMIN'] },
+      { id: 'admin-subscriptions', label: 'Abonnements', href: '/admin/subscriptions', icon: CreditCard, requiredRoles: ['SUPER_ADMIN'] },
+      { id: 'admin-support-access', label: 'Support Access', href: '/admin/support-access', icon: LifeBuoy, requiredRoles: ['SUPER_ADMIN'] },
+    ],
+  },
+  {
     group: 'Configuration',
     items: [
       { id: 'gestion-acces', label: 'Gestion des Accès', icon: ShieldCheck },
-      { id: 'admin-plateforme', label: 'Admin Plateforme', icon: Shield },
+      { id: 'acces-support', label: 'Accès Support', href: '/parametres/acces-support', icon: Shield, requiredRoles: ['GERANT', 'SUPER_ADMIN'] },
       { id: 'parametres', label: 'Paramètres', icon: Settings },
     ],
   },
 ]
 
 // Flat list for header breadcrumb lookup
-const navItems = navSections.flatMap((s) => s.items)
+const navItems: NavItem[] = navSections.flatMap((s) => s.items)
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -133,13 +161,28 @@ function SidebarContent({
   const userRole = (session?.user as any)?.role as UserRole | undefined
   const compact = mode === 'compact'
 
-  // Filter nav sections based on user's RBAC permissions
+  // Filter nav sections based on user's role + RBAC permissions.
+  // - If `requiredRoles` is set on the item, the user's role must be in that list.
+  // - Otherwise, fall back to `canAccessPage` (works for legacy AppPage ids).
+  // - Items without requiredRoles and with unknown ids (no AppPage mapping) are shown.
   const filteredSections = navSections
     .map(section => ({
       ...section,
-      items: section.items.filter(item =>
-        !userRole || canAccessPage(userRole, item.id as AppPage)
-      )
+      items: section.items.filter(item => {
+        if (!userRole) return false
+        if (item.requiredRoles) return item.requiredRoles.includes(userRole)
+        // Try RBAC if the id maps to an AppPage
+        const knownPages: string[] = [
+          'dashboard', 'chantiers', 'planning', 'pointage', 'personnel', 'paie',
+          'sous-traitants', 'budget', 'stocks', 'engins', 'carburant', 'rapports',
+          'photos', 'documents', 'clients', 'devis', 'contrats', 'facturation',
+          'support', 'parametres', 'gestion-acces', 'admin-plateforme',
+        ]
+        if (knownPages.includes(item.id)) {
+          return canAccessPage(userRole, item.id as AppPage)
+        }
+        return true
+      })
     }))
     .filter(section => section.items.length > 0)
 
@@ -182,7 +225,7 @@ function SidebarContent({
               <div className="space-y-px">
                 {section.items.map((item) => {
                   const Icon = item.icon
-                  const itemHref = `/${item.id}`
+                  const itemHref = item.href || `/${item.id}`
                   const isActive =
                     pathname === itemHref || pathname.startsWith(`${itemHref}/`)
                   return (
@@ -323,8 +366,9 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   // Derive the current page from the URL — App Router is now the source of
   // truth for navigation (replaces the old `currentView` Zustand state).
+  // Supports custom `href` (e.g. /admin/entreprises).
   const currentPage = navItems.find((item) => {
-    const href = `/${item.id}`
+    const href = item.href || `/${item.id}`
     return pathname === href || pathname.startsWith(`${href}/`)
   })
   const pageLabel = currentPage?.label || 'Tableau de bord'
