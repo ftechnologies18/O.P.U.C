@@ -183,6 +183,7 @@ func (uc *UsersUsecase) Create(ctx context.Context, auth *database.AuthUser, in 
         }
         // Validation fonction (Phase 1)
         fonction := strings.TrimSpace(in.Fonction)
+        var fonctionPtr *string
         if fonction != "" {
                 if !domain.IsValidFonctionString(fonction) {
                         return nil, fmt.Errorf("%w: invalid fonction %q", domain.ErrBadRequest, fonction)
@@ -191,7 +192,8 @@ func (uc *UsersUsecase) Create(ctx context.Context, auth *database.AuthUser, in 
                         // La fonction n'est pertinente que pour EMPLOYE — on l'ignore pour les autres rôles
                         uc.log.Info("iam.Create: fonction ignored for non-EMPLOYE role",
                                 "email", in.Email, "role", in.Role, "fonction", fonction)
-                        fonction = ""
+                } else {
+                        fonctionPtr = &fonction
                 }
         }
 
@@ -221,7 +223,7 @@ func (uc *UsersUsecase) Create(ctx context.Context, auth *database.AuthUser, in 
                 Email:        in.Email,
                 Name:         in.Name,
                 Role:         in.Role,
-                Fonction:     fonction,
+                Fonction:     fonctionPtr,
                 Password:     &hashed,
                 Telephone:    in.Telephone,
                 Active:       true,
@@ -290,7 +292,12 @@ func (uc *UsersUsecase) Update(ctx context.Context, auth *database.AuthUser, id 
                 if fonction != "" && !domain.IsValidFonctionString(fonction) {
                         return nil, fmt.Errorf("%w: invalid fonction %q", domain.ErrBadRequest, fonction)
                 }
-                updates["fonction"] = fonction
+                // Si fonction est vide → on clear (set to NULL) ; sinon on set la valeur
+                if fonction == "" {
+                        updates["fonction"] = nil
+                } else {
+                        updates["fonction"] = fonction
+                }
         }
         if in.Active != nil {
                 updates["active"] = *in.Active

@@ -136,7 +136,7 @@ func UserToResponse(u *model.User) UserResponse {
                 Email:             u.Email,
                 Name:              u.Name,
                 Role:              u.Role,
-                Fonction:          u.Fonction,
+                Fonction:          derefStrPtr(u.Fonction),
                 Telephone:         u.Telephone,
                 Active:            u.Active,
                 EntrepriseID:      u.EntrepriseID,
@@ -155,7 +155,7 @@ func UserToSummary(u *model.User) UserSummary {
                 Email:            u.Email,
                 Name:             u.Name,
                 Role:             u.Role,
-                Fonction:         u.Fonction,
+                Fonction:         derefStrPtr(u.Fonction),
                 Telephone:        u.Telephone,
                 Active:           u.Active,
                 EntrepriseID:     u.EntrepriseID,
@@ -172,6 +172,16 @@ func UsersToSummaries(users []model.User) []UserSummary {
                 out = append(out, UserToSummary(&users[i]))
         }
         return out
+}
+
+// derefStrPtr retourne la valeur pointée par s, ou "" si s est nil.
+// Helper local au package dto pour convertir les champs *string du model.User
+// (Fonction nullable) en string pour les DTOs de réponse.
+func derefStrPtr(s *string) string {
+        if s == nil {
+                return ""
+        }
+        return *s
 }
 
 // compile-time check : s'assurer que json.RawMessage reste utilisé ailleurs.

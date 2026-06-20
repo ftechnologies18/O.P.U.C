@@ -19,7 +19,7 @@ type User struct {
         Password  *string `gorm:"type:varchar(255)" json:"-"`
         Name      string  `gorm:"type:varchar(255);not null" json:"name"`
         Role      string  `gorm:"type:varchar(30);default:CHEF_PROJET" json:"role"`
-        Fonction  string  `gorm:"type:varchar(30);column:fonction" json:"fonction,omitempty"` // Phase 1 : fonction BTP (nullable)
+        Fonction  *string `gorm:"type:varchar(30);column:fonction" json:"fonction,omitempty"` // Phase 1 : fonction BTP (nullable pour legacy users)
         Telephone *string `gorm:"type:varchar(30)" json:"telephone,omitempty"`
         Active    bool    `gorm:"default:true" json:"active"`
 
