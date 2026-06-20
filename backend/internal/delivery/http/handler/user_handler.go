@@ -70,7 +70,8 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
         users, total, err := h.uc.List(r.Context(), au, filter)
         if err != nil {
                 h.log.Error("users.List", "err", err)
-                WriteError(w, http.StatusInternalServerError, "internal error")
+                // TEMPORAIRE (debug Phase 1) : retourner l'erreur réelle pour diagnostic
+                WriteError(w, http.StatusInternalServerError, "internal error: "+err.Error())
                 return
         }
 

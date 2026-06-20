@@ -115,7 +115,8 @@ func (uc *UsersUsecase) List(ctx context.Context, auth *database.AuthUser, filte
         users, total, err := uc.repo.List(ctx, auth, filter)
         if err != nil {
                 uc.log.Error("iam.List", "err", err, "auth_uid", auth.UserID)
-                return nil, 0, domain.ErrInternal
+                // TEMPORAIRE (debug Phase 1) : wrapper l'erreur réelle pour diagnostic
+                return nil, 0, fmt.Errorf("iam.List: %w", err)
         }
         return users, total, nil
 }
