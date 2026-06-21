@@ -265,7 +265,8 @@ func (uc *UsersUsecase) Create(ctx context.Context, auth *database.AuthUser, in 
                         return nil, domain.ErrConflict
                 }
                 uc.log.Error("iam.Create: repo.Create", "err", err, "email", in.Email)
-                return nil, domain.ErrInternal
+                // TEMPORAIRE (debug Phase 5) : wrapper l'erreur réelle pour diagnostic
+                return nil, fmt.Errorf("iam.Create: repo: %w", err)
         }
 
         uc.log.Info("user created",
