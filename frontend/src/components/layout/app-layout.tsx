@@ -253,9 +253,11 @@ function SidebarContent({
         if (!userRole) return false
 
         // 1. Whitelist stricte (SUPER_ADMIN / EMPLOYE) — priorité absolue
+        //    On utilise item.id (identifiant stable) comme clé de matching.
+        //    Pour les items avec href personnalisé (ex: /admin/entreprises),
+        //    item.id reste 'admin-entreprises' qui matche la whitelist.
         if (allowedPages) {
-          const pageId = item.href ? item.href.replace(/^\//, '') : item.id
-          if (!allowedPages.includes(pageId)) return false
+          if (!allowedPages.includes(item.id)) return false
         }
 
         // 2. canShow (predicate customisé)
