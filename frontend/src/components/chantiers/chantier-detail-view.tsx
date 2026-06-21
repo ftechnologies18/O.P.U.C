@@ -477,10 +477,14 @@ export function ChantierDetailView() {
     const val = Math.min(100, Math.max(0, parseInt(editingAvancement) || 0))
     setSaving(true)
     try {
+      // Utilise PATCH /taches/{tacheId}/avancement (route personnelle par responsable)
+      // plutôt que PUT /chantiers/{id}/phases/{phaseId}/taches/{tacheId} (RequireAccess CHANTIER/ECRITURE).
+      // Le PATCH permet à un EMPLOYE de mettre à jour SA tâche sans délégation CHANTIER.
+      // L'ownership (responsableId = currentUser) est vérifié côté backend.
       const res = await fetch(
-        `/api/v1/chantiers/${chantier!.id}/phases/${phaseId}/taches/${tacheId}`,
+        `/api/v1/taches/${tacheId}/avancement`,
         {
-          method: 'PUT',
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ avancement: val }),
         }
@@ -490,7 +494,8 @@ export function ChantierDetailView() {
         setEditingTaskId(null)
         fetchChantier()
       } else {
-        toast.error('Erreur lors de la mise à jour')
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error || 'Erreur lors de la mise à jour')
       }
     } catch {
       toast.error('Erreur réseau')

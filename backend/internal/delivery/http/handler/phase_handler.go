@@ -293,6 +293,52 @@ func (h *PhaseHandler) ListMyTaches(w http.ResponseWriter, r *http.Request) {
         })
 }
 
+// UpdateMyTacheAvancement — PATCH /api/v1/taches/{tacheId}/avancement
+//
+// Permet au responsable d'une tâche de mettre à jour SON avancement SANS
+// avoir besoin d'une délégation CHANTIER/ECRITURE. C'est le cœur de la
+// "délégation de suivi" : un EMPLOYE assigné peut faire progresser sa tâche.
+//
+// Body JSON : { "avancement": number } (0-100)
+// Réponse 200 : la tâche mise à jour (avec Phase.Chantier préloadé)
+// Réponse 403 : si l'user n'est pas le responsable de la tâche
+// Réponse 404 : si la tâche n'existe pas
+//
+// RBAC : auth-seul (pas de RequireAccess — l'ownership est vérifié côté usecase).
+func (h *PhaseHandler) UpdateMyTacheAvancement(w http.ResponseWriter, r *http.Request) {
+        au := authUserFromCtx(r.Context())
+        if au == nil {
+                WriteError(w, http.StatusUnauthorized, "unauthorized")
+                return
+        }
+
+        tacheID := chi.URLParam(r, "tacheId")
+        if tacheID == "" {
+                WriteError(w, http.StatusBadRequest, "missing tacheId")
+                return
+        }
+
+        var body struct {
+                Avancement *float64 `json:"avancement"`
+        }
+        if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+                WriteError(w, http.StatusBadRequest, "invalid JSON body")
+                return
+        }
+        if body.Avancement == nil {
+                WriteError(w, http.StatusBadRequest, "avancement is required")
+                return
+        }
+
+        updated, err := h.uc.UpdateMyTacheAvancement(r.Context(), au, tacheID, au.UserID, *body.Avancement)
+        if err != nil {
+                writePhaseError(w, h.log, "tache.UpdateMyAvancement", err)
+                return
+        }
+
+        WriteJSON(w, http.StatusOK, updated)
+}
+
 // ══════════════════════════════════════════════════════════════════
 // Helpers — parsing JSON → usecase inputs
 // ══════════════════════════════════════════════════════════════════

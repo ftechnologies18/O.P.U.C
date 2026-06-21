@@ -55,6 +55,11 @@ type Repo interface {
         // Liste les tâches où responsableId = userID, avec Preload Phase.Chantier.
         // Le filtrage tenant se fait via JOIN Phase → Chantier (RLS-protected).
         ListMyTaches(ctx context.Context, auth *database.AuthUser, userID string) ([]model.Tache, int64, error)
+
+        // UpdateMyTacheAvancement — update avancement d'une tâche dont l'user est responsable.
+        // Vérifie ownership (responsableId = userID) + applique la règle auto statut↔avancement.
+        // Retourne ErrNotFound si la tâche n'existe pas ou n'appartient pas à l'user.
+        UpdateMyTacheAvancement(ctx context.Context, auth *database.AuthUser, tacheID, userID string, updates map[string]any) (*model.Tache, error)
 }
 
 // ── Phase inputs ────────────────────────────────────────────────
@@ -480,6 +485,61 @@ func (uc *Usecase) ListMyTaches(ctx context.Context, auth *database.AuthUser) ([
                 return nil, 0, domain.ErrInternal
         }
         return items, total, nil
+}
+
+// UpdateMyTacheAvancement — permet au responsable d'une tâche de mettre à jour
+// son avancement SANS avoir besoin d'une délégation CHANTIER/ECRITURE.
+//
+// C'est le cœur de la "délégation de suivi" : un EMPLOYE assigné à une tâche
+// peut la faire progresser (avancement 0→100) sans avoir accès à la gestion
+// du chantier. La règle auto statut↔avancement s'applique :
+//   - avancement >= 100 → statut = TERMINE
+//   - avancement > 0    → statut = EN_COURS
+//   - avancement == 0   → statut = PLANIFIEE
+//
+// Vérifie l'ownership (responsableId = auth.UserID) côté usecase + repo.
+// Renvoie ErrNotFound si la tâche n'existe pas ou n'appartient pas à l'user.
+func (uc *Usecase) UpdateMyTacheAvancement(ctx context.Context, auth *database.AuthUser, tacheID, userID string, avancement float64) (*model.Tache, error) {
+        if auth == nil {
+                return nil, domain.ErrUnauthorized
+        }
+        if tacheID == "" || userID == "" {
+                return nil, fmt.Errorf("%w: tacheID and userID are required", domain.ErrBadRequest)
+        }
+        if avancement < 0 || avancement > 100 {
+                return nil, fmt.Errorf("%w: avancement must be between 0 and 100", domain.ErrBadRequest)
+        }
+
+        // Règle auto statut↔avancement
+        statut := "PLANIFIEE"
+        if avancement >= 100 {
+                statut = "TERMINE"
+        } else if avancement > 0 {
+                statut = "EN_COURS"
+        }
+
+        updates := map[string]any{
+                "avancement": avancement,
+                "statut":     statut,
+                "updatedAt":  time.Now().UTC(),
+        }
+
+        updated, err := uc.repo.UpdateMyTacheAvancement(ctx, auth, tacheID, userID, updates)
+        if err != nil {
+                uc.log.Error("tache.UpdateMyAvancement: repo", "err", err, "tacheID", tacheID, "user", userID)
+                return nil, domain.ErrInternal
+        }
+        if updated == nil {
+                return nil, domain.ErrNotFound
+        }
+
+        uc.log.Info("tache avancement updated by responsable",
+                "tacheID", tacheID,
+                "user", userID,
+                "avancement", avancement,
+                "statut", statut,
+        )
+        return updated, nil
 }
 
 // ── helpers ─────────────────────────────────────────────────────
