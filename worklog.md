@@ -939,3 +939,426 @@ Stage Summary:
 - **Grep vérifications** : `/api/v1/v1/` = 0, `/api/pointage` (sans v1) = 0, `/api/sous-traitants` (sans v1) = 0, `/api/personnel` (sans v1) = 0.
 - **Discrepancy flag** : les paths salaires (`/api/v1/salaires*`) sont également cassés côté frontend (backend attend `/api/v1/paie/salaires*`) — NON corrigés ici car la consigne les déclarait "déjà corrects". Suggestion : créer une tâche de suivi pour corriger les 5 URLs salaires (lignes 644, 673, 726, 770, 811).
 - Non commit/push — le tuteur s'en chargera.
+
+---
+Task ID: PHASE-B-ENGINS
+Agent: full-stack-developer
+Task: Module backend Engins (parc engins + locations) — Clean Architecture Go.
+
+Work Log:
+- Lu /home/z/my-project/opuc/worklog.md (contexte : ONBOARDING, AUDIT-RBAC, PHASE-0 → PHASE-5, RBAC-FRONTEND, PHASE-A-QUICK-WINS, PHASE-B-PERSONNEL).
+- Lu le pattern de référence : chantier (model + repo + usecase + handler + dto) + soustraitant + carburant.
+- Vérifié le schéma Prisma `frontend/prisma/schema.prisma` :
+  • model Equipement (id, designation, typeEquipement?, marque?, modele?, immatriculation?, etat default "BON", typeLocation?, entrepriseId?, compteurHeuresActuel, createdAt, updatedAt).
+  • model LocationEngin (id, equipementId, fournisseurId?, fournisseurNom?, fournisseurTel?, numeroContrat?, chantierId?, coutJournalier, coutTransport default 0, coutOperateur default 0, caution default 0, dateDebut, dateFin?, statut default "EN_COURS", conditions?, createdAt, updatedAt) + relations equipement, fournisseur (SousTraitant), chantier.
+- Vérifié le frontend `engins-view.tsx` (contrat API exact) :
+  • GET /api/v1/engins?search=&typeLocation=&chantierId=&page=&pageSize= → { engins: [...], kpi: {totalEngins, enginsPropres, enginsLoues} } avec _count.locations par engin.
+  • POST /api/v1/engins body: { designation, typeEquipement|null, marque|null, modele|null, immatriculation|null, etat, typeLocation }.
+  • PUT /api/v1/engins/{id} body: idem POST (tous les champs, null = clear).
+  • DELETE /api/v1/engins/{id}.
+  • GET /api/v1/locations?search=&statut=&chantierId= → { locations: [...], kpi: {locationsEnCours, coutTotalEnCours, coutJournalierMoyen, locationsCeMois} } avec relations equipement/fournisseur/chantier préchargées.
+  • POST /api/v1/locations body: { equipementId, fournisseurId|null, fournisseurNom|null, fournisseurTel|null, numeroContrat|null, chantierId|null, coutJournalier, coutTransport, coutOperateur, caution, dateDebut, dateFin|null, statut, conditions|null }.
+  • PUT /api/v1/locations/{id} body: partial (utilisé pour clôture via {statut:"TERMINE"} ou {statut:"ANNULE"}). ⚠️ La consigne mentionnait POST /locations/{id} mais le frontend fait PUT (ligne 751) — implémenté via UpdateLocation (PUT).
+  • DELETE /api/v1/locations/{id}.
+- Étape 1 — Modèles GORM :
+  • `internal/domain/model/carburant.go` : corrigé `Equipement.Etat` default `ACTIF` → `BON` (alignement Prisma). Changé `Equipement.TypeEquipement` de `string` à `*string` (alignement Prisma `String?` + frontend `string | null`). Ajouté relation `Locations []LocationEngin` (lazy, `foreignKey:EquipementID`).
+  • `internal/domain/model/engin.go` (nouveau) : modèle `LocationEngin` avec tous les champs Prisma (camelCase columns), FK vers Equipement/SousTraitant/Chantier, TableName "LocationEngin".
+- Étape 2 — Usecase `internal/usecase/engin/engin.go` (nouveau) :
+  • Interface `Repo` : ListEquipements, GetEquipementByID, CreateEquipement, UpdateEquipement, DeleteEquipement, CountLocationsByEquipement, CountLocationsByEquipements (batch), CountEquipementsByTypeLocation + ListLocations, GetLocationByID, CreateLocation, UpdateLocation, DeleteLocation, LocationKPIs.
+  • Inputs/outputs typés : ListEquipementsInput, ListLocationsInput, CreateEquipementInput, UpdateEquipementInput, CreateLocationInput, UpdateLocationInput, EnginKPI, LocationKPI, ListEquipementsOutput, ListLocationsOutput.
+  • Usecase avec validation (etat ∈ {BON, EN_REPARATION, HORS_SERVICE}, typeLocation ∈ {PROPRE, LOCATION}, statut location ∈ {EN_COURS, TERMINE, ANNULE}, dateFin >= dateDebut, coutJournalier >= 0).
+  • RLS : non-SUPER_ADMIN force EntrepriseID = auth.EntrepriseID (RLS WITH CHECK sur Equipement).
+  • UpdateEquipement : empty string pour champ nullable → SET NULL (frontend envoie null pour vider → handler le convertit en `&""` → usecase convertit en `nil` dans le map updates).
+  • UpdateLocation : idem (vide → SET NULL pour fournisseurId, fournisseurNom, fournisseurTel, numeroContrat, chantierId, conditions).
+  • DeleteEquipement : bloque avec ErrConflict si locations liées (données comptables — pas de cascade).
+  • CreateLocation : vérifie l'existence de l'equipement (RLS-filtered) avant insertion.
+- Étape 3 — Repository `internal/repository/gorm/engin_repo.go` (nouveau) :
+  • `EnginRepository` implémente `engin.Repo` (compile-time check `var _ engin.Repo = (*EnginRepository)(nil)`).
+  • Equipement : RLS direct (WithTenant suffit). LocationEngin : JOIN `JOIN "Equipement" ON "Equipement".id = "LocationEngin"."equipementId"` pour filtrage tenant.
+  • ListEquipements : filtres search (ILIKE designation/marque/modele/immatriculation), typeLocation, chantierId (subquery `id IN (SELECT "equipementId" FROM "LocationEngin" WHERE "chantierId" = ?)`).
+  • CountLocationsByEquipements : batch GROUP BY equipementId (évite N+1 sur List).
+  • CountEquipementsByTypeLocation : `COALESCE("typeLocation", '')` + GROUP BY pour KPI.
+  • ListLocations : Preload Equipement + Fournisseur + Chantier (relations lazy, respectent RLS car queries dans même tx).
+  • LocationKPIs : agrégation SQL `COALESCE(SUM(CASE WHEN statut='EN_COURS' THEN 1 ELSE 0 END), 0)` etc. pour calculer en 1 seule query les 4 KPIs (locationsEnCours, coutTotalEnCours = SUM(coutJournalier), coutJournalierMoyen = AVG(coutJournalier), locationsCeMois = COUNT WHERE createdAt >= début du mois UTC).
+  • Create/Update/Delete : ID généré via `newCuidLikeID()` (helper existant). CreateLocation recharge avec Preload pour retourner la réponse complète. Update/Get vérifient l'existence via JOIN Equipement (RLS-filtered) → (nil, nil) si non visible.
+- Étape 4 — DTOs `internal/delivery/http/dto/engin_dto.go` (nouveau) :
+  • EnginWithCount : embeds model.Equipement + `_count: { locations: N }` (matcher format Next.js).
+  • EnginKPIResponse : { totalEngins, enginsPropres, enginsLoues }.
+  • EnginListResponse : { engins: [...], kpi: {...} }.
+  • LocationItem : flat DTO avec equipement/fournisseur/chantier réduits (id, designation, typeEquipement / id, raisonSociale, nom, prenom, contact / id, nom, statut).
+  • LocationKPIResponse : { locationsEnCours, coutTotalEnCours, coutJournalierMoyen, locationsCeMois }.
+  • LocationListResponse : { locations: [...], kpi: {...} }.
+  • Helper `ToLocationItem(*model.LocationEngin) LocationItem` pour la conversion model → DTO.
+- Étape 5 — Handler `internal/delivery/http/handler/engin_handler.go` (nouveau) :
+  • EnginHandler avec 8 méthodes : ListEngins, CreateEngin, UpdateEngin, DeleteEngin, ListLocations, CreateLocation, UpdateLocation, DeleteLocation.
+  • Extraction query params via `r.URL.Query().Get()` + `atoiDefault()` (helper existant).
+  • Parsing body JSON en `map[string]any` puis conversion via `parseEnginCreateInput`, `parseEnginUpdateInput`, `parseLocationCreateInput`, `parseLocationUpdateInput`.
+  • Helper `stringPtrFromRaw(raw, key)` : absent → nil (pas d'update), null → &"" (clear via SET NULL côté usecase), string → &string.
+  • Helper `writeEnginError` : mappe domain errors → HTTP (404 NotFound, 401 Unauthorized, 400 BadRequest, 409 Conflict, 500 Internal).
+- Étape 6 — Router `internal/delivery/http/router.go` :
+  • Ajouté `Engin *handler.EnginHandler` au struct `Deps` (après Personnel).
+  • Ajouté bloc routes après /personnel (avant /dashboard) :
+    - GET /engins (LECTURE), POST /engins (ECRITURE), PUT /engins/{id} (ECRITURE), DELETE /engins/{id} (ECRITURE).
+    - GET /locations (LECTURE), POST /locations (ECRITURE), PUT /locations/{id} (ECRITURE), DELETE /locations/{id} (ECRITURE).
+  • RBAC : `RequireAccess(model.DomainLogistique, model.PermLecture/Ecriture, d.DelegationRepo)` (le domaine LOGISTIQUE couvre stocks + carburant + engins + sous-traitants selon delegation.go).
+- Étape 7 — main.go wiring :
+  • Import `"opuc/internal/usecase/engin"`.
+  • Repository : `enginRepo := gorm.NewEnginRepository(dbm.Runtime)`.
+  • Usecase : `enginUC := engin.NewUsecase(enginRepo, log)`.
+  • Handler : `enginHandler := handler.NewEnginHandler(enginUC, log)`.
+  • Deps{} : `Engin: enginHandler`.
+
+VALIDATION :
+- `export PATH=~/go-sdk/bin:$PATH` (Go 1.23.4 linux/amd64).
+- `cd /home/z/my-project/opuc/backend && go build -o /tmp/opuc-test .` : ✅ exit 0.
+- `go vet ./...` : ✅ exit 0 (aucun warning).
+- Compilation de tout le module : OK (chantier + carburant + soustraitant + engin + personnel + autres non affectés).
+
+Stage Summary:
+- **Fichiers créés (4)** :
+  1. `internal/domain/model/engin.go` — modèle LocationEngin (GORM).
+  2. `internal/usecase/engin/engin.go` — interface Repo + Usecase + inputs/outputs (~700 lignes).
+  3. `internal/repository/gorm/engin_repo.go` — repository GORM RLS-aware (~460 lignes).
+  4. `internal/delivery/http/dto/engin_dto.go` — DTOs wire-format Next.js.
+  5. `internal/delivery/http/handler/engin_handler.go` — handlers HTTP + parsing JSON.
+- **Fichiers modifiés (4)** :
+  1. `internal/domain/model/carburant.go` — Equipement.Etat default `ACTIF`→`BON`, TypeEquipement `string`→`*string`, ajout relation `Locations []LocationEngin`.
+  2. `internal/delivery/http/router.go` — ajout `Engin` field Deps + 8 routes /engins + /locations.
+  3. `main.go` — import `engin` + repo + usecase + handler + Deps wiring.
+- **Endpoints implémentés (8)** :
+  - GET /api/v1/engins (paginé + KPI + _count.locations par engin, RLS LECTURE).
+  - POST /api/v1/engins (create équipement, RLS ECRITURE).
+  - PUT /api/v1/engins/{id} (update partial, null = clear, RLS ECRITURE).
+  - DELETE /api/v1/engins/{id} (409 si locations liées, RLS ECRITURE).
+  - GET /api/v1/locations (filtré + KPI + Preload equipement/fournisseur/chantier, RLS LECTURE).
+  - POST /api/v1/locations (create location + vérif equipement, RLS ECRITURE).
+  - PUT /api/v1/locations/{id} (update partial + clôture via {statut:"TERMINE"}, RLS ECRITURE).
+  - DELETE /api/v1/locations/{id} (hard delete, RLS ECRITURE).
+- **RBAC** : tous sous `RequireAccess(model.DomainLogistique, PermLecture|Ecriture, DelegationRepo)`.
+- **RLS** : Equipement RLS direct, LocationEngin filtré via JOIN Equipement.
+- **Build + vet** : ✅ exit 0 (Go 1.23.4).
+- **Note** : la consigne mentionnait `POST /api/v1/locations/{id}` pour la clôture, mais le frontend (engins-view.tsx ligne 751) fait `PUT /api/v1/locations/${locationId}` avec body `{statut: newStatut}`. Implémenté via UpdateLocation (PUT) — pas de route POST /locations/{id} nécessaire.
+- Non commit/push — le tuteur s'en chargera.
+
+---
+Task ID: PHASE-B-PERSONNEL
+Agent: full-stack-developer
+Task: Module backend Personnel (journaliers + affectations) — Clean Architecture Go.
+
+Work Log:
+- Lu /home/z/my-project/opuc/worklog.md (contexte : ONBOARDING, AUDIT-RBAC, PHASE-0 → PHASE-5, RBAC-FRONTEND, PHASE-A-QUICK-WINS). À l'heure du démarrage, PHASE-B-ENGINS n'avait pas encore écrit sa section ; elle est apparue ensuite (parallèle) — l'agent engin a résolu un conflit `Equipement.TypeEquipement` (`string` → `*string` aligné sur Prisma `String?`) dans carburant.go qui aurait bloqué mon build.
+- Étudié les patterns existants : chantier usecase/repo/handler (CRUD write Phase 0.2), soustraitant usecase/repo/handler (pattern Preload + JOIN pour RLS), helpers.go (parseDate/WriteJSON/WriteError/authUserFromCtx), saas_handler.go (toFloat64/toInt64), user_handler.go (atoiDefault), middleware/delegation.go (RequireAccess), tenant.go (WithTenant), router.go (struct Deps + chi groups).
+- Confirmé les appels frontend (personnel-view.tsx lignes 472/588/633/674/720) — 6 endpoints déjà appelés sur `/api/v1/personnel*` (URLs corrigées en PHASE-A). Le frontend envoie un body JSON avec 14 champs (nom, prenom, telephone?, specialite?, photo?, typeContrat, tauxJournalier?, salaireMensuel?, dateDebutContrat?, dateFinContrat?, statutContrat, numeroCNPS?, poste?, departement?) — bien plus que les 5 champs du modèle GORM original.
+- Vérifié le schéma Prisma `frontend/prisma/schema.prisma` (modèle Journalier lignes 195-222) : 13 champs manquants dans le modèle GORM (specialite, photo, typeContrat, tauxJournalier, salaireMensuel, dateDebutContrat, dateFinContrat, statutContrat [renommage de Statut], numeroCNPS, nbCongesRestants, poste, departement) + Prenom à passer de `*string` à `string` (NOT NULL comme Prisma).
+- Vérifié l'interface KpiData attendue par le frontend (personnel-view.tsx lignes 125-135) : 9 compteurs (total, grosOeuvre, enveloppe, secondOeuvre, nonAffecte, journaliers, cdd, cdi, stagiaires) — nécessite un mapping spécialité → phase BTP (aligné sur PHASE_GROUPS lignes 177-229).
+- Vérifié que DELETE affectation côté frontend (ligne 720) utilise la forme `?chantierId=X` (query param) au lieu de `/{affectationId}` (path param) — j'ai donc supporté LES DEUX formes dans le handler.
+
+Étape 1 — Modèles GORM :
+- `internal/domain/model/notification.go` : supprimé les types Journalier + JournalierAffectation (déplacés vers personnel.go) en laissant un commentaire de renvoi.
+- `internal/domain/model/personnel.go` (nouveau, 70 lignes) : modèles Journalier + JournalierAffectation étendus pour matcher le schéma Prisma. 13 champs ajoutés à Journalier : Specialite, Photo, TypeContrat (default JOURNALIER), TauxJournalier, SalaireMensuel, DateDebutContrat, DateFinContrat, StatutContrat (renommé depuis Statut, valeurs ACTIF/ESSAI/TERMINE/SUSPENDU), NumeroCNPS, NbCongesRestants (default 0), Poste, Departement. Prenom passé de `*string` à `string` (NOT NULL). Ajouté relation `Affectations []JournalierAffectation` (lazy, `foreignKey:JournalierID`) pour le Preload. JournalierAffectation inchangé (ID, JournalierID, ChantierID, DateDebut, DateFin, Actif, relations) — aucun impact sur chantier_repo.go / dashboard_repo.go / paie_repo.go qui l'utilisent.
+- Vérifié via grep qu'aucun code ne référençait `Journalier.Statut` (l'ancien nom) — safe de renommer.
+
+Étape 2 — Usecase `internal/usecase/personnel/personnel.go` (nouveau, ~570 lignes) :
+- Interface `Repo` avec 12 méthodes (List, GetByID, Create, Update, Delete, CountKPI, CountNonAffecte, ListAffectationsByJournalier, CreateAffectation, DeleteAffectation, DeleteAffectationByChantier, ChantierExists).
+- Inputs/outputs typés : ListInput, CreateInput, UpdateInput, CreateAffectationInput, KPICounts (avec tags gorm column pour Scan direct), KPI, ListOutput.
+- Constantes de validation : `validTypeContrats` (JOURNALIER, CDD, CDI, STAGIAIRE), `validStatutsContrat` (ACTIF, ESSAI, TERMINE, SUSPENDU).
+- Mapping `specialitesByPhase` : 21 spécialités BTP réparties sur 3 groupes (GROS_OEUVRE 7, ENVELOPPE 5, SECOND_OEUVRE 9) — aligné sur PHASE_GROUPS du frontend (personnel-view.tsx lignes 177-229).
+- Helper exporté `SpecialitesForPhase(phase string) []string` pour le repo (construction de la clause SQL IN ?).
+- 9 méthodes Usecase : List (avec KPI agrégés), Get, Create (validation nom+prenom requis, typeContrat+statutContrat valides, dateFinContrat >= dateDebutContrat, force EntrepriseID pour non-SUPER_ADMIN), Update (partial via map, validation champs non-vides si fournis), Delete (vérifie existence pour 404), ListAffectations (vérifie existence journalier pour 404), CreateAffectation (vérifie existence journalier ET chantier via RLS avant INSERT, validation dates), DeleteAffectation (by id), DeleteAffectationByChantier (by journalierId + chantierId pair).
+
+Étape 3 — Repository `internal/repository/gorm/personnel_repo.go` (nouveau, ~340 lignes) :
+- `PersonnelRepository` implémente `personnel.Repo` (compile-time check `var _ personnel.Repo = (*PersonnelRepository)(nil)`).
+- Journalier : RLS direct (WithTenant suffit car la table a la policy tenant_isolation sur entrepriseId).
+- JournalierAffectation : filtrage tenant via `JOIN "Chantier" ON "Chantier".id = "JournalierAffectation"."chantierId"` (Chantier est RLS-protected).
+- List : pagination + 6 filtres (search ILIKE nom/prenom/telephone, statutContrat, typeContrat, specialite single, specialites[] multiple via `IN ?` avec slice, chantierId via subquery `id IN (SELECT "journalierId" FROM "JournalierAffectation" WHERE "chantierId" = ? AND actif = true)`). Preload `Affectations.Chantier` (une seule query supplémentaire pour toutes les affectations de tous les journaliers de la page).
+- GetByID : Preload `Affectations.Chantier`. Retourne (nil, nil) si non trouvé (RLS-filtered).
+- Create : génère ID via `newCuidLikeID()`, force createdAt/updatedAt, defaults défensifs TypeContrat=JOURNALIER + StatutContrat=ACTIF.
+- Update : partial updates via `map[string]any` (GORM Updates), force updatedAt, recharge avec Preload Affectations.Chantier.
+- Delete : cascade delete JournalierAffectation (WHERE journalierId = ?) puis Journalier — idempotent (Count==0 → return nil sans erreur).
+- CountKPI : une seule query SQL avec `COUNT(*) FILTER (WHERE ...)` pour 8 compteurs en 1 round-trip (total, journaliers, cdd, cdi, stagiaires, grosOeuvre, enveloppe, secondOeuvre). Construction dynamique des placeholders via `buildKPISQL` + `buildKPIArgs` (ordre des args doit matcher l'ordre des placeholders : grosSpecs, envSpecs, secSpecs). Helper `placeholders(n)` retourne "NULL" si n=0 (pour que `IN (NULL)` soit valide et renvoie 0 lignes).
+- CountNonAffecte : `NOT EXISTS (SELECT 1 FROM "JournalierAffectation" a WHERE a."journalierId" = "Journalier".id AND a.actif = true)` — implicitement tenant-scoped car l'outer Journalier est RLS-filtered (les affectations d'autres tenants ne matchent jamais journalierId = j.id).
+- ListAffectationsByJournalier : JOIN Chantier (RLS) + Preload Chantier, tri `dateDebut DESC NULLS LAST`.
+- CreateAffectation : génère ID, force Actif=true, recharge avec Preload Chantier pour la réponse. Si le rechargement via JOIN Chantier renvoie ErrRecordNotFound (chantier pas visible par RLS — ne devrait pas arriver car le usecase a déjà vérifié), retourne quand même l'affectation créée (sans chantier préloadé) plutôt que de fail.
+- DeleteAffectation (by id) : JOIN Chantier pour RLS check + Count==0 → return nil (idempotent), sinon `Delete WHERE id = ?`.
+- DeleteAffectationByChantier (by journalierId + chantierId pair) : idem avec double condition WHERE.
+- ChantierExists : count simple sur Chantier (RLS direct), utilisé par CreateAffectation pour vérifier la visibilité du chantier.
+
+Étape 4 — Handler `internal/delivery/http/handler/personnel_handler.go` (nouveau, ~430 lignes) :
+- `PersonnelHandler` avec 8 méthodes : List, Create, Update, Delete, ListAffectations, CreateAffectation, DeleteAffectation (gère à la fois path et query).
+- Parsing JSON via `map[string]any` (pattern identique à chantier_handler.go) pour gérer la conversion flexible des dates string (YYYY-MM-DD ou RFC3339) → *time.Time via `parseDate`.
+- Helpers `parsePersonnelCreateInput` + `parsePersonnelUpdateInput` : extraient nom, prenom, telephone, specialite, photo, typeContrat, statutContrat, numeroCNPS, poste, departement (strings), tauxJournalier, salaireMensuel (float64 via `toFloat64`), nbCongesRestants (int via `toInt64`), dateDebutContrat, dateFinContrat (dates via `parseDate`). Pour Create, les strings vides sont skippées (champs optionnels restent nil). Pour Update, toutes les strings sont passées (permet de vider un champ via string vide).
+- `writePersonnelError` : mapping ErrNotFound→404, ErrBadRequest→400, ErrUnauthorized→401, ErrConflict→409, default→500.
+- List : supporte à la fois `?statut=` (alias compat task brief) et `?statutContrat=` (aligné Prisma). Lit `specialites` via `r.URL.Query()["specialites"]` (slice, repeated query params).
+- DeleteAffectation : un seul handler qui décide selon la présence de `chi.URLParam(r, "affectationId")` (path) vs `r.URL.Query().Get("chantierId")` (query). Si affectationId présent → DeleteAffectation by id. Sinon → DeleteAffectationByChantier (by journalierId + chantierId pair). Si aucun des deux → 400 "missing affectationId (path) or chantierId (query)".
+- Réponses : Create/CreateAffectation → 201 (ressource créée), Update/Get/List/ListAffectations → 200, Delete → 200 {success: true, id}. ListOutput : {journaliers: [...], kpi: {...}, total, page, pageSize}. ListAffectations : {data: [...], total: N}.
+
+Étape 5 — Router `internal/delivery/http/router.go` (modifié) :
+- Ajouté champ `Personnel *handler.PersonnelHandler` à la struct Deps (ligne 200).
+- Ajouté bloc PHASE-B-PERSONNEL après le bloc Phase (lignes 327-355) avec 8 routes :
+  * GET    /personnel — RequireAccess(RH, LECTURE)
+  * POST   /personnel — RequireAccess(RH, ECRITURE)
+  * PUT    /personnel/{id} — RequireAccess(RH, ECRITURE)
+  * DELETE /personnel/{id} — RequireAccess(RH, ECRITURE)
+  * GET    /personnel/{id}/affectations — RequireAccess(RH, LECTURE)
+  * POST   /personnel/{id}/affectations — RequireAccess(RH, ECRITURE)
+  * DELETE /personnel/{id}/affectations/{affectationId} — RequireAccess(RH, ECRITURE)
+  * DELETE /personnel/{id}/affectations — RequireAccess(RH, ECRITURE) (forme query ?chantierId= utilisée par le frontend)
+
+Étape 6 — main.go (modifié) :
+- Ajouté import `"opuc/internal/usecase/personnel"`.
+- Ajouté `personnelRepo := gorm.NewPersonnelRepository(dbm.Runtime)`.
+- Ajouté `personnelUC := personnel.NewUsecase(personnelRepo, log)`.
+- Ajouté `personnelHandler := handler.NewPersonnelHandler(personnelUC, log)`.
+- Ajouté `Personnel: personnelHandler` dans la struct `http.Deps{...}`.
+
+Vérifications :
+- `go build -o /tmp/opuc-test .` → ✅ OK (binary 20.2MB généré)
+- `go vet ./...` → ✅ OK (0 warnings)
+- `gofmt -l` sur les 7 fichiers créés/modifiés → ✅ OK (vide = tous formatés)
+- Smoke test : `JWT_SECRET=test DATABASE_URL=postgresql://fake MIGRATIONS_URL=postgresql://fake PORT=18080 /tmp/opuc-test` → démarre, log "starting O.P.U.C API" version 0.1.0, échoue sur connexion DB (attendu — pas de DB locale). Tous les wiring repo/usecase/handler/routes exécutés sans panic avant l'échec DB.
+
+Stage Summary:
+- **4 fichiers créés** : internal/domain/model/personnel.go (70 lignes), internal/usecase/personnel/personnel.go (~570 lignes), internal/repository/gorm/personnel_repo.go (~340 lignes), internal/delivery/http/handler/personnel_handler.go (~430 lignes).
+- **3 fichiers modifiés** : internal/domain/model/notification.go (-27 lignes, +8 lignes commentaire de renvoi), internal/delivery/http/router.go (+33 lignes), main.go (+9 lignes).
+- **~1 420 lignes de code Go ajoutées** (hors modèle déplacé).
+- **8 endpoints implémentés** (dont 1 double forme pour DELETE affectation) :
+  1. GET    /api/v1/personnel                                — RequireAccess(RH, LECTURE) — liste paginée + KPI agrégés (9 compteurs)
+  2. POST   /api/v1/personnel                                — RequireAccess(RH, ECRITURE) — create journalier (14 champs)
+  3. PUT    /api/v1/personnel/{id}                           — RequireAccess(RH, ECRITURE) — update partiel (14 champs optionnels)
+  4. DELETE /api/v1/personnel/{id}                           — RequireAccess(RH, ECRITURE) — delete + cascade affectations
+  5. GET    /api/v1/personnel/{id}/affectations              — RequireAccess(RH, LECTURE) — liste affectations
+  6. POST   /api/v1/personnel/{id}/affectations              — RequireAccess(RH, ECRITURE) — create affectation (vérif FK journalier + chantier)
+  7. DELETE /api/v1/personnel/{id}/affectations/{affectationId} — RequireAccess(RH, ECRITURE) — delete by id (path param, API publique)
+  8. DELETE /api/v1/personnel/{id}/affectations?chantierId=X    — RequireAccess(RH, ECRITURE) — delete by (journalier,chantier) pair (forme utilisée par le frontend)
+- **RBAC** : tous sous `RequireAccess(model.DomainRH, PermLecture|Ecriture, DelegationRepo)`. Le domaine RH couvre personnel + pointage + paie (cf. domain/model/delegation.go). CHEF_PROJET a accès baseline (peut gérer le personnel), EMPLOYE nécessite une délégation RH/LECTURE ou RH/ECRITURE active (sauf si sa fonction BTP est CHARGE_RH → auto-grant RH/ECRITURE via PHASE-5).
+- **RLS** :
+  * Journalier : RLS direct (policy tenant_isolation sur entrepriseId). Toutes les queries utilisent WithTenant → SET LOCAL ROLE app_user + set_config app.current_tenant.
+  * JournalierAffectation : PAS de RLS direct. Filtrage tenant via `JOIN "Chantier" ON "Chantier".id = "JournalierAffectation"."chantierId"` (Chantier est RLS-protected). Pour CountNonAffecte, le filtrage est implicite via `journalierId = Journalier.id` (l'outer Journalier étant RLS-filtered, seules les affectations des journaliers du tenant sont matchées).
+  * Create journalier : RLS WITH CHECK → entrepriseId forcé à auth.EntrepriseID pour non-SUPER_ADMIN. SUPER_ADMIN peut créer dans n'importe quelle entreprise (entrepriseId non forcé).
+  * CreateAffectation : explicit existence check sur Chantier (RLS direct) avant INSERT — rejet si chantier non visible dans tenant.
+- **Modèle GORM étendu** : 13 champs ajoutés à Journalier pour matcher le schéma Prisma (specialite, photo, typeContrat, tauxJournalier, salaireMensuel, dateDebutContrat, dateFinContrat, statutContrat, numeroCNPS, nbCongesRestants, poste, departement) + Prenom passé de *string à string (NOT NULL comme Prisma). Le champ `Statut` a été renommé en `StatutContrat` (valeurs ACTIF/ESSAI/TERMINE/SUSPENDU au lieu de ACTIF/INACTIF) — aucune régression car aucun code ne référençait `Journalier.Statut` (vérifié via grep).
+- **KPI optimisés** : une seule query SQL `COUNT(*) FILTER (WHERE ...)` pour 8 compteurs (total/journaliers/cdd/cdi/stagiaires/grosOeuvre/enveloppe/secondOeuvre) en 1 round-trip. La phase BTP (grosOeuvre/enveloppe/secondOeuvre) est déterminée par la spécialité du journalier via un mapping hardcodé `specialitesByPhase` (21 spécialités alignées sur PHASE_GROUPS du frontend personnel-view.tsx). CountNonAffecte utilise `NOT EXISTS (subquery)` — 1 query supplémentaire.
+- **DELETE affectation double forme** : le handler `DeleteAffectation` décide selon la présence de `chi.URLParam("affectationId")` (path) vs `r.URL.Query().Get("chantierId")` (query). Le frontend (personnel-view.tsx ligne 720) utilise la forme query (?chantierId=X) — fonctionnera directement. L'API publique documentée dans le task brief utilise la forme path (/{affectationId}) — fonctionnera aussi.
+- **Build + vet + gofmt** : ✅ exit 0 (Go 1.23.4).
+- **Pré-existant (non mon œuvre)** : module `engin` (PHASE-B-ENGINS) ajouté en parallèle par un autre agent — wiring dans main.go/router.go + fichiers untracked dans usecase/engin, repository/gorm/engin_repo.go, handler/engin_handler.go, dto/engin_dto.go, model/engin.go. Le fix `Equipement.TypeEquipement string → *string` dans carburant.go (alignement Prisma `String?`) par l'agent engin a été nécessaire pour que mon build passe (aucune modification de ma part sur carburant.go).
+- Non commit/push — le tuteur s'en chargera.
+
+---
+Task ID: PHASE-B-BUDGET
+Agent: full-stack-developer
+Task: Endpoint backend GET /api/v1/budget/{chantierId} — agrégation des coûts d'un chantier
+
+Work Log:
+- Lu le contexte : worklog.md, modèle dashboard (pattern d'agrégation), modèles GORM
+  (Chantier, PaiementHebdo, SalaireMensuel, EntreeStock, ContratST, LocationEngin,
+  Journalier, JournalierAffectation, StockMateriel, Equipement, SousTraitant),
+  tenant.go (WithTenant + RLS), router.go (pattern RequireAccess).
+- Identifié les RLS JOINs nécessaires pour chaque table (cf. commentaires en tête
+  de budget_repo.go) :
+    * Chantier         → RLS direct
+    * PaiementHebdo    → JOIN Chantier
+    * SalaireMensuel   → JOIN Journalier (RLS direct)
+    * EntreeStock      → JOIN Chantier
+    * ContratST        → JOIN SousTraitant (RLS direct)
+    * LocationEngin    → JOIN Equipement (RLS direct)
+- Fichiers créés :
+    * internal/usecase/budget/budget.go (254 lignes)
+      - Types BudgetData, HistoriqueItem, RepartitionItem (alignés sur le frontend
+        budget-view.tsx)
+      - Interface Repo (6 méthodes : GetChantier, SumCoutPersonnel, SumCoutMateriaux,
+        SumCoutSousTraitants, SumCoutLocations, Historique)
+      - Usecase.Get(ctx, auth, chantierID) → *BudgetData
+      - Helper niveauAlerteFromPourcentage + buildRepartition + currentYear
+    * internal/repository/gorm/budget_repo.go (300 lignes)
+      - BudgetRepository implémentant budget.Repo (compile-time check)
+      - Toutes les méthodes utilisent database.WithTenant
+      - COALESCE(SUM(...), 0) pour garantir des zéros si pas de données
+      - SumCoutLocations : formule SQL
+        (coutJournalier * GREATEST(dureeJours, 1) + coutTransport + coutOperateur)
+        avec dureeJours = EXTRACT(EPOCH FROM (COALESCE(dateFin, NOW()) - dateDebut)) / 86400
+      - Historique : UNION ALL de 5 sous-requêtes (une par source de coût), GROUP BY
+        mois (TO_CHAR(date, 'YYYY-MM')), filtre EXTRACT(YEAR FROM date) = ?, trié par
+        mois ASC. Une seule query SQL pour tout l'historique.
+    * internal/delivery/http/handler/budget_handler.go (94 lignes)
+      - BudgetHandler.Get — GET /api/v1/budget/{chantierId}
+      - Extraction AuthUser via authUserFromCtx + chantierId via chi.URLParam
+      - writeBudgetError : mappe domain errors → HTTP (404/401/400/500)
+- Fichiers modifiés :
+    * internal/delivery/http/router.go
+      - Ajout de `Budget *handler.BudgetHandler` au struct Deps
+      - Route : `r.With(RequireAccess(DomainFinance, PermLecture, DelegationRepo)).
+        Get("/budget/{chantierId}", d.Budget.Get)`
+      - Documentation ajoutée dans le block comment en tête de fichier
+    * main.go
+      - Import `opuc/internal/usecase/budget`
+      - budgetRepo := gorm.NewBudgetRepository(dbm.Runtime)
+      - budgetUC := budget.NewUsecase(budgetRepo, log)
+      - budgetHandler := handler.NewBudgetHandler(budgetUC, log)
+      - Budget: budgetHandler dans Deps du NewRouter
+
+Stage Summary:
+- **Nouvel endpoint** : `GET /api/v1/budget/{chantierId}` — agrège les coûts d'un
+  chantier depuis 5 tables existantes (PaiementHebdo, SalaireMensuel, EntreeStock,
+  ContratST, LocationEngin) + Chantier.budgetPrevisionnel.
+- **Structure JSON retournée** (alignée sur frontend/src/components/budget/budget-view.tsx) :
+  ```json
+  {
+    "budgetPrevisionnel": 50000000,
+    "coutPersonnel": 1500000,
+    "coutMateriaux": 800000,
+    "coutSousTraitants": 600000,
+    "coutLocations": 300000,
+    "coutTotal": 3200000,
+    "ecart": 46800000,
+    "ecartPourcentage": 93.6,
+    "niveauAlerte": "OK",
+    "historique": [{"mois":"2025-01","cout":500000}, ...],
+    "repartition": [
+      {"categorie":"Personnel","reel":1500000,"pourcentage":46.9},
+      {"categorie":"Matériaux","reel":800000,"pourcentage":25.0},
+      {"categorie":"Sous-traitants","reel":600000,"pourcentage":18.8},
+      {"categorie":"Locations","reel":300000,"pourcentage":9.4}
+    ]
+  }
+  ```
+- **RBAC** : RequireAccess(model.DomainFinance, model.PermLecture) — le budget est
+  listé dans DomainModules[DomainFinance] = {"facturation","contrats","paie","budget"}.
+  Les délégations FINANCE/LECTURE actives permettent à un EMPLOYE d'y accéder.
+- **RLS** : toutes les queries passent par database.WithTenant (SET LOCAL ROLE app_user
+  + set_config('app.current_tenant', entrepriseID)). Chaque table sans RLS direct est
+  filtrée via JOIN sur la table RLS-protected appropriée (Chantier, Journalier,
+  SousTraitant, Equipement). Si le chantier n'appartient pas au tenant, GetChantier
+  renvoie (0, false, nil) → 404 ; les SUM renvoient 0 (pas d'erreur).
+- **Formules** :
+    * coutPersonnel = SUM(PaiementHebdo.montantVerse WHERE chantierId=?)
+                     + SUM(SalaireMensuel.netAPayer WHERE journalierId IN
+                        (SELECT journalierId FROM JournalierAffectation
+                         JOIN Chantier WHERE chantierId=?))
+    * coutMateriaux = SUM(EntreeStock.quantite * EntreeStock.prixUnitaire WHERE chantierId=?)
+    * coutSousTraitants = SUM(ContratST.montantHT WHERE chantierId=?)
+    * coutLocations = SUM(coutJournalier * GREATEST(dureeJours, 1)
+                          + coutTransport + coutOperateur
+                        WHERE chantierId=?)
+      avec dureeJours = EXTRACT(EPOCH FROM (COALESCE(dateFin, NOW()) - dateDebut)) / 86400
+    * coutTotal = somme des 4 catégories
+    * ecart = budgetPrevisionnel - coutTotal
+    * ecartPourcentage = (ecart / budgetPrevisionnel) * 100 — % du budget RESTANT
+      (positif = marge, négatif = dépassement). 0 si budgetPrevisionnel = 0.
+    * niveauAlerte :
+        - "OK" si ecartPourcentage > 20 (plus de 20% du budget restant)
+        - "ATTENTION" si 0 <= ecartPourcentage <= 20 (proche du budget)
+        - "CRITIQUE" si ecartPourcentage < 0 (dépassement)
+- **Historique mensuel** : UNION ALL de 5 sources (PaiementHebdo via COALESCE(datePaiement,
+  createdAt), SalaireMensuel via createdAt, EntreeStock via dateEntree, ContratST via
+  createdAt, LocationEngin via dateDebut), filtré sur l'année courante, GROUP BY mois
+  (TO_CHAR 'YYYY-MM'), SUM(montant), trié ASC. Retourne []vide (jamais nil) si pas
+  de données.
+- **Codes HTTP** :
+    * 200 OK (BudgetData, même si toutes les valeurs sont à 0 — chantier sans donnée)
+    * 400 Bad Request (chantierId manquant)
+    * 401 Unauthorized (non authentifié)
+    * 404 Not Found (chantier introuvable ou non visible par RLS)
+    * 500 Internal Server Error (erreur DB)
+- **Validation** :
+    * `go build -o /tmp/opuc-test .` → exit 0 ✅
+    * `go vet ./...` → exit 0 ✅
+    * `gofmt -l` sur tous les fichiers modifiés → 0 fichiers mal formatés ✅
+- **Note spec vs frontend** : le spec snippet JSON montre `"eccartPourcentage": 93.6`
+  (typo double 'c') — le frontend budget-view.tsx utilise `ecartPourcentage` (single 'c').
+  J'ai utilisé `ecartPourcentage` (single 'c') pour matcher le frontend. Le spec
+  mentionnait aussi "(ecart / budgetPrevisionnel) * 100" pour ecartPourcentage — c'est
+  bien la formule implémentée. Le frontend affiche "X% du budget consommé" à côté de
+  cette valeur, ce qui est incohérent avec la formule (X = % restant). C'est un bug
+  frontend séparé — le backend suit strictement le spec.
+- Non commit/push — le tuteur s'en chargera.
+
+---
+Task ID: PHASE-B-PARAMETRES
+Agent: full-stack-developer
+
+Work Log:
+- Réécriture complète du composant `frontend/src/components/parametres/parametres-view.tsx`
+  (1252 lignes → 1140 lignes) pour utiliser UNIQUEMENT les endpoints backend existants.
+  L'ancien composant appelait `/api/v1/parametres` (GET/PUT/PATCH) qui n'existe PAS dans le backend Go.
+- Aucun nouvel endpoint backend créé. Aucune modification au backend.
+- Package ajouté : `qrcode.react@4.2.0` (rendering SVG du QR code TOTP pour 2FA setup).
+
+Endpoints utilisés (tous existants, aucun inventé) :
+- `GET  /api/v1/auth/me`           → charge le user courant (via `goApi.me()`)
+- `PUT  /api/v1/users/{id}`        → sauve le profil (name, telephone) via `goApi.put()`
+- `POST /api/v1/auth/2fa/setup`    → génère secret + qrUrl (via `goApi.setup2FA()`)
+- `POST /api/v1/auth/2fa/verify`   → valide le code TOTP 6 chiffres (via `goApi.verify2FA()`)
+- `POST /api/v1/auth/2fa/disable`  → désactive 2FA avec password (via `goApi.disable2FA()`)
+
+Architecture du composant :
+1. **Onglet "Profil"** :
+   - Header card avec gradient amber/orange + avatar + badges (rôle, co-gérant, 2FA, statut).
+   - Form de modification (nom + téléphone) → PUT /users/{id} au clic sur "Enregistrer".
+   - Card "Détails du compte" en lecture seule (email, rôle, 2FA, entrepriseId tronqué).
+   - Alert info expliquant que l'email/le rôle/l'entreprise sont gérés par l'admin.
+   - **Entreprise card supprimée** : `/auth/me` ne retourne que `entrepriseId` (pas les détails
+     de l'entreprise). Au lieu d'afficher un card vide, on affiche l'ID tronqué dans les détails.
+
+2. **Onglet "Sécurité"** (2 cards côte à côte) :
+   - **Mot de passe** : pas d'endpoint self-service. `PUT /users/{id}` n'accepte pas `password`
+     (DTO `UpdateUserRequest` = name/telephone/role/fonction/active uniquement). `POST /users/{id}/reset-password`
+     est réservé aux admins (RBAC: SUPER_ADMIN, GERANT). Affichage d'une Alert "Bientôt disponible"
+     + note d'orientation vers l'admin pour reset. Pas d'UI factice de changement de mot de passe.
+   - **2FA** : card avec statut visuel (Activée/Désactivée) + bouton "Activer la 2FA" ou "Désactiver".
+     - Bouton "Activer" → ouvre `TwoFASetupDialog` (sub-composant) :
+       a. Fetch POST /auth/2fa/setup au mount du dialog → affiche loader.
+       b. Affiche QR code (QRCodeSVG de qrcode.react, 180px, level M) + secret en monospace + bouton "Copier".
+       c. Input OTP 6 chiffres (InputOTP shadcn) pour saisie du code TOTP.
+       d. Bouton "Vérifier & activer" → POST /auth/2fa/verify → si 200: écran de succès vert + toast,
+          refresh user via `goApi.me()`. Si 401: "Code invalide". Si autre erreur: message générique.
+     - Bouton "Désactiver" → ouvre `TwoFADisableDialog` (sub-composant) :
+       a. Input password avec toggle afficher/masquer.
+       b. Bouton "Désactiver" (destructive) → POST /auth/2fa/disable → toast succès + refresh user.
+       c. 401 → "Mot de passe incorrect".
+   - Section "Session active" (badge vert) + card "Conseils de sécurité" (6 tips en grid).
+
+3. **Onglet "Notifications"** : Alert info "stocké localement" + 5 switches (stockAlerts, budgetAlerts,
+   taskReminders, paymentAlerts, dailyReport) persistés dans localStorage (`opuc-notif-prefs`).
+   Lazy-initialized via `loadNotifPrefs()` pour éviter setState dans useEffect.
+
+4. **Onglet "Apparence"** : 3 thèmes (light/dark/system) via `useTheme()` de next-themes.
+   Plus de state `mounted` — utilisé directement `theme !== undefined` comme indicateur de mounting
+   (le thème est `undefined` pendant SSR puis devient la vraie valeur après mount côté client).
+
+5. **Onglets "Langue", "Raccourcis", "Données", "À propos"** : conservés de l'ancien composant,
+   ajustés (DB card mentionne maintenant PostgreSQL/RLS/JWT/2FA au lieu de SQLite ;
+   card "À propos" ajoute une ligne "Auth: JWT + 2FA TOTP" ; "Zone de danger" reset les
+   préférences locales au lieu de "toutes les données" — moins dangereux et plus précis).
+
+Patterns techniques pour passer le lint `react-hooks/set-state-in-effect` :
+- Fetch du user au mount : async IIFE dans useEffect avec `let active = true` + cleanup.
+- Init notifPrefs : idem, async IIFE avec `await Promise.resolve()` puis setState.
+- Init 2FA setup dialog : tout dans async IIFE (setStep/setError inclus).
+- Pas de state `mounted` séparé (utilise `theme !== undefined` de next-themes).
+- Le fichier passe `bunx eslint` avec EXIT 0 (0 erreur, 0 warning).
+- TypeScript : `bunx tsc --noEmit --skipLibCheck` → 0 erreur sur le fichier.
+
+Validation :
+- `cd /home/z/my-project/opuc/frontend && bunx eslint src/components/parametres/parametres-view.tsx`
+  → EXIT 0 (0 erreur sur le fichier).
+- `bunx tsc --noEmit --skipLibCheck` → 0 erreur sur parametres-view.tsx (79 erreurs pré-existantes
+  ailleurs dans le projet, principalement prisma/seed.ts — non introduites ici).
+- `bun run lint` (project-wide) : 79 erreurs au total (3 de moins qu'avant : les 3 erreurs
+  set-state-in-effect de l'ancien parametres-view.tsx sont corrigées). Les 79 erreurs restantes
+  sont dans d'autres fichiers (use-mobile.ts, useOfflineSync.ts, personnel-view.tsx, engins-view.tsx,
+  etc.) — non concernées par cette task.
+- Note: le dev server auto-démarré tourne sur `/home/z/my-project/` (root stub), pas sur
+  `/home/z/my-project/opuc/frontend/` — voir worklog Task SAAS-FRONTEND pour contexte. Le code
+  est correct (lint + tsc passent).
+
+Stage Summary:
+- **Component rewrite complete** : parametres-view.tsx utilise désormais les endpoints existants
+  (/auth/me, /users/{id}, /auth/2fa/*). Plus aucun appel à /api/v1/parametres.
+- **2FA fully functional** : setup (QR + secret + verify) + disable (password) via 2 sub-composants
+  Dialog réutilisables.
+- **Password change** : pas d'UI factice, message honnête "Bientôt disponible" + orientation admin.
+- **Style glassmorphism + amber/orange theme** : conservé (gradient header, badges colorés,
+  cards `border shadow-sm`, Alert amber pour info, Alert red pour danger).
+- **shadcn/ui components** : Dialog, InputOTP, Alert, Card, Button, Input, Switch, Badge, Avatar,
+  Separator, Skeleton, Select, Label — tous existants.
+- Non commit/push — en attente de validation.
