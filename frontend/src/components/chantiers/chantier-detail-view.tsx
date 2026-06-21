@@ -225,13 +225,11 @@ export function ChantierDetailView() {
   const [availableUsers, setAvailableUsers] = useState<{ id: string; name: string; email: string; role: string; fonction?: string }[]>([])
 
   useEffect(() => {
-    fetch('/api/v1/users?pageSize=100')
+    fetch('/api/v1/users/assignable')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data?.data) {
-          // Filter : only CHEF_PROJET + EMPLOYE (not GERANT/SUPER_ADMIN — they have full access anyway)
-          const assignable = data.data.filter((u: any) => u.role === 'CHEF_PROJET' || u.role === 'EMPLOYE')
-          setAvailableUsers(assignable)
+          setAvailableUsers(data.data)
         }
       })
       .catch(() => { /* silent fail — select will just be empty */ })

@@ -82,6 +82,66 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
         })
 }
 
+// ListAssignable — GET /api/v1/users/assignable
+// Retourne les users assignables (CHEF_PROJET + EMPLOYE) du tenant courant.
+// Accessible à TOUS les utilisateurs authentifiés (auth-seul) — utilisé par
+// le select "Responsable" dans le formulaire de création de tâche.
+//
+// Retourne des données minimales (id, name, role, fonction) — pas d'email,
+// pas de téléphone, pas de 2FA. RLS-filtered (tenant-scoped).
+//
+// Réponse : { data: [{ id, name, role, fonction }] }
+func (h *UserHandler) ListAssignable(w http.ResponseWriter, r *http.Request) {
+        au := authUserFromCtx(r.Context())
+        if au == nil {
+                WriteError(w, http.StatusUnauthorized, "unauthorized")
+                return
+        }
+
+        // Récupère tous les users du tenant (RLS-filtered)
+        // On utilise le filtre active=true pour ne pas proposer des users désactivés
+        active := true
+        users, _, err := h.uc.List(r.Context(), au, iam.ListFilter{
+                Page:     1,
+                PageSize: 200,
+                Active:   &active,
+        })
+        if err != nil {
+                h.log.Error("users.ListAssignable", "err", err)
+                WriteError(w, http.StatusInternalServerError, "internal error")
+                return
+        }
+
+        // Filtre côté handler : ne garde que CHEF_PROJET + EMPLOYE + SOUS_TRAITANT (legacy)
+        type assignableUser struct {
+                ID       string `json:"id"`
+                Name     string `json:"name"`
+                Role     string `json:"role"`
+                Fonction string `json:"fonction,omitempty"`
+        }
+        out := make([]assignableUser, 0, len(users))
+        for i := range users {
+                u := &users[i]
+                if u.Role == "CHEF_PROJET" || u.Role == "EMPLOYE" || u.Role == "SOUS_TRAITANT" {
+                        fn := ""
+                        if u.Fonction != nil {
+                                fn = *u.Fonction
+                        }
+                        out = append(out, assignableUser{
+                                ID:       u.ID,
+                                Name:     u.Name,
+                                Role:     u.Role,
+                                Fonction: fn,
+                        })
+                }
+        }
+
+        WriteJSON(w, http.StatusOK, map[string]any{
+                "data":  out,
+                "total": len(out),
+        })
+}
+
 // Get — GET /api/v1/users/{id}
 // RLS-filtered : un GERANT ne peut pas GET un user d'une autre entreprise.
 func (h *UserHandler) Get(w http.ResponseWriter, r *http.Request) {
