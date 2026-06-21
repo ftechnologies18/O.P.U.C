@@ -1618,3 +1618,218 @@ Stage Summary:
   qu'appeler les endpoints — si l'utilisateur n'a pas la permission, le backend
   retourne 403 et le toast affiche l'erreur.
 - Non commit/push — en attente de validation.
+
+---
+Task ID: DASHBOARDS-PAR-ROLE
+Agent: full-stack-developer
+Task: Créer 4 dashboards spécialisés par rôle + routing /dashboard selon le rôle + fix sidebar SUPER_ADMIN (doublon)
+
+Work Log:
+
+Problèmes identifiés :
+1. Tous les utilisateurs voyaient le même `DashboardView` (générique, KPIs BTP).
+2. Le SUPER_ADMIN avait 2 entrées dashboard dans sa sidebar : "Tableau de bord"
+   (/dashboard) dans "Principal" + "Dashboard" (/admin-plateforme) dans "Plateforme".
+3. Le dashboard générique affichait des KPIs BTP (chantiersActifs, journaliersSurSite)
+   qui sont VIDES pour SUPER_ADMIN car le RLS backend bloque ces requêtes (le
+   SUPER_ADMIN n'appartient à aucun tenant).
+
+Solution implémentée — 4 dashboards spécialisés + routing par rôle :
+
+PARTIE 1 — 4 nouveaux composants dashboard
+(tous dans `frontend/src/components/dashboard/`)
+
+A. `super-admin-dashboard.tsx` (NOUVEAU, ~45 lignes)
+   - Composant simple : `useEffect(() => router.replace('/admin-plateforme'))`
+     + Loader2 spinner pendant la redirection côté client.
+   - Filet de sécurité : si un SUPER_ADMIN arrive sur /dashboard (lien obsolète,
+     bookmark), il est redirigé proprement vers /admin-plateforme.
+   - Ne fait AUCUN fetch API (le SUPER_ADMIN n'a pas de données métier).
+
+B. `gerant-dashboard.tsx` (NOUVEAU, ~620 lignes)
+   - Rôle : GERANT (gérant d'entreprise tenant BTP).
+   - KPIs (5 cards) : chantiersActifs, journaliersSurSite, pointagesAujourdhui,
+     tachesEnRetard (highlight rouge si > 0), alertesActives (highlight rouge
+     si > 0).
+   - Widgets :
+     * Budget global entreprise (somme budgetData : prévisionnel, réel, % de
+       consommation avec Progress + code couleur emerald/amber/red).
+     * Budget par chantier (BarChart recharts — prévisionnel vs réel, millions
+       FCFA, légende amber/amber-400).
+     * Statut des chantiers (PieChart recharts + liste cliquable des 6 premiers
+       chantiers avec badge couleur par statut).
+     * Top 3 chantiers en cours (par budget prévisionnel, avec Progress de
+       consommation budgétaire + badge statut + click → /chantiers/{id}).
+     * Tâches en retard (alerte rouge si > 0, liste scrollable avec chantier +
+       phase + avancement + dateFin formatée, bouton "Voir le planning").
+     * Notifications récentes (max 10, avec icône emoji par type, badge "non lu"
+       point amber).
+     * Quick actions (6 boutons en grille 2-3 cols) : Nouveau chantier, Générer
+       paie, Gérer users, Suivi budget, Planning, Rapports.
+   - Backend : Promise.all de GET /api/v1/dashboard + /api/v1/chantiers +
+     /api/v1/notifications?limit=10 + /api/v1/auth/me.
+   - Gestion erreurs : toast.error + loading state skeletons (3 zones).
+
+C. `chef-projet-dashboard.tsx` (NOUVEAU, ~570 lignes)
+   - Rôle : CHEF_PROJET (opérationnel, pas de management financier/HR global).
+   - KPIs (4 cards) : mes tâches en cours, mes tâches en retard (highlight rouge
+     si > 0), pointages aujourd'hui, chantiers actifs.
+   - Widgets :
+     * Mes tâches assignées (top 5 — en cours + en retard, avec avancement
+       Progress + badge statut + dateFin + jours restants avec code couleur
+       rouge/amber selon isPast/daysLeft<=3, click → /chantiers/{chantierId}).
+     * Actions rapides (4 boutons grille 2 cols) : Nouveau pointage, Voir mes
+       tâches, Planning, Stocks.
+     * Pointages du jour (2 sous-cards : pointages aujourd'hui + journaliers sur
+       site, avec icône background amber/emerald).
+     * Alertes stock (carte rouge si alertesActives > 0, grand chiffre, bouton
+       "Voir le stock").
+     * Notifications récentes (max 5, format compact).
+   - Backend : Promise.all de GET /api/v1/taches/mes-taches + /api/v1/dashboard +
+     /api/v1/notifications?limit=8 + /api/v1/auth/me.
+   - Gestion erreurs : toast.error + loading state skeletons.
+
+D. `employe-dashboard.tsx` (NOUVEAU, ~580 lignes)
+   - Rôle : EMPLOYE (et SOUS_TRAITANT legacy).
+   - KPIs (4 cards) : mes tâches total, en cours, en retard (highlight rouge),
+     terminées.
+   - Widgets :
+     * Alerte tâches en retard (carte rouge conditionnelle, liste max 5 tâches
+       avec jours de retard + dateFin, bouton "Voir toutes mes tâches").
+     * Mes tâches du jour (dateFin == today, non terminées, max 5, avec
+       avancement Progress + badge statut, click → /chantiers/{chantierId}).
+       Empty state : "Aucune tâche pour aujourd'hui" + info sur tâches à venir.
+     * Notifications récentes (max 10, avec icône emoji + date formatée +
+       badge "non lues" count, point amber si non lu).
+     * CTA "Consulter toutes mes tâches" (carte gradient amber→orange avec
+       bouton primary → /mes-taches).
+   - Backend : Promise.all de GET /api/v1/taches/mes-taches + /api/v1/notifications
+     ?limit=10 + /api/v1/auth/me.
+   - IMPORTANT : NE fait AUCUN fetch vers /api/v1/dashboard (KPIs entreprise) —
+     l'EMPLOYE n'y a pas accès (RLS backend). Seulement données personnelles
+     (mes-taches + notifications).
+   - Gestion erreurs : toast.error + loading state skeletons.
+
+PARTIE 2 — Routing /dashboard par rôle
+
+Fichier modifié : `frontend/src/app/(app)/dashboard/page.tsx`
+- Avant : `return <DashboardView />` (un seul dashboard générique).
+- Après : switch sur `session.user.role` :
+  * SUPER_ADMIN → <SuperAdminDashboard /> (redirect /admin-plateforme)
+  * GERANT → <GerantDashboard />
+  * CHEF_PROJET → <ChefProjetDashboard />
+  * EMPLOYE / SOUS_TRAITANT → <EmployeDashboard />
+  * default (rôles inconnus) → <GerantDashboard /> (fallback le plus générique)
+- Loading state : spinner Loader2 plein écran tant que `status === 'loading'`
+  ou `!role` (évite le flash de contenu générique).
+
+PARTIE 3 — Fix sidebar SUPER_ADMIN (doublon supprimé)
+
+Fichier modifié : `frontend/src/lib/rbac.ts`
+- Avant : `SUPER_ADMIN_PAGES` contenait 'dashboard' → l'item sidebar "Tableau
+  de bord" (/dashboard) était visible pour SUPER_ADMIN (car la sidebar filtre
+  les items via `allowedPages.includes(item.id)`).
+- Après : 'dashboard' RETIRÉ de `SUPER_ADMIN_PAGES`. Conséquences :
+  * L'item "Tableau de bord" (/dashboard) est automatiquement MASQUÉ de la
+    sidebar pour SUPER_ADMIN (l'item.id='dashboard' n'est plus dans
+    allowedPages → filtré par la règle 1 de `filteredSections`).
+  * Si SUPER_ADMIN tente /dashboard directement : PageGuard
+    (`src/components/layout/page-guard.tsx`) détecte que 'dashboard' n'est pas
+    dans SUPER_ADMIN_PAGES → `router.replace('/admin-plateforme')`.
+  * Filet de sécurité : si PageGuard ne capte pas (race condition), la page
+    /dashboard route vers <SuperAdminDashboard /> qui fait aussi
+    `router.replace('/admin-plateforme')` côté client.
+- DEFAULT_PAGES['SUPER_ADMIN'] était déjà 'admin-plateforme' → inchangé.
+- Commentaire ajouté dans rbac.ts pour expliquer pourquoi 'dashboard' est
+  absent de SUPER_ADMIN_PAGES (évite qu'un futur dev le ré-ajoute par erreur).
+- `dashboard-view.tsx` CONSERVÉ (non supprimé) pour compat, mais n'est plus
+  importé nulle part (peut être supprimé dans une future passe de cleanup).
+
+Conséquences pour chaque rôle :
+- SUPER_ADMIN : sidebar = 1 dashboard (/admin-plateforme dans "Plateforme").
+  Plus de doublon. Page d'accueil = /admin-plateforme (inchangé).
+- GERANT : sidebar = "Tableau de bord" (/dashboard) → GerantDashboard.
+  Page d'accueil = /dashboard (inchangé).
+- CHEF_PROJET : sidebar = "Tableau de bord" (/dashboard) → ChefProjetDashboard.
+  Page d'accueil par défaut = /pointage (inchangé dans DEFAULT_PAGES).
+- EMPLOYE / SOUS_TRAITANT : sidebar = "Tableau de bord" (/dashboard) →
+  EmployeDashboard. Page d'accueil = /dashboard (inchangé).
+
+Patterns techniques :
+- Tous les composants sont `'use client'` (utilisation de hooks React + fetch
+  côté client + useRouter pour la navigation).
+- Fetch via `fetch('/api/v1/...', { credentials: 'same-origin' })` — le cookie
+  httpOnly `opuc_session` est envoyé automatiquement (pas besoin de headers
+  Authorization).
+- Promise.all pour paralléliser les fetch (4 endpoints max, ~200ms total).
+- Variable `cancelled` (closure) dans useEffect pour éviter les setState
+  après unmount (race condition si l'user navigue vite).
+- Pas de useCallback pour les fetch (le pattern `loadAll` inline dans useEffect
+  avec `[]` deps est suffisant et évite les re-fetch inutiles).
+- Animations Framer Motion : `motion.div` avec `initial` + `animate` + `delay`
+  échelonné (0.05s, 0.1s, 0.15s, ...) pour un effet de cascade fluide.
+- Style glassmorphism : `backdrop-blur-xl bg-white/70 border-white/60
+  dark:bg-slate-900/50 dark:border-slate-800/60` (cohérent avec mes-taches
+  et admin-plateforme).
+- Theme amber/orange : gradients `from-amber-600 to-orange-600` pour les
+  titres, accents `text-amber-500` pour les icônes, `bg-amber-500` pour les
+  Progress, `bg-amber-50/50` pour les fonds de carte alerte.
+- shadcn/ui utilisés : Card, CardContent, CardHeader, CardTitle, Badge,
+  Button, Progress. Recharts : BarChart, PieChart, ResponsiveContainer.
+- Responsive mobile-first : `grid-cols-2 lg:grid-cols-4/5` pour les KPIs,
+  `grid-cols-1 lg:grid-cols-2/3` pour les widgets, `text-xs lg:text-sm` pour
+  la typo adaptative, `p-4 lg:p-5` pour le padding.
+- Gestion loading : skeletons `bg-muted/60 rounded-xl animate-pulse` (3 zones
+  qui miment la structure finale).
+- Gestion error : `toast.error('Erreur...', { description: err?.message })`
+  via sonner.
+
+Validation :
+- `cd /home/z/my-project/opuc/frontend && bun run lint` → 79 erreurs au total
+  (même nombre que la baseline pré-task). AUCUNE nouvelle erreur introduite.
+  Vérifié : aucun fichier dans `src/components/dashboard/` ou
+  `src/app/(app)/dashboard/page.tsx` ou `src/lib/rbac.ts` n'apparaît dans la
+  liste des erreurs.
+- `bunx tsc --noEmit --skipLibCheck` → 0 erreur sur les nouveaux fichiers.
+  Les 148 erreurs pré-existantes (useOfflineSync, theme-provider, prisma/seed,
+  etc.) sont inchangées.
+- Le dev server auto-démarré tourne sur `/home/z/my-project/` (root stub),
+  pas sur `/home/z/my-project/opuc/frontend/` (voir worklog PHASE-B-PARAMETRES
+  pour contexte). Le code est correct (lint + tsc passent sur les nouveaux
+  fichiers).
+
+Limitations connues :
+- `dashboard-view.tsx` est conservé (non supprimé) pour compat, mais n'est
+  plus importé nulle part. Il peut être supprimé dans une future passe de
+  cleanup (hors scope de cette task).
+- L'endpoint `GET /api/v1/pointage?summary` mentionné dans la spec pour
+  ChefProjetDashboard n'est PAS utilisé — le composant utilise à la place
+  `dashData.pointagesAujourdhui` et `dashData.journaliersSurSite` depuis
+  GET /api/v1/dashboard (qui fournit déjà ces agrégats). Cela évite un fetch
+  supplémentaire et garde le code simple. Si on a besoin d'agrégats plus fins
+  (pointages à valider, pointages par chantier), on pourra ajouter l'endpoint
+  /pointage/summary dans une future task.
+- Pour l'EMPLOYE, la spec mentionnait `GET /api/v1/pointage?summary` comme
+  source pour "mes pointages" — mais cet endpoint retourne des agrégats par
+  chantier, pas par user. L'EMPLOYE n'a de toute façon pas accès aux données
+  entreprise (RLS). On se limite donc à mes-taches + notifications.
+
+Stage Summary:
+- **4 dashboards spécialisés créés** : SuperAdminDashboard (redirect),
+  GerantDashboard (KPIs BTP + budget + chart + tâches + notifs + quick
+  actions), ChefProjetDashboard (mes-taches + pointages + alertes + notifs),
+  EmployeDashboard (mes-taches + notifs + CTA — SANS KPIs entreprise).
+- **Routing /dashboard par rôle** : switch sur session.user.role, fallback
+  GerantDashboard pour rôles inconnus.
+- **Sidebar SUPER_ADMIN fix** : 'dashboard' retiré de SUPER_ADMIN_PAGES dans
+  rbac.ts → l'item "Tableau de bord" est masqué pour SUPER_ADMIN (plus de
+  doublon avec "Dashboard" /admin-plateforme). Triple sécurité :
+  PageGuard + SuperAdminDashboard redirect + DEFAULT_PAGES.
+- **Style cohérent** : glassmorphism + amber/orange theme + Framer Motion
+  animations + shadcn/ui components + Recharts charts. Responsive mobile-first
+  sur tous les dashboards.
+- **Données respectant le RLS** : l'EMPLOYE ne fetch QUE ses données
+  personnelles (mes-taches + notifications), jamais les KPIs entreprise
+  (chantiersActifs, budget) qui sont bloqués par le RLS backend.
+- **dashboard-view.tsx conservé** pour compat (plus importé nulle part).
+- Non commit/push — en attente de validation.

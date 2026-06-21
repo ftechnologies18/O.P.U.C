@@ -103,19 +103,27 @@ const PERSONAL_PAGES: string[] = ['dashboard', 'mes-taches', 'support']
 // demander un SupportAccess (mécanisme existant, limite 4h, audit log).
 //
 // Pages autorisées pour SUPER_ADMIN :
-//   - admin-plateforme (dashboard SaaS)
+//   - admin-plateforme (dashboard SaaS — c'est SA page d'accueil par défaut)
 //   - admin-entreprises (CRUD tenants)
 //   - admin-subscriptions (gestion abonnements)
 //   - admin-support-access (gestion demandes support)
-//   - dashboard (page d'accueil générique)
 //   - support (contacter le support plateforme)
 //   - mes-taches (si assigné)
+//
+// NOTE : 'dashboard' est VOLONTAIREMENT absent de cette liste. Le SUPER_ADMIN
+// n'a pas de dashboard "métier" sur /dashboard : sa page d'accueil par défaut
+// est /admin-plateforme (DEFAULT_PAGES['SUPER_ADMIN'] = 'admin-plateforme').
+// Si le SUPER_ADMIN tente d'accéder à /dashboard :
+//   - PageGuard (src/components/layout/page-guard.tsx) le redirige vers
+//     /admin-plateforme (car 'dashboard' n'est pas dans SUPER_ADMIN_PAGES).
+//   - À defaut, la page /dashboard route vers <SuperAdminDashboard /> qui fait
+//     un router.replace('/admin-plateforme') côté client (filet de sécurité).
+// Cela évite le doublon dans la sidebar ("Tableau de bord" + "Dashboard").
 const SUPER_ADMIN_PAGES: string[] = [
   'admin-plateforme',
   'admin-entreprises',
   'admin-subscriptions',
   'admin-support-access',
-  'dashboard',
   'mes-taches',
   'support',
 ]
