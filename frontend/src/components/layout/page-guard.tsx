@@ -3,11 +3,17 @@
 import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useSession } from '@/lib/auth-session'
-import { getFonctionPages } from '@/lib/rbac'
+import { getRolePages } from '@/lib/rbac'
 
 /**
- * PageGuard — empêche un EMPLOYE d'accéder directement (URL) à une page
- * qui n'est pas dans sa fonction. Redirige vers /dashboard si tentative.
+ * PageGuard — empêche un user d'accéder directement (URL) à une page
+ * qui n'est pas autorisée pour son rôle. Redirige vers la page par défaut.
+ *
+ * Rôles concernés :
+ * - SUPER_ADMIN : redirigé vers /admin-plateforme s'il tente une page métier
+ * - EMPLOYE / SOUS_TRAITANT : redirigé vers /dashboard s'il tente une page
+ *   hors de sa fonction BTP
+ * - GERANT / CHEF_PROJET : pas de restriction (null = RBAC normal)
  *
  * À placer dans le layout (app)/(app)/layout.tsx pour wrapper toutes les pages app.
  */
@@ -18,7 +24,7 @@ export function PageGuard({ children }: { children: React.ReactNode }) {
 
   const role = (session?.user as any)?.role as string | undefined
   const fonction = (session?.user as any)?.fonction as string | undefined
-  const allowedPages = getFonctionPages(role, fonction)
+  const allowedPages = getRolePages(role, fonction)
 
   useEffect(() => {
     if (!allowedPages || !pathname) return
@@ -29,9 +35,12 @@ export function PageGuard({ children }: { children: React.ReactNode }) {
     // Special case : mes-taches is a top-level route
     if (pageId === 'mes-taches') return
     if (!allowedPages.includes(pageId)) {
-      router.replace('/dashboard')
+      // SUPER_ADMIN est redirigé vers /admin-plateforme (son dashboard)
+      // Les autres rôles vers /dashboard
+      const redirectUrl = role === 'SUPER_ADMIN' ? '/admin-plateforme' : '/dashboard'
+      router.replace(redirectUrl)
     }
-  }, [allowedPages, pathname, router])
+  }, [allowedPages, pathname, router, role])
 
   return <>{children}</>
 }

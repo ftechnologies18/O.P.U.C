@@ -90,15 +90,71 @@ export const FONCTION_PAGES: Record<string, string[]> = {
 // Pages personnelles — toujours visibles pour tout user authentifié (y compris EMPLOYE sans fonction)
 const PERSONAL_PAGES: string[] = ['dashboard', 'mes-taches', 'support']
 
+// ═══════════════════════════════════════════════════════════
+// SUPER_ADMIN — Pages accessibles (admin plateforme SaaS)
+// ═══════════════════════════════════════════════════════════
+//
+// Le SUPER_ADMIN est l'administrateur de la PLATEFORME (multi-tenant).
+// Il ne gère PAS les données opérationnelles d'une entreprise (chantiers,
+// pointage, stocks, etc.) — il gère les ENTREPRISES (tenants), les
+// ABONNEMENTS, et le SUPPORT ACCESS.
+//
+// Pour accéder aux données d'un tenant spécifique, le SUPER_ADMIN doit
+// demander un SupportAccess (mécanisme existant, limite 4h, audit log).
+//
+// Pages autorisées pour SUPER_ADMIN :
+//   - admin-plateforme (dashboard SaaS)
+//   - admin-entreprises (CRUD tenants)
+//   - admin-subscriptions (gestion abonnements)
+//   - admin-support-access (gestion demandes support)
+//   - dashboard (page d'accueil générique)
+//   - support (contacter le support plateforme)
+//   - mes-taches (si assigné)
+const SUPER_ADMIN_PAGES: string[] = [
+  'admin-plateforme',
+  'admin-entreprises',
+  'admin-subscriptions',
+  'admin-support-access',
+  'dashboard',
+  'mes-taches',
+  'support',
+]
+
 /**
+ * Get the list of page IDs accessible by a user based on their role.
+ *
+ * - SUPER_ADMIN : returns SUPER_ADMIN_PAGES (admin plateforme only)
+ * - EMPLOYE / SOUS_TRAITANT : returns PERSONAL_PAGES + fonction-specific pages
+ * - GERANT / CHEF_PROJET : returns null (no restriction, use normal RBAC)
+ *
+ * Returns null for roles that should use normal RBAC (PAGE_ACCESS matrix).
+ * Returns a string[] for roles that have a strict whitelist.
+ */
+export function getRolePages(role: string | undefined, fonction: string | undefined): string[] | null {
+  if (!role) return null
+
+  // SUPER_ADMIN : whitelist stricte (admin plateforme seulement)
+  if (role === 'SUPER_ADMIN') {
+    return SUPER_ADMIN_PAGES
+  }
+
+  // EMPLOYE / SOUS_TRAITANT : whitelist par fonction BTP
+  if (role === 'EMPLOYE' || role === 'SOUS_TRAITANT') {
+    const foncPages = (fonction && FONCTION_PAGES[fonction]) || []
+    return [...PERSONAL_PAGES, ...foncPages]
+  }
+
+  // GERANT / CHEF_PROJET : pas de restriction (normal RBAC)
+  return null
+}
+
+/**
+ * @deprecated Use getRolePages() instead. Kept for backward compatibility.
  * Get the list of page IDs accessible by an EMPLOYE based on their fonction.
- * Returns PERSONAL_PAGES + fonction-specific pages.
- * For non-EMPLOYE roles, returns null (meaning : use normal RBAC, no fonction filter).
  */
 export function getFonctionPages(role: string | undefined, fonction: string | undefined): string[] | null {
-  // Only EMPLOYE (and legacy SOUS_TRAITANT) are restricted by fonction
   if (role !== 'EMPLOYE' && role !== 'SOUS_TRAITANT') {
-    return null // null = no restriction, use normal RBAC
+    return null
   }
   const foncPages = (fonction && FONCTION_PAGES[fonction]) || []
   return [...PERSONAL_PAGES, ...foncPages]

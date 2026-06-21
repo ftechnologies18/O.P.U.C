@@ -47,7 +47,7 @@ import {
   ListChecks,
 } from 'lucide-react'
 import { useSession } from '@/lib/auth-session'
-import { canAccessPage, getFonctionPages } from '@/lib/rbac'
+import { canAccessPage, getRolePages } from '@/lib/rbac'
 import type { UserRole, AppPage } from '@/lib/rbac'
 import { SearchCommand } from './search-command'
 import { UserMenu } from './user-menu'
@@ -219,7 +219,7 @@ function SidebarContent({
   // EMPLOYE (et legacy SOUS_TRAITANT) sont restreints par fonction :
   // - `null`    → pas de filtre par fonction (rôles supérieurs, RBAC normal)
   // - `string[]`→ liste blanche des page-ids autorisés pour cet EMPLOYE
-  const allowedPages = getFonctionPages(userRole, fonction)
+  const allowedPages = getRolePages(userRole, fonction)
 
   // Calcule l'ensemble des module-ids couverts par au moins une délégation active.
   const delegatedModuleIds = useMemo(() => {
