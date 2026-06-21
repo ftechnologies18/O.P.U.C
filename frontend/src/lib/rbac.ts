@@ -120,12 +120,54 @@ const SUPER_ADMIN_PAGES: string[] = [
   'support',
 ]
 
+// ═══════════════════════════════════════════════════════════
+// CHEF_PROJET — Pages accessibles (opérationnel seulement)
+// ═══════════════════════════════════════════════════════════
+//
+// Le CHEF_PROJET gère l'opérationnel (chantiers, pointage, stocks) mais
+// PAS le management financier/HR de l'entreprise. Les pages suivantes sont
+// RÉSERVÉES au GERANT :
+//   - budget (planification financière)
+//   - paie (gestion de la paie)
+//   - personnel (gestion RH globale)
+//   - gestion-acces (gestion des users)
+//   - acces-support, delegations, co-gerant (configuration avancée)
+//
+// Pages autorisées pour CHEF_PROJET :
+const CHEF_PROJET_PAGES: string[] = [
+  // Personnel
+  'dashboard',
+  'mes-taches',
+  'support',
+  // Gestion Chantier
+  'chantiers',
+  'planning',
+  'pointage',
+  // Logistique
+  'stocks',
+  'engins',
+  'carburant',
+  'sous-traitants',
+  // Commercial
+  'clients',
+  'devis',
+  'contrats',
+  'facturation',
+  // Documents
+  'rapports',
+  'photos',
+  'documents',
+  // Self
+  'parametres',
+]
+
 /**
  * Get the list of page IDs accessible by a user based on their role.
  *
  * - SUPER_ADMIN : returns SUPER_ADMIN_PAGES (admin plateforme only)
+ * - CHEF_PROJET : returns CHEF_PROJET_PAGES (operational only, no management)
  * - EMPLOYE / SOUS_TRAITANT : returns PERSONAL_PAGES + fonction-specific pages
- * - GERANT / CHEF_PROJET : returns null (no restriction, use normal RBAC)
+ * - GERANT : returns null (no restriction, full access tenant)
  *
  * Returns null for roles that should use normal RBAC (PAGE_ACCESS matrix).
  * Returns a string[] for roles that have a strict whitelist.
@@ -138,13 +180,18 @@ export function getRolePages(role: string | undefined, fonction: string | undefi
     return SUPER_ADMIN_PAGES
   }
 
+  // CHEF_PROJET : whitelist opérationnelle (pas de pages management/financières)
+  if (role === 'CHEF_PROJET') {
+    return CHEF_PROJET_PAGES
+  }
+
   // EMPLOYE / SOUS_TRAITANT : whitelist par fonction BTP
   if (role === 'EMPLOYE' || role === 'SOUS_TRAITANT') {
     const foncPages = (fonction && FONCTION_PAGES[fonction]) || []
     return [...PERSONAL_PAGES, ...foncPages]
   }
 
-  // GERANT / CHEF_PROJET : pas de restriction (normal RBAC)
+  // GERANT : pas de restriction (full access tenant)
   return null
 }
 
