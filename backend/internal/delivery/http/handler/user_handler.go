@@ -268,7 +268,8 @@ func writeIAMError(w http.ResponseWriter, log *slog.Logger, op string, err error
                 WriteError(w, http.StatusBadRequest, err.Error())
         default:
                 log.Error(op, "err", err)
-                WriteError(w, http.StatusInternalServerError, "internal error")
+                // TEMPORAIRE (debug Phase 5) : retourner l'erreur réelle pour diagnostic
+                WriteError(w, http.StatusInternalServerError, "internal error: "+err.Error())
         }
 }
 
