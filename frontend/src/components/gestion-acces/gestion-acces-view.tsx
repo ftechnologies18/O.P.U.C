@@ -632,7 +632,7 @@ function UsersTab({ session }: { session: any }) {
   const handleToggleActive = async (user: User) => {
     try {
       const res = await fetch(`/api/v1/users/${user.id}/toggle-active`, {
-        method: 'PATCH',
+        method: 'POST',
       })
       if (res.ok) {
         toast.success(user.active ? 'Utilisateur bloqué' : 'Utilisateur débloqué')

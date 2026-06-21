@@ -341,7 +341,7 @@ export function PointageView() {
         const fin = toDateStr(subDays(new Date(), 1))
         const debut = toDateStr(subDays(new Date(), 7))
         const res = await fetch(
-          `/api/pointage?chantierId=${chantierId}&dateDebut=${debut}&dateFin=${fin}`
+          `/api/v1/pointage?chantierId=${chantierId}&dateDebut=${debut}&dateFin=${fin}`
         )
         if (res.ok) {
           const data = await res.json()
@@ -368,7 +368,7 @@ export function PointageView() {
         const isoWeek = format(ws, "yyyy-'W'II")
 
         const res = await fetch(
-          `/api/pointage/summary?chantierId=${chantierId}&semaine=${isoWeek}`
+          `/api/v1/pointage/summary?chantierId=${chantierId}&semaine=${isoWeek}`
         )
         if (res.ok) {
           setSummaryData(await res.json())

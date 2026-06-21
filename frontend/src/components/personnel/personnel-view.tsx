@@ -717,7 +717,7 @@ export function PersonnelView() {
     setRemoving(true)
     try {
       const res = await fetch(
-        `/api/personnel/${removingInfo.journalierId}/affectations?chantierId=${removingInfo.chantierId}`,
+        `/api/v1/personnel/${removingInfo.journalierId}/affectations?chantierId=${removingInfo.chantierId}`,
         { method: 'DELETE' }
       )
 

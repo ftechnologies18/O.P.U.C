@@ -426,7 +426,7 @@ export function DocumentsView() {
     setFormUploading(true)
     try {
       // Get current user session
-      const sessionRes = await fetch('/api/v1/v1/auth/me')
+      const sessionRes = await fetch('/api/v1/auth/me')
       const session = await sessionRes.json()
       const auteurId = session?.user?.id
 

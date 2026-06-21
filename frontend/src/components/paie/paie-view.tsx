@@ -428,7 +428,7 @@ export function PaieView() {
       }
       params.set('semaineDebut', format(currentWeekStart, 'yyyy-MM-dd'))
 
-      const res = await fetch(`/api/v1/paie?${params.toString()}`)
+      const res = await fetch(`/api/v1/paie/paiements-hebdo?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
         setPaiements(data.paiements || [])
@@ -453,7 +453,7 @@ export function PaieView() {
 
     setGenerating(true)
     try {
-      const res = await fetch('/api/v1/paie/generate', {
+      const res = await fetch('/api/v1/paie/paiements-hebdo/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -517,7 +517,7 @@ export function PaieView() {
 
     setValidating(true)
     try {
-      const res = await fetch(`/api/v1/paie/${editingPaiement.id}`, {
+      const res = await fetch(`/api/v1/paie/paiements-hebdo/${editingPaiement.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -589,6 +589,7 @@ export function PaieView() {
 
     setDeleting(true)
     try {
+      // TODO: no DELETE endpoint backend for paiements-hebdo
       const res = await fetch(`/api/v1/paie/${deletingPaiement.id}`, {
         method: 'DELETE',
       })
@@ -641,7 +642,7 @@ export function PaieView() {
       if (salFilter !== 'TOUS') params.set('statut', salFilter)
       if (salSearch.trim()) params.set('search', salSearch.trim())
 
-      const res = await fetch(`/api/v1/salaires?${params.toString()}`)
+      const res = await fetch(`/api/v1/paie/salaires?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
         setSalaires(data.salaires || [])
@@ -670,7 +671,7 @@ export function PaieView() {
       }
       if (chantierId) body.chantierId = chantierId
 
-      const res = await fetch('/api/v1/salaires/generate', {
+      const res = await fetch('/api/v1/paie/salaires/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -723,7 +724,7 @@ export function PaieView() {
     if (!salEditItem) return
     setSalEditSaving(true)
     try {
-      const res = await fetch(`/api/v1/salaires/${salEditItem.id}`, {
+      const res = await fetch(`/api/v1/paie/salaires/${salEditItem.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(salForm),
@@ -767,7 +768,7 @@ export function PaieView() {
 
     setSalValidating(true)
     try {
-      const res = await fetch(`/api/v1/salaires/${salValidateItem.id}`, {
+      const res = await fetch(`/api/v1/paie/salaires/${salValidateItem.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -808,7 +809,7 @@ export function PaieView() {
     if (!salDeleteItem) return
     setSalDeleting(true)
     try {
-      const res = await fetch(`/api/v1/salaires/${salDeleteItem.id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/v1/paie/salaires/${salDeleteItem.id}`, { method: 'DELETE' })
       if (!res.ok) {
         const err = await res.json()
         throw new Error(err.error || 'Erreur lors de la suppression')

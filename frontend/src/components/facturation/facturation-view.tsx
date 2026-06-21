@@ -1057,7 +1057,7 @@ function FactureDetailContent({
     setLoadingAction(newStatut)
     try {
       const res = await fetch(`/api/v1/facturation/${facture.id}/statut`, {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ statut: newStatut }),
       })

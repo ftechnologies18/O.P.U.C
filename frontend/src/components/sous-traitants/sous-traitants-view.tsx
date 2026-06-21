@@ -574,7 +574,7 @@ export function SousTraitantsView() {
 
     try {
       const res = await fetch(
-        `/api/sous-traitants/${detailSt.id}/contrats/${contratId}`,
+        `/api/v1/sous-traitants/${detailSt.id}/contrats/${contratId}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -613,7 +613,7 @@ export function SousTraitantsView() {
     setDeletingContrat(true)
     try {
       const res = await fetch(
-        `/api/sous-traitants/${detailSt.id}/contrats/${deletingContratId}`,
+        `/api/v1/sous-traitants/${detailSt.id}/contrats/${deletingContratId}`,
         { method: 'DELETE' }
       )
 

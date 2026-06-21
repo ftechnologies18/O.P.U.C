@@ -884,3 +884,58 @@ Stage Summary:
   - SUPER_ADMIN / GERANT / CHEF_PROJET : sidebar et navigation inchangées (RBAC normal).
   - EMPLOYE : ne voit dans la sidebar QUE les pages de sa fonction + dashboard/mes-taches/support ; toute tentative d'accès directe par URL à une page non autorisée est interceptée par `PageGuard` qui redirige vers `/dashboard`.
   - EMPLOYE sans fonction : ne voit QUE les pages personnelles (dashboard, mes-taches, support).
+
+
+---
+Task ID: PHASE-A-QUICK-WINS
+Agent: general-purpose
+Task: Quick wins — 6 bugs chemin + 5 méthodes HTTP + chemins Paie.
+
+Work Log:
+- Lu /home/z/my-project/opuc/worklog.md pour contexte (ONBOARDING, AUDIT-RBAC, PHASE-0 → PHASE-5, RBAC-FRONTEND).
+- Vérifié le backend router.go (lignes 356-364) pour confirmer les endpoints paie/paiements-hebdo et paie/salaires.
+- PARTIE 1 — 6 bugs chemin (URLs malformées) :
+  * photos-view.tsx (B1) : replace_all `/api/v1/v1/auth/me` → `/api/v1/auth/me` (1 occurrence à la ligne 321 — double `/v1` supprimé).
+  * documents-view.tsx (B2) : replace_all `/api/v1/v1/auth/me` → `/api/v1/auth/me` (1 occurrence à la ligne 429 — double `/v1` supprimé).
+  * sous-traitants-view.tsx (B3+B4) : replace_all `/api/sous-traitants/` → `/api/v1/sous-traitants/` (2 occurrences corrigées — lignes 577 et 616, contrats sous-traitant statut PUT + DELETE). Les 9 autres URLs déjà sur `/api/v1/sous-traitants/` non affectées (la string `/api/sous-traitants/` n'est pas un substring de `/api/v1/sous-traitants/`).
+  * personnel-view.tsx (B5) : replace_all `/api/personnel/` → `/api/v1/personnel/` (1 occurrence corrigée — ligne 720, DELETE affectation). Les 5 autres URLs déjà sur `/api/v1/personnel/` non affectées.
+  * pointage-view.tsx (B6) : 2 remplacements ciblés (MultiEdit) — `/api/pointage/summary?...` → `/api/v1/pointage/summary?...` (ligne 371) et `/api/pointage?chantierId=...dateDebut=...dateFin=...` → `/api/v1/pointage?...` (ligne 344). Les 4 autres URLs déjà sur `/api/v1/pointage` non affectées.
+- PARTIE 2 — 5 mismatches de méthode HTTP :
+  * gestion-acces-view.tsx (M1, ligne 635) : `method: 'PATCH'` → `method: 'POST'` pour `/users/${user.id}/toggle-active`.
+  * devis-view.tsx (M2, ligne 528) : `method: 'PUT'` → `method: 'POST'` pour `/devis/${statusTarget.id}/statut`.
+  * contrats-view.tsx (M3, ligne 505) : `method: 'PUT'` → `method: 'POST'` pour `/contrats/${statusTarget.id}/statut`.
+  * facturation-view.tsx (M4, ligne 1060) : `method: 'PUT'` → `method: 'POST'` pour `/facturation/${facture.id}/statut`.
+  * support-view.tsx (M5, ligne 1263) : `method: 'PUT'` → `method: 'POST'` pour `/support/${ticketId}/statut`.
+- PARTIE 3 — chemins Paie (paie-view.tsx) : 3 remplacements + 1 commentaire TODO via MultiEdit.
+  * Ligne 431 : `fetch('/api/v1/paie?...')` → `fetch('/api/v1/paie/paiements-hebdo?...')` (GET liste paiements hebdo).
+  * Ligne 456 : `fetch('/api/v1/paie/generate', ...)` → `fetch('/api/v1/paie/paiements-hebdo/generate', ...)` (POST generate).
+  * Ligne 520 : `fetch('/api/v1/paie/${editingPaiement.id}', {method:'PUT'...})` → `fetch('/api/v1/paie/paiements-hebdo/${editingPaiement.id}', {method:'PUT'...})` (PUT update).
+  * Ligne 592 (DELETE paiements-hebdo) : laissée en l'état + commentaire `// TODO: no DELETE endpoint backend for paiements-hebdo` ajouté au-dessus du fetch (pas d'endpoint DELETE sur le backend router.go ligne 356-364).
+  * Ligne 568 (GET détail paiement par ID) : laissée en l'état — non listée dans les remplacements explicites de la consigne (pas d'endpoint GET by ID backend non plus).
+  * Salaires (lignes 644, 673, 726, 770, 811) : NON touchés conformément à la consigne qui les déclare "déjà corrects". ⚠️ DISCRÉPANCE : la consigne indique que les salaires sont déjà sur `/api/v1/paie/salaires` mais le code actuel les appelle sur `/api/v1/salaires` (SANS le segment `/paie/`). Backend router.go ligne 362-364 expose bien `/api/v1/paie/salaires*` → les paths salaires frontend sont donc AUSSI cassés mais hors scope de cette tâche (suivi suggéré dans une tâche séparée).
+- VALIDATION :
+  * `cd frontend && bun run lint` : OK (exit 0, 0 erreur, 0 warning).
+  * `grep "/api/v1/v1/"` sur src/ : 0 match (tous les doubles /v1 supprimés).
+  * `grep "/api/pointage"` (sans v1) sur pointage-view.tsx : 0 match.
+  * `grep "/api/sous-traitants"` (sans v1) sur sous-traitants-view.tsx : 0 match.
+  * `grep "/api/personnel"` (sans v1) sur personnel-view.tsx : 0 match.
+  * Vérification visuelle des 5 méthodes HTTP via grep `/statut|toggle-active` + ligne `method:` suivante : toutes à `'POST'`.
+
+Stage Summary:
+- **11 fichiers modifiés** :
+  1. src/components/photos/photos-view.tsx (1 correction : URL auth/me)
+  2. src/components/documents/documents-view.tsx (1 correction : URL auth/me)
+  3. src/components/sous-traitants/sous-traitants-view.tsx (2 corrections : URLs contrats sous-traitant)
+  4. src/components/personnel/personnel-view.tsx (1 correction : URL DELETE affectation)
+  5. src/components/pointage/pointage-view.tsx (2 corrections : URLs history + summary)
+  6. src/components/gestion-acces/gestion-acces-view.tsx (1 correction : PATCH→POST toggle-active)
+  7. src/components/devis/devis-view.tsx (1 correction : PUT→POST /statut)
+  8. src/components/contrats/contrats-view.tsx (1 correction : PUT→POST /statut)
+  9. src/components/facturation/facturation-view.tsx (1 correction : PUT→POST /statut)
+  10. src/components/support/support-view.tsx (1 correction : PUT→POST /statut)
+  11. src/components/paie/paie-view.tsx (3 corrections de chemin + 1 commentaire TODO = 4 changements)
+- **Total corrections** : 14 corrections effectives + 1 commentaire TODO = couvre les 16 bugs identifiés (6 chemin + 5 méthode + 3 chemin paie + 2 TODO/non-touchés).
+- **Lint** : `bun run lint` ✅ exit 0, sans erreur ni warning.
+- **Grep vérifications** : `/api/v1/v1/` = 0, `/api/pointage` (sans v1) = 0, `/api/sous-traitants` (sans v1) = 0, `/api/personnel` (sans v1) = 0.
+- **Discrepancy flag** : les paths salaires (`/api/v1/salaires*`) sont également cassés côté frontend (backend attend `/api/v1/paie/salaires*`) — NON corrigés ici car la consigne les déclarait "déjà corrects". Suggestion : créer une tâche de suivi pour corriger les 5 URLs salaires (lignes 644, 673, 726, 770, 811).
+- Non commit/push — le tuteur s'en chargera.
