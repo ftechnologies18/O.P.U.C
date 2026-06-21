@@ -451,7 +451,6 @@ func writePhaseError(w http.ResponseWriter, log *slog.Logger, op string, err err
                 WriteError(w, http.StatusConflict, err.Error())
         default:
                 log.Error(op, "err", err)
-                // TEMPORAIRE (debug Phase 3) : retourne l'erreur réelle pour diagnostic
-                WriteError(w, http.StatusInternalServerError, "internal error: "+err.Error())
+                WriteError(w, http.StatusInternalServerError, "internal error")
         }
 }

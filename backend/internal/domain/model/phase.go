@@ -37,6 +37,10 @@ type Tache struct {
         TachePrecedenteID *string   `gorm:"column:tachePrecedenteId;type:varchar(30)" json:"tachePrecedenteId,omitempty"`
         CreatedAt        time.Time  `gorm:"column:createdAt" json:"createdAt"`
         UpdatedAt        time.Time  `gorm:"column:updatedAt" json:"updatedAt"`
+
+        // ── Relations (Phase 3 — nécessaires pour Preload dans ListMyTaches) ───
+        Phase       *Phase `gorm:"foreignKey:PhaseID" json:"phase,omitempty"`
+        Responsable *User  `gorm:"foreignKey:ResponsableID" json:"responsable,omitempty"`
 }
 
 func (Tache) TableName() string { return "Tache" } // Prisma PascalCase

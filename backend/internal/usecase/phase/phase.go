@@ -477,8 +477,7 @@ func (uc *Usecase) ListMyTaches(ctx context.Context, auth *database.AuthUser) ([
         items, total, err := uc.repo.ListMyTaches(ctx, auth, auth.UserID)
         if err != nil {
                 uc.log.Error("tache.ListMy: repo", "err", err, "user", auth.UserID)
-                // TEMPORAIRE (debug Phase 3) : wrapper l'erreur réelle pour diagnostic
-                return nil, 0, fmt.Errorf("tache.ListMy: %w", err)
+                return nil, 0, domain.ErrInternal
         }
         return items, total, nil
 }
