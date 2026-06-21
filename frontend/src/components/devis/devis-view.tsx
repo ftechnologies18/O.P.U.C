@@ -147,6 +147,16 @@ interface LigneDevisForm {
   prixUnitaire: number
 }
 
+// LigneFormData — payload pour POST/PUT /api/v1/devis/{id}/lignes[/{ligneId}]
+// (champs sans `id` — l'id est géré via l'URL pour PUT/DELETE).
+interface LigneFormData {
+  designation: string
+  description: string
+  quantite: number
+  unite: string
+  prixUnitaire: number
+}
+
 interface PaginationInfo {
   page: number
   limit: number
@@ -183,6 +193,14 @@ function generateTempId(): string {
 
 const EMPTY_LIGNE = (): LigneDevisForm => ({
   id: generateTempId(),
+  designation: '',
+  description: '',
+  quantite: 1,
+  unite: 'u',
+  prixUnitaire: 0,
+})
+
+const EMPTY_LIGNE_FORM = (): LigneFormData => ({
   designation: '',
   description: '',
   quantite: 1,
@@ -277,6 +295,15 @@ export function DevisView() {
   const [statusAction, setStatusAction] = useState<string>('')
   const [statusChanging, setStatusChanging] = useState(false)
 
+  // ── Ligne Management (add/edit/delete via /devis/{id}/lignes) ──
+  const [ligneFormOpen, setLigneFormOpen] = useState(false)
+  const [editingLigne, setEditingLigne] = useState<LigneDevis | null>(null)
+  const [ligneForm, setLigneForm] = useState<LigneFormData>(EMPTY_LIGNE_FORM())
+  const [ligneSaving, setLigneSaving] = useState(false)
+  const [ligneDeleteOpen, setLigneDeleteOpen] = useState(false)
+  const [ligneDeleteTarget, setLigneDeleteTarget] = useState<LigneDevis | null>(null)
+  const [ligneDeleting, setLigneDeleting] = useState(false)
+
   // ═══════════════════════════════════════════════════════════════
   // FETCH LIST
   // ═══════════════════════════════════════════════════════════════
@@ -338,6 +365,20 @@ export function DevisView() {
     const totalTTC = sousTotal + montantTVA
     return { totalHT, remise, sousTotal, montantTVA, totalTTC }
   }, [form.lignes, form.remiseGlobale, form.tauxTVA])
+
+  // detailTotals — calcule `remise` et `sousTotal` côté frontend pour la vue
+  // détaillée (le backend ne renvoie que totalHT/montantTVA/totalTTC ; remise
+  // et sousTotal sont dérivés de remiseGlobale et totalHT). Synchronisé avec
+  // selectedDevis → recalculé automatiquement après chaque opération sur une
+  // ligne (POST/PUT/DELETE /devis/{id}/lignes met à jour selectedDevis).
+  const detailTotals = useMemo(() => {
+    if (!selectedDevis) return { remise: 0, sousTotal: 0 }
+    const totalHT = selectedDevis.totalHT || 0
+    const remiseGlobale = selectedDevis.remiseGlobale || 0
+    const remise = totalHT * (remiseGlobale / 100)
+    const sousTotal = totalHT - remise
+    return { remise, sousTotal }
+  }, [selectedDevis])
 
   // ═══════════════════════════════════════════════════════════════
   // FORM HELPERS
@@ -466,7 +507,7 @@ export function DevisView() {
       }
 
       const isEdit = editingDevis !== null
-      const res = await fetch(isEdit ? `/api/devis/${editingDevis.id}` : '/api/devis', {
+      const res = await fetch(isEdit ? `/api/v1/devis/${editingDevis.id}` : '/api/v1/devis', {
         method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -544,6 +585,174 @@ export function DevisView() {
     } finally {
       setStatusChanging(false)
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // LIGNE MANAGEMENT (add / edit / delete via /devis/{id}/lignes)
+  // ═══════════════════════════════════════════════════════════════
+  //
+  // Le backend POST/PUT/DELETE /devis/{id}/lignes[/{ligneId}] renvoie le
+  // devis COMPLET mis à jour (avec lignes + totaux recalculés) → on met à
+  // jour `selectedDevis` pour rafraîchir la vue détaillée sans re-fetch.
+
+  // handleAddLigne — POST /api/v1/devis/{id}/lignes
+  const handleAddLigne = async (
+    devisId: string,
+    ligne: LigneFormData,
+  ): Promise<boolean> => {
+    try {
+      const payload = {
+        designation: ligne.designation.trim(),
+        description: ligne.description.trim() || null,
+        quantite: ligne.quantite,
+        unite: ligne.unite || 'u',
+        prixUnitaire: ligne.prixUnitaire,
+      }
+      const res = await fetch(`/api/v1/devis/${devisId}/lignes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) {
+        const data: Devis = await res.json()
+        setSelectedDevis(data)
+        toast.success('Ligne ajoutée avec succès')
+        return true
+      }
+      const err = await res.json().catch(() => ({}) as { error?: string })
+      toast.error(err.error || 'Une erreur est survenue')
+      return false
+    } catch {
+      toast.error('Erreur de connexion')
+      return false
+    }
+  }
+
+  // handleUpdateLigne — PUT /api/v1/devis/{id}/lignes/{ligneId}
+  // Envoie un payload partiel (uniquement les champs définis dans `updates`).
+  const handleUpdateLigne = async (
+    devisId: string,
+    ligneId: string,
+    updates: Partial<LigneFormData>,
+  ): Promise<boolean> => {
+    try {
+      const payload: Record<string, unknown> = {}
+      if (updates.designation !== undefined) payload.designation = updates.designation.trim()
+      if (updates.description !== undefined) payload.description = updates.description.trim() || null
+      if (updates.quantite !== undefined) payload.quantite = updates.quantite
+      if (updates.unite !== undefined) payload.unite = updates.unite || 'u'
+      if (updates.prixUnitaire !== undefined) payload.prixUnitaire = updates.prixUnitaire
+
+      const res = await fetch(`/api/v1/devis/${devisId}/lignes/${ligneId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) {
+        const data: Devis = await res.json()
+        setSelectedDevis(data)
+        toast.success('Ligne modifiée avec succès')
+        return true
+      }
+      const err = await res.json().catch(() => ({}) as { error?: string })
+      toast.error(err.error || 'Une erreur est survenue')
+      return false
+    } catch {
+      toast.error('Erreur de connexion')
+      return false
+    }
+  }
+
+  // handleDeleteLigne — DELETE /api/v1/devis/{id}/lignes/{ligneId}
+  const handleDeleteLigne = async (
+    devisId: string,
+    ligneId: string,
+  ): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/v1/devis/${devisId}/lignes/${ligneId}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        const data: Devis = await res.json()
+        setSelectedDevis(data)
+        toast.success('Ligne supprimée')
+        return true
+      }
+      const err = await res.json().catch(() => ({}) as { error?: string })
+      toast.error(err.error || 'Une erreur est survenue')
+      return false
+    } catch {
+      toast.error('Erreur de connexion')
+      return false
+    }
+  }
+
+  // ── Sub-dialog openers ──
+  const openAddLigne = () => {
+    if (!selectedDevis) return
+    setEditingLigne(null)
+    setLigneForm(EMPTY_LIGNE_FORM())
+    setLigneFormOpen(true)
+  }
+
+  const openEditLigne = (ligne: LigneDevis) => {
+    if (!ligne.id) return
+    setEditingLigne(ligne)
+    setLigneForm({
+      designation: ligne.designation,
+      description: ligne.description || '',
+      quantite: ligne.quantite,
+      unite: ligne.unite,
+      prixUnitaire: ligne.prixUnitaire,
+    })
+    setLigneFormOpen(true)
+  }
+
+  const confirmDeleteLigne = (ligne: LigneDevis) => {
+    if (!ligne.id) return
+    setLigneDeleteTarget(ligne)
+    setLigneDeleteOpen(true)
+  }
+
+  // ── Sub-dialog submit handlers ──
+  const onSubmitLigne = async () => {
+    if (!selectedDevis) return
+    if (!ligneForm.designation.trim()) {
+      toast.error('Veuillez saisir une désignation')
+      return
+    }
+    if (ligneForm.quantite <= 0) {
+      toast.error('La quantité doit être supérieure à 0')
+      return
+    }
+    if (ligneForm.prixUnitaire < 0) {
+      toast.error('Le prix unitaire ne peut pas être négatif')
+      return
+    }
+
+    setLigneSaving(true)
+    let ok = false
+    if (editingLigne && editingLigne.id) {
+      ok = await handleUpdateLigne(selectedDevis.id, editingLigne.id, ligneForm)
+    } else {
+      ok = await handleAddLigne(selectedDevis.id, ligneForm)
+    }
+    if (ok) {
+      setLigneFormOpen(false)
+      fetchDevis(currentPage, searchQuery, statutFilter)
+    }
+    setLigneSaving(false)
+  }
+
+  const onConfirmDeleteLigne = async () => {
+    if (!selectedDevis || !ligneDeleteTarget?.id) return
+    setLigneDeleting(true)
+    const ok = await handleDeleteLigne(selectedDevis.id, ligneDeleteTarget.id)
+    if (ok) {
+      setLigneDeleteOpen(false)
+      fetchDevis(currentPage, searchQuery, statutFilter)
+    }
+    setLigneDeleting(false)
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1208,11 +1417,24 @@ export function DevisView() {
                         )}
                       </div>
 
-                      {/* Lignes Table */}
+                      {/* Lignes Table — avec actions add/edit/delete si BROUILLON */}
                       <div className="space-y-3">
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          Lignes du devis
-                        </h4>
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Lignes du devis ({selectedDevis.lignes?.length || 0})
+                          </h4>
+                          {selectedDevis.statut === 'BROUILLON' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={openAddLigne}
+                              className="gap-2 h-7"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              Ajouter une ligne
+                            </Button>
+                          )}
+                        </div>
                         <div className="rounded-lg border overflow-hidden">
                           <Table>
                             <TableHeader>
@@ -1223,6 +1445,9 @@ export function DevisView() {
                                 <TableHead className="hidden sm:table-cell text-center">Unité</TableHead>
                                 <TableHead className="text-right">Prix unit.</TableHead>
                                 <TableHead className="text-right">Total HT</TableHead>
+                                {selectedDevis.statut === 'BROUILLON' && (
+                                  <TableHead className="w-[80px] text-center">Actions</TableHead>
+                                )}
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1246,11 +1471,38 @@ export function DevisView() {
                                   <TableCell className="text-right text-sm font-medium">
                                     {formatFCFACurrency(ligne.totalHT)}
                                   </TableCell>
+                                  {selectedDevis.statut === 'BROUILLON' && (
+                                    <TableCell className="text-center">
+                                      <div className="flex items-center justify-center gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 w-7 p-0"
+                                          onClick={() => openEditLigne(ligne)}
+                                          title="Modifier la ligne"
+                                        >
+                                          <Pencil className="w-3.5 h-3.5" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                          onClick={() => confirmDeleteLigne(ligne)}
+                                          title="Supprimer la ligne"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  )}
                                 </TableRow>
                               ))}
                               {(!selectedDevis.lignes || selectedDevis.lignes.length === 0) && (
                                 <TableRow>
-                                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-8">
+                                  <TableCell
+                                    colSpan={selectedDevis.statut === 'BROUILLON' ? 7 : 6}
+                                    className="text-center text-sm text-muted-foreground py-8"
+                                  >
                                     Aucune ligne
                                   </TableCell>
                                 </TableRow>
@@ -1260,22 +1512,27 @@ export function DevisView() {
                         </div>
                       </div>
 
-                      {/* Totals */}
+                      {/* Totals — totalHT/montantTVA/totalTTC viennent du backend
+                          (recalculés après chaque opération sur une ligne) ;
+                          remise et sousTotal sont dérivés côté frontend
+                          (detailTotals) car le backend ne les expose pas. */}
                       <div className="flex justify-end">
                         <div className="w-full sm:w-72 space-y-2 p-4 rounded-lg bg-muted/50 border">
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Total HT</span>
                             <span className="font-medium">{formatFCFACurrency(selectedDevis.totalHT)}</span>
                           </div>
-                          {selectedDevis.remise > 0 && (
+                          {detailTotals.remise > 0 && (
                             <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Remise</span>
-                              <span className="text-red-600 font-medium">-{formatFCFACurrency(selectedDevis.remise)}</span>
+                              <span className="text-muted-foreground">
+                                Remise ({selectedDevis.remiseGlobale}%)
+                              </span>
+                              <span className="text-red-600 font-medium">-{formatFCFACurrency(detailTotals.remise)}</span>
                             </div>
                           )}
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Sous-total</span>
-                            <span className="font-medium">{formatFCFACurrency(selectedDevis.sousTotal)}</span>
+                            <span className="font-medium">{formatFCFACurrency(detailTotals.sousTotal)}</span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">
@@ -1370,6 +1627,148 @@ export function DevisView() {
               {statusAction === 'REFUSE' && 'Refuser'}
               {statusAction === 'ENVOYE' && 'Envoyer'}
               {statusAction === 'BROUILLON' && 'Remettre en brouillon'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          LIGNE FORM DIALOG (add / edit a ligne on the selected devis)
+          — Sub-dialog ouvert depuis la vue détaillée. Le devis parent reste
+          ouvert en arrière-plan ; à la soumission, le backend renvoie le
+          devis complet mis à jour → selectedDevis est rafraîchi.
+          ═══════════════════════════════════════════════════════════════ */}
+      <Dialog open={ligneFormOpen} onOpenChange={setLigneFormOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-emerald-600" />
+              {editingLigne ? 'Modifier la ligne' : 'Ajouter une ligne'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingLigne
+                ? 'Modifiez les informations de la ligne ci-dessous. Les totaux du devis seront recalculés automatiquement.'
+                : 'Remplissez les informations pour ajouter une nouvelle ligne au devis. Les totaux seront recalculés automatiquement.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="ligne-designation">
+                Désignation <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="ligne-designation"
+                value={ligneForm.designation}
+                onChange={(e) => setLigneForm((p) => ({ ...p, designation: e.target.value }))}
+                placeholder="Ex: Fondation béton armé"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ligne-description">Description</Label>
+              <Input
+                id="ligne-description"
+                value={ligneForm.description}
+                onChange={(e) => setLigneForm((p) => ({ ...p, description: e.target.value }))}
+                placeholder="Description complémentaire (optionnel)"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="ligne-quantite">
+                  Quantité <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="ligne-quantite"
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={ligneForm.quantite}
+                  onChange={(e) =>
+                    setLigneForm((p) => ({ ...p, quantite: parseFloat(e.target.value) || 0 }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ligne-unite">Unité</Label>
+                <Input
+                  id="ligne-unite"
+                  value={ligneForm.unite}
+                  onChange={(e) => setLigneForm((p) => ({ ...p, unite: e.target.value }))}
+                  placeholder="u, m, m², m³, h, kg..."
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ligne-prix">
+                Prix unitaire (F) <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="ligne-prix"
+                type="number"
+                min={0}
+                step={0.5}
+                value={ligneForm.prixUnitaire}
+                onChange={(e) =>
+                  setLigneForm((p) => ({ ...p, prixUnitaire: parseFloat(e.target.value) || 0 }))
+                }
+              />
+            </div>
+            <div className="p-3 rounded-lg bg-muted/50 border flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Total HT (ligne)</span>
+              <span className="text-base font-semibold text-emerald-600">
+                {formatFCFACurrency(ligneForm.quantite * ligneForm.prixUnitaire)}
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter className="pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setLigneFormOpen(false)}
+              disabled={ligneSaving}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={onSubmitLigne}
+              disabled={ligneSaving}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+            >
+              {ligneSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+              <Save className="w-4 h-4" />
+              {editingLigne ? 'Enregistrer' : 'Ajouter la ligne'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          LIGNE DELETE CONFIRMATION
+          ═══════════════════════════════════════════════════════════════ */}
+      <AlertDialog open={ligneDeleteOpen} onOpenChange={setLigneDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-red-500" />
+              Supprimer la ligne
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer la ligne
+              &quot;{ligneDeleteTarget?.designation}&quot; ?
+              Les totaux du devis seront recalculés automatiquement. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={ligneDeleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={onConfirmDeleteLigne}
+              disabled={ligneDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {ligneDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

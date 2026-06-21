@@ -460,7 +460,7 @@ export function ContratsView() {
         montantTTC: calculatedTTC,
       }
 
-      const url = editingContrat ? `/api/contrats/${editingContrat.id}` : '/api/contrats'
+      const url = editingContrat ? `/api/v1/contrats/${editingContrat.id}` : '/api/v1/contrats'
       const method = editingContrat ? 'PUT' : 'POST'
 
       const res = await fetch(url, {

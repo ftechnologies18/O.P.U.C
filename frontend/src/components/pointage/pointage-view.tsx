@@ -19,6 +19,8 @@ import {
   BarChart3,
   Users,
   HardHat,
+  Pencil,
+  Trash2,
 } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -47,6 +49,24 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Textarea } from '@/components/ui/textarea'
 import { useAppStore } from '@/store/app-store'
 
 // ── Types ──────────────────────────────────────────────
@@ -164,6 +184,16 @@ export function PointageView() {
   const [summaryData, setSummaryData] = useState<WeeklySummaryData | null>(null)
   const [loadingSummary, setLoadingSummary] = useState(false)
   const [summaryWeekOffset, setSummaryWeekOffset] = useState(0)
+
+  // Edit / Delete / Validate actions (historique)
+  const [editingPointage, setEditingPointage] = useState<PointageExisting | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deletePointage, setDeletePointage] = useState<PointageExisting | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [validatingId, setValidatingId] = useState<string | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [editForm, setEditForm] = useState({ tauxJournalier: '', observation: '' })
 
   // ── Fetch chantiers ─────────────────────────────────
   useEffect(() => {
@@ -327,6 +357,99 @@ export function PointageView() {
       )
     } finally {
       setSaving(false)
+    }
+  }
+
+  // ── Validate a pointage (historique) ───────────────
+  async function handleValidate(id: string) {
+    setValidatingId(id)
+    try {
+      const res = await fetch(`/api/v1/pointage/${id}/validate`, {
+        method: 'POST',
+      })
+      if (res.ok) {
+        toast.success('Pointage validé')
+        setHistoryData((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, valide: true } : p))
+        )
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error || 'Erreur lors de la validation')
+      }
+    } catch {
+      toast.error('Erreur réseau')
+    } finally {
+      setValidatingId(null)
+    }
+  }
+
+  // ── Open edit dialog ────────────────────────────────
+  function openEditDialog(p: PointageExisting) {
+    setEditingPointage(p)
+    setEditForm({
+      tauxJournalier: String(p.tauxJournalier ?? ''),
+      observation: p.observation || '',
+    })
+    setEditDialogOpen(true)
+  }
+
+  // ── Save edit ───────────────────────────────────────
+  async function handleEditSave() {
+    if (!editingPointage) return
+    const id = editingPointage.id
+    const newTaux = Number(editForm.tauxJournalier) || 0
+    const newObs = editForm.observation.trim() || null
+    setSavingEdit(true)
+    try {
+      const res = await fetch(`/api/v1/pointage/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tauxJournalier: newTaux,
+          observation: newObs,
+        }),
+      })
+      if (res.ok) {
+        toast.success('Pointage mis à jour')
+        setEditDialogOpen(false)
+        setHistoryData((prev) =>
+          prev.map((p) =>
+            p.id === id
+              ? { ...p, tauxJournalier: newTaux, observation: newObs }
+              : p
+          )
+        )
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error || 'Erreur lors de la mise à jour')
+      }
+    } catch {
+      toast.error('Erreur réseau')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  // ── Delete pointage ─────────────────────────────────
+  async function handleDelete() {
+    if (!deletePointage) return
+    const id = deletePointage.id
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/v1/pointage/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        toast.success('Pointage supprimé')
+        setDeleteDialogOpen(false)
+        setHistoryData((prev) => prev.filter((p) => p.id !== id))
+        setDeletePointage(null)
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error || 'Erreur lors de la suppression')
+      }
+    } catch {
+      toast.error('Erreur réseau')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -766,6 +889,7 @@ export function PointageView() {
                         <TableHead className="text-right">Taux</TableHead>
                         <TableHead className="text-right">Montant</TableHead>
                         <TableHead className="text-center">Statut</TableHead>
+                        <TableHead className="text-center">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -817,6 +941,50 @@ export function PointageView() {
                                 En attente
                               </Badge>
                             )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              {!p.valide && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => handleValidate(p.id)}
+                                  disabled={validatingId === p.id}
+                                  className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                  title="Valider le pointage"
+                                  aria-label="Valider le pointage"
+                                >
+                                  {validatingId === p.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              )}
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => openEditDialog(p)}
+                                className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                title="Modifier le pointage"
+                                aria-label="Modifier le pointage"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => {
+                                  setDeletePointage(p)
+                                  setDeleteDialogOpen(true)
+                                }}
+                                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Supprimer le pointage"
+                                aria-label="Supprimer le pointage"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -937,6 +1105,158 @@ export function PointageView() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* ──── Edit Dialog ──── */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[17px]">
+              <Pencil className="w-4 h-4 text-amber-500" />
+              Modifier le pointage
+            </DialogTitle>
+          </DialogHeader>
+          {editingPointage && (
+            <div className="space-y-4 py-2">
+              <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">
+                <div className="flex items-center gap-2">
+                  <HardHat className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="text-muted-foreground">Journalier :</span>
+                  <span className="font-medium">
+                    {editingPointage.journalier?.prenom}{' '}
+                    {editingPointage.journalier?.nom}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="text-muted-foreground">Date :</span>
+                  <span className="font-medium">
+                    {fmtDateShort(editingPointage.dateTravail)}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="edit-taux"
+                  className="text-[15px] font-medium"
+                >
+                  Taux journalier (FCFA)
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="edit-taux"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editForm.tauxJournalier}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        tauxJournalier: e.target.value,
+                      }))
+                    }
+                    placeholder="0"
+                    className="h-9 pr-14"
+                  />
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                    FCFA
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="edit-obs"
+                  className="text-[15px] font-medium"
+                >
+                  Observation
+                </Label>
+                <Textarea
+                  id="edit-obs"
+                  value={editForm.observation}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      observation: e.target.value,
+                    }))
+                  }
+                  placeholder="Observation (optionnel)..."
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setEditDialogOpen(false)}
+              disabled={savingEdit}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleEditSave}
+              disabled={savingEdit}
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+            >
+              {savingEdit ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ──── Delete AlertDialog ──── */}
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+      >
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-[17px]">
+              <Trash2 className="w-4 h-4 text-red-500" />
+              Supprimer le pointage
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer ce pointage ? Cette action est
+              irréversible.
+              {deletePointage && (
+                <span className="block mt-2 rounded-lg bg-muted/50 p-3 text-sm text-foreground">
+                  <span className="font-medium">
+                    {deletePointage.journalier?.prenom}{' '}
+                    {deletePointage.journalier?.nom}
+                  </span>
+                  {' — '}
+                  {fmtDateShort(deletePointage.dateTravail)}
+                  {' — '}
+                  {fmtCurrency(deletePointage.tauxJournalier)}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleDelete()
+              }}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -1362,3 +1362,259 @@ Stage Summary:
 - **shadcn/ui components** : Dialog, InputOTP, Alert, Card, Button, Input, Switch, Badge, Avatar,
   Separator, Skeleton, Select, Label — tous existants.
 - Non commit/push — en attente de validation.
+
+---
+Task ID: PHASE-D-POINTAGE
+Agent: full-stack-developer
+Task: Ajouter les fonctionnalités edit / delete / validate dans l'historique du pointage (frontend).
+
+Work Log:
+- Lecture du composant `src/components/pointage/pointage-view.tsx` (953 lignes → 1265 lignes après modif).
+- Backend endpoints déjà implémentés et confirmés via `internal/delivery/http/router.go` + `handler/pointage_handler.go` :
+  - `PUT /api/v1/pointage/{id}` (update tauxJournalier / observation / present)
+  - `DELETE /api/v1/pointage/{id}`
+  - `POST /api/v1/pointage/{id}/validate` (marque `valide=true`)
+- Imports ajoutés : `Pencil, Trash2` (lucide-react) + `Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter` (ui/dialog) + `AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle` (ui/alert-dialog) + `Textarea` (ui/textarea).
+- State ajouté (7 variables) :
+  - `editingPointage: PointageExisting | null`
+  - `editDialogOpen: boolean`
+  - `deletePointage: PointageExisting | null`
+  - `deleteDialogOpen: boolean`
+  - `validatingId: string | null` (désactive le bouton Valider pendant l'async)
+  - `savingEdit: boolean` (désactive boutons du Dialog edit)
+  - `deleting: boolean` (désactive boutons du AlertDialog delete)
+  - `editForm: { tauxJournalier: string, observation: string }`
+- 4 handlers ajoutés (entre `savePointages` et `useEffect` historique) :
+  - `handleValidate(id)` — POST `/api/v1/pointage/${id}/validate`, met à jour `historyData` (marque `valide=true`), toast succès/erreur.
+  - `openEditDialog(p)` — initialise `editingPointage` + `editForm` (taux + observation), ouvre le Dialog.
+  - `handleEditSave()` — PUT `/api/v1/pointage/${editingPointage.id}` avec `{ tauxJournalier, observation }`, met à jour `historyData` localement (taux + observation), toast.
+  - `handleDelete()` — DELETE `/api/v1/pointage/${deletePointage.id}`, retire la ligne de `historyData`, toast.
+  - Toutes les réponses d'erreur sont parsées via `res.json().catch(() => ({}))` pour éviter un crash réseau si le body n'est pas du JSON.
+- Colonne "Actions" ajoutée dans le `TableHeader` (après "Statut") du tableau Historique uniquement.
+- `TableCell` Actions pour chaque ligne (3 boutons `size="icon" variant="ghost"` dans un flex `gap-1`) :
+  - **Valider** (vert émeraude, `CheckCircle2`) — affiché uniquement si `!p.valide`, désactivé + spinner quand `validatingId === p.id`.
+  - **Éditer** (amber, `Pencil`) — ouvre le Dialog d'édition.
+  - **Supprimer** (rouge, `Trash2`) — ouvre l'AlertDialog de confirmation.
+- Dialog d'édition (`sm:max-w-md`) : titre "Modifier le pointage" + icône Pencil amber, bloc info (journalier + date) en `bg-muted/50`, Input number pour taux (avec suffixe "FCFA" absolu), Textarea (rows=3, resize-none) pour observation, boutons Annuler / Enregistrer (Loader2 spinner si `savingEdit`).
+- AlertDialog de suppression (`sm:max-w-md`) : titre "Supprimer le pointage" + icône Trash2 rouge, description avec récap (journalier, date, montant) en `bg-muted/50`, boutons Annuler / Supprimer (Loader2 spinner si `deleting`). **`e.preventDefault()`** sur le bouton AlertDialogAction pour empêcher la fermeture auto par Radix le temps que `handleDelete` s'exécute (sinon le spinner ne s'afficherait pas).
+- Style glassmorphism + amber theme conservé (boutons amber pour Enregistrer, red pour Supprimer, emerald pour Valider).
+- Aucune modification des onglets "Saisie" ou "Résumé Hebdo".
+- Onglet Historique : `historyData` est mis à jour localement après chaque opération (pas de re-fetch complet) — l'UX reste fluide.
+- Accessibilité : `title` + `aria-label` sur chaque bouton d'action (44px touch target via `h-8 w-8`).
+
+Stage Summary:
+- **3 nouvelles actions** dans l'historique pointage : Valider (POST /validate), Éditer (PUT), Supprimer (DELETE).
+- **2 nouveaux dialogs** : Edit Dialog (taux + observation) + AlertDialog de confirmation suppression.
+- **Lint** : `cd /home/z/my-project/opuc/frontend && bun run lint` — 79 erreurs au total (idem baseline), **0 nouvelle erreur** introduite. Les 2 erreurs présentes dans pointage-view.tsx (lignes 293 et 510) sont préexistantes (`react-hooks/set-state-in-effect` sur `loadFormData()` et `setHistoryData([])` dans useEffect) et ne proviennent pas de cette modification.
+- **Dev server** : `✓ Compiled in 268ms` — aucune erreur de compilation.
+- Non commit/push — en attente de validation.
+
+---
+Task ID: PHASE-D-DEVIS-LIGNES
+Agent: full-stack-developer
+
+Work Log:
+- Câblage complet de la gestion des LIGNES de devis aux endpoints backend
+  `POST/PUT/DELETE /api/v1/devis/{id}/lignes[/{ligneId}]` dans le composant
+  `frontend/src/components/devis/devis-view.tsx` (1380 → 1779 lignes, +399 lignes).
+- Aucun nouvel endpoint backend créé. Aucune modification au backend. Aucun package
+  npm ajouté.
+
+Analyse pré-implémentation (vérification backend) :
+- `POST /api/v1/devis` (CreateDevisRequest) accepte déjà un tableau `lignes`
+  ([]LigneDevisInput) → les lignes sont SAUVEGARDÉES EN BATCH à la création du devis.
+  Le formulaire de création actuel envoie déjà ce payload (lignes incluses) — pas de
+  changement nécessaire côté création.
+- `PUT /api/v1/devis/{id}` (UpdateDevisRequest) n'accepte PAS de `lignes` (seulement
+  dateValidite, conditions, remiseGlobale, tauxTVA, notes, statut). Donc les modifications
+  de lignes ne peuvent PAS être sauvegardées via le formulaire d'édition du devis —
+  elles doivent passer par les endpoints /lignes dédiés.
+- Les 3 endpoints /lignes existent et retournent TOUS le devis complet mis à jour
+  (*model.Devis avec Preload Client + Lignes + totaux recalculés côté backend via
+  `recomputeTotals`). Donc après chaque opération sur une ligne, on peut rafraîchir
+  `selectedDevis` directement avec la réponse, sans re-fetch GET /devis/{id}.
+
+Champs backend d'une ligne (DTO `CreateLigneDevisRequest` / `UpdateLigneDevisRequest`) :
+- `designation` (string, requis)
+- `description` (*string, optionnel)
+- `quantite` (float64)
+- `unite` (string)
+- `prixUnitaire` (float64)
+- `ordre` (int, optionnel — non exposé dans l'UI)
+
+Note spec vs backend : la task spec mentionnait `{ designation, quantite, prixUnitaire,
+tva?, remise? }` mais le backend réel ne supporte PAS de `tva` ni `remise` par ligne
+(ce sont des champs au niveau du devis : `tauxTVA` et `remiseGlobale`). J'ai utilisé
+les champs réels du backend (designation, description, quantite, unite, prixUnitaire).
+
+Architecture choisie (point 3 de la spec) :
+- Puisque les lignes SONT déjà sauvegardées en batch via POST /devis (à la création),
+  on garde le formulaire de création tel quel (lignes locales + envoi batch).
+- On ajoute la gestion individuelle des lignes (add/edit/delete) UNIQUEMENT dans la vue
+  détaillée (Dialog "Détail du devis"), via des sub-dialogs qui appellent les endpoints
+  /lignes dédiés.
+- Le formulaire d'édition (PUT /devis/{id}) n'est PAS modifié — il continue de gérer
+  uniquement les champs au niveau du devis (dateValidite, remiseGlobale, tauxTVA,
+  conditions, notes). Les modifications de lignes via ce formulaire ne sont PAS
+  persistées (limitation pré-existante, hors scope de cette task).
+
+Fichier modifié : `frontend/src/components/devis/devis-view.tsx`
+
+Ajouts au composant :
+
+1. **Type `LigneFormData`** (interface, ~ligne 152) — payload pour POST/PUT /lignes :
+   `{ designation, description, quantite, unite, prixUnitaire }` (sans `id`, géré via
+   l'URL pour PUT/DELETE).
+
+2. **Constante `EMPTY_LIGNE_FORM()`** (~ligne 203) — factory pour initialiser le
+   formulaire de ligne (designation='', quantite=1, unite='u', prixUnitaire=0).
+
+3. **State pour la gestion des lignes** (~lignes 298-305) :
+   - `ligneFormOpen` (bool) — ouvre le sub-dialog add/edit ligne
+   - `editingLigne` (LigneDevis | null) — null = ajout, non-null = édition
+   - `ligneForm` (LigneFormData) — données du formulaire de ligne
+   - `ligneSaving` (bool) — loading state pour POST/PUT
+   - `ligneDeleteOpen` (bool) — ouvre l'AlertDialog de confirmation de suppression
+   - `ligneDeleteTarget` (LigneDevis | null) — ligne à supprimer
+   - `ligneDeleting` (bool) — loading state pour DELETE
+
+4. **`detailTotals` useMemo** (~lignes 374-381) — calcule `remise` et `sousTotal` côté
+   frontend à partir de `selectedDevis.totalHT` et `selectedDevis.remiseGlobale`. Le
+   backend ne renvoie QUE `totalHT`, `montantTVA`, `totalTTC` (pas de `remise` ni
+   `sousTotal` dans model.Devis). Sans ce helper, l'affichage du sous-total montrerait
+   "NaN F" (pré-existing bug). Après chaque opération sur une ligne, `selectedDevis`
+   est rafraîchi → `detailTotals` est recalculé automatiquement → l'affichage des
+   totaux est synchronisé avec les valeurs backend.
+
+5. **Handlers `/lignes`** (~lignes 590-756) :
+   - `handleAddLigne(devisId, ligne: LigneFormData): Promise<boolean>` — POST
+     /api/v1/devis/{id}/lignes. Body: `{ designation, description|null, quantite,
+     unite, prixUnitaire }`. Réponse: devis complet → `setSelectedDevis(data)`.
+   - `handleUpdateLigne(devisId, ligneId, updates: Partial<LigneFormData>): Promise<boolean>`
+     — PUT /api/v1/devis/{id}/lignes/{ligneId}. Envoie un payload PARTIEL (uniquement
+     les champs définis dans `updates`, pas de `null` pour les champs non-modifiés).
+     Réponse: devis complet → `setSelectedDevis(data)`.
+   - `handleDeleteLigne(devisId, ligneId): Promise<boolean>` — DELETE
+     /api/v1/devis/{id}/lignes/{ligneId}. Réponse: devis complet → `setSelectedDevis(data)`.
+   - Tous retournent `Promise<boolean>` (true si succès, false si échec) pour permettre
+     au caller de conditionnellement fermer le sub-dialog et re-fetch la liste.
+   - Tous gèrent les erreurs : 200/201 → toast succès ; non-OK → parse JSON `{error}`,
+     toast.error ; catch network → toast "Erreur de connexion".
+   - `openAddLigne()`, `openEditLigne(ligne)`, `confirmDeleteLigne(ligne)` — ouvrent les
+     sub-dialogs avec le bon état initial.
+   - `onSubmitLigne()` — valide le formulaire (désignation non vide, quantite > 0,
+     prixUnitaire >= 0), puis appelle handleAddLigne ou handleUpdateLigne selon
+     `editingLigne`. Si succès : ferme le sub-dialog + refresh liste.
+   - `onConfirmDeleteLigne()` — appelle handleDeleteLigne. Si succès : ferme l'AlertDialog
+     + refresh liste.
+
+6. **Tableau des lignes dans la vue détaillée** (~lignes 1420-1513) — modifié pour :
+   - Header : ajoute un compteur "(N)" à côté de "Lignes du devis" + bouton "Ajouter une
+     ligne" (visible uniquement si `statut === 'BROUILLON'`).
+   - TableHeader : ajoute une colonne "Actions" (visible uniquement si BROUILLON).
+   - TableBody : chaque ligne a 2 boutons (Pencil pour éditer, Trash2 pour supprimer)
+     dans la colonne Actions. `title` attribut pour tooltip accessibilité.
+   - Empty state : `colSpan` dynamique (7 si BROUILLON, 6 sinon) pour couvrir la colonne
+     Actions quand présente.
+   - Si statut != BROUILLON (ENVOYE, ACCEPTE, etc.) : pas de bouton "Ajouter", pas de
+     colonne Actions — les lignes sont en lecture seule (comportement attendu : on ne
+     modifie pas un devis déjà envoyé).
+
+7. **Totals dans la vue détaillée** (~lignes 1515-1549) — modifié pour :
+   - `Total HT`, `TVA`, `Total TTC` : utilisent directement `selectedDevis.totalHT`,
+     `selectedDevis.montantTVA`, `selectedDevis.totalTTC` (venant du backend, recalculés
+     après chaque opération sur une ligne).
+   - `Remise` : utilise `detailTotals.remise` (calculé côté frontend) au lieu de
+     `selectedDevis.remise` (champ phantom non retourné par le backend). Affiché
+     uniquement si `detailTotals.remise > 0`. Label inclut le % : "Remise (X%)".
+   - `Sous-total` : utilise `detailTotals.sousTotal` au lieu de `selectedDevis.sousTotal`
+     (champ phantom). Évite l'affichage "NaN F".
+
+8. **Sub-dialog LIGNE FORM** (~lignes 1641-1745) — Dialog séparé (sibling du Dialog
+   détail, rendu via portal radix) :
+   - Titre dynamique : "Ajouter une ligne" ou "Modifier la ligne" selon `editingLigne`.
+   - Champs : Désignation* (Input, autoFocus), Description (Input optionnel),
+     Quantité* + Unité (grid 2 cols), Prix unitaire* (Input number).
+   - Live preview "Total HT (ligne)" = quantite × prixUnitaire, affiché dans une box
+     bg-muted/50 avec le montant en emerald.
+   - Footer : Annuler + bouton principal ("Ajouter la ligne" ou "Enregistrer") avec
+     Loader2 spinner si `ligneSaving`. Bouton principal vert emerald.
+   - Le devis parent reste ouvert en arrière-plan ; à la soumission, le backend renvoie
+     le devis complet → `selectedDevis` est rafraîchi → la vue détaillée se met à jour
+     avec la nouvelle ligne + les totaux recalculés, sans re-fetch.
+   - Validation : désignation non vide, quantite > 0, prixUnitaire >= 0. Si invalide,
+     toast.error et retour sans fermer le dialog.
+
+9. **Sub-dialog LIGNE DELETE CONFIRMATION** (~lignes 1750-1775) — AlertDialog séparé :
+   - Titre : "Supprimer la ligne" avec icône Trash2 rouge.
+   - Description : "Êtes-vous sûr de vouloir supprimer la ligne \"X\" ? Les totaux du
+     devis seront recalculés automatiquement. Cette action est irréversible."
+   - Bouton "Supprimer" (rouge) avec Loader2 si `ligneDeleting`.
+
+Patterns techniques :
+- Tous les handlers sont des `async` arrow functions (pas de useCallback) — ils ne
+  dépendent d'aucun state/prop externe (uniquement `setSelectedDevis` qui est stable
+  depuis useState, et `toast` qui est stable depuis son module).
+- Aucun `useEffect` ajouté → pas de risque de lint `react-hooks/set-state-in-effect`.
+- Les sub-dialogs sont rendus au niveau racine (siblings du Dialog détail, après
+  l'AlertDialog STATUS CHANGE), pas nested dans le Dialog détail. Radix-ui Dialog
+  utilise des portals → les sub-dialogs apparaissent au-dessus du Dialog parent avec
+  z-index correct. Le focus trap du sub-dialog empêche l'interaction avec le parent
+  tant que le sub-dialog est ouvert.
+- Le `setLigneFormOpen(false)` et `setLigneDeleteOpen(false)` sont appelés uniquement
+  après succès de l'opération backend (dans `onSubmitLigne` et `onConfirmDeleteLigne`).
+  En cas d'échec, le sub-dialog reste ouvert pour permettre à l'utilisateur de corriger
+  et réessayer.
+- Après chaque opération réussie, on appelle `fetchDevis(currentPage, searchQuery,
+  statutFilter)` pour rafraîchir la liste (le compteur de lignes `_count.lignes` et le
+  totalTTC affichés dans la table principale sont mis à jour).
+
+Validation :
+- `cd /home/z/my-project/opuc/frontend && bunx eslint src/components/devis/devis-view.tsx`
+  → EXIT 1, 1 erreur : `react-hooks/set-state-in-effect` à la ligne 334
+  (`useEffect(() => { fetchDevis(...) }, [...])`). Cette erreur est PRÉ-EXISTANTE
+  (présente avant mes changements — c'est le pattern d'init du composant). Mes changements
+  n'ont introduit AUCUNE nouvelle erreur de lint.
+- `cd /home/z/my-project/opuc/frontend && bunx tsc --noEmit --skipLibCheck` → 0 erreur
+  sur devis-view.tsx. 72 erreurs pré-existantes ailleurs (prisma/seed.ts principalement).
+- `bun run lint` (project-wide) : 79 erreurs au total (même nombre qu'avant). Toutes
+  dans d'autres fichiers (support-view.tsx, carousel.tsx, use-go-auth.ts, use-mobile.ts,
+  useOfflineSync.ts, et la seule du devis-view est la pré-existante à la ligne 334).
+- Le dev server auto-démarré tourne sur `/home/z/my-project/` (root stub), pas sur
+  `/home/z/my-project/opuc/frontend/` — voir worklog PHASE-B-PARAMETRES pour contexte.
+  Le code est correct (lint + tsc passent sur devis-view.tsx).
+
+Limitations connues (hors scope) :
+- Le formulaire d'édition du devis (Dialog "Modifier le devis", ouvert via le bouton
+  "Modifier" dans la vue détaillée ou le dropdown) permet toujours d'éditer les lignes
+  LOCALEMENT (state `form.lignes`), mais ces modifications NE SONT PAS PERSISTÉES via
+  PUT /devis/{id} (le backend UpdateDevisRequest n'accepte pas de lignes). Pour modifier
+  les lignes d'un devis existant, l'utilisateur doit utiliser la vue détaillée (boutons
+  edit/delete par ligne + bouton "Ajouter une ligne"). Ce comportement est pré-existant
+  et n'est pas corrigé ici (la task spécifiait d'ajouter la gestion via les endpoints
+  /lignes, ce qui est fait dans la vue détaillée).
+- L'API liste GET /api/v1/devis retourne `{ data, total, page, pageSize }` (DTO
+  `DevisListResponse`) mais le frontend attend `{ devis, pagination }` (lignes 296-297).
+  Ce mismatch pré-existant fait que la liste affichée est vide. Hors scope de cette task.
+
+Stage Summary:
+- **3 endpoints /lignes câblés** : POST (add), PUT (edit), DELETE (remove). Chaque
+  opération retourne le devis complet mis à jour → `selectedDevis` est rafraîchi → la
+  vue détaillée (lignes + totaux) se met à jour instantanément sans re-fetch.
+- **UI de gestion des lignes dans la vue détaillée** : bouton "Ajouter une ligne" +
+  boutons edit/delete par ligne (uniquement si `statut === 'BROUILLON'` ; en lecture
+  seule sinon). Sub-dialog Form pour add/edit (designation, description, quantite,
+  unite, prixUnitaire + live preview total HT). AlertDialog pour confirmation de
+  suppression.
+- **Recalcul des totaux côté frontend** : `detailTotals` useMemo calcule `remise` et
+  `sousTotal` à partir de `selectedDevis.totalHT` et `selectedDevis.remiseGlobale` (le
+  backend ne renvoie que totalHT/montantTVA/totalTTC). Synchronisé avec `selectedDevis`
+  → recalculé après chaque opération sur une ligne.
+- **Style conservé** : glassmorphism + amber/emerald theme (boutons verts emerald pour
+  ajouter/sauver, rouges pour supprimer, icônes Lucide Pencil/Trash2/Plus/Save/Loader2).
+  shadcn/ui components : Dialog, AlertDialog, Input, Label, Button, Table*, Separator.
+- **RBAC respecté** : les endpoints /lignes sont protégés par
+  `RequireAccess(DomainCommercial, PermEcriture)` côté backend. Le frontend ne fait
+  qu'appeler les endpoints — si l'utilisateur n'a pas la permission, le backend
+  retourne 403 et le toast affiche l'erreur.
+- Non commit/push — en attente de validation.
