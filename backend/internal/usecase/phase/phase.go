@@ -140,15 +140,38 @@ func computeStatutFromAvancement(av float64) string {
 
 // ── Usecase ─────────────────────────────────────────────────────
 
+// Notifier — interface pour envoyer des notifications (Phase 4).
+// Implémentée par *notification.Usecase. Définie ici (côté phase) pour éviter
+// une dépendance circulaire (notification ne dépend pas de phase).
+//
+// On utilise une interface minimale (juste Create) pour découpler.
+type Notifier interface {
+        Create(ctx context.Context, userID, titre, message, notifType string, lien *string) (*model.Notification, error)
+}
+
+// noopNotifier — Notifier qui ne fait rien (utilisé si nil passé au constructeur).
+// Permet de garder le NewUsecase backward-compatible.
+type noopNotifier struct{}
+
+func (noopNotifier) Create(_ context.Context, _, _, _, _ string, _ *string) (*model.Notification, error) {
+        return nil, nil
+}
+
 // Usecase — cas d'usage pour les Phases et Tâches.
 type Usecase struct {
-        repo Repo
-        log  *slog.Logger
+        repo      Repo
+        log       *slog.Logger
+        notif     Notifier
 }
 
 // NewUsecase constructeur.
-func NewUsecase(repo Repo, log *slog.Logger) *Usecase {
-        return &Usecase{repo: repo, log: log}
+// notif est optionnel (nil → noopNotifier). Passer un *notification.Usecase
+// pour activer les notifications d'assignation de tâche (Phase 4).
+func NewUsecase(repo Repo, log *slog.Logger, notif Notifier) *Usecase {
+        if notif == nil {
+                notif = noopNotifier{}
+        }
+        return &Usecase{repo: repo, log: log, notif: notif}
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -330,6 +353,15 @@ func (uc *Usecase) CreateTache(ctx context.Context, auth *database.AuthUser, pha
                 return nil, domain.ErrInternal
         }
 
+        // Phase 4 — Notification d'assignation si responsableId est set
+        if created.ResponsableID != nil && *created.ResponsableID != "" && *created.ResponsableID != auth.UserID {
+                lien := fmt.Sprintf("/chantiers/%s", created.PhaseID) // le frontend redirige vers le chantier
+                msg := fmt.Sprintf("Une nouvelle tâche '%s' vous a été assignée.", created.Nom)
+                if _, nerr := uc.notif.Create(ctx, *created.ResponsableID, "Nouvelle tâche assignée", msg, "info", &lien); nerr != nil {
+                        uc.log.Warn("tache.Create: notification failed (non-blocking)", "err", nerr, "tacheId", created.ID)
+                }
+        }
+
         uc.log.Info("tache created", "id", created.ID, "phaseId", phaseID, "by", auth.UserID)
         return created, nil
 }
@@ -429,6 +461,20 @@ func (uc *Usecase) UpdateTache(ctx context.Context, auth *database.AuthUser, tac
         if updated == nil {
                 return nil, domain.ErrNotFound
         }
+
+        // Phase 4 — Notification si responsableId a changé vers un nouvel user
+        if in.ResponsableID != nil {
+                newResp := strings.TrimSpace(*in.ResponsableID)
+                if newResp != "" && newResp != auth.UserID {
+                        // Notifier le nouveau responsable (sauf si c'est l'auteur lui-même)
+                        lien := fmt.Sprintf("/chantiers/%s", updated.PhaseID)
+                        msg := fmt.Sprintf("La tâche '%s' vous a été assignée.", updated.Nom)
+                        if _, nerr := uc.notif.Create(ctx, newResp, "Tâche assignée", msg, "info", &lien); nerr != nil {
+                                uc.log.Warn("tache.Update: notification failed (non-blocking)", "err", nerr, "tacheId", tacheID)
+                        }
+                }
+        }
+
         return updated, nil
 }
 

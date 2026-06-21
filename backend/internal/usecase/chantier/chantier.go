@@ -160,6 +160,12 @@ func (uc *Usecase) List(ctx context.Context, auth *database.AuthUser, in ListInp
 // Le repo Preload "Phases.Taches" → on calcule avancementGlobal + phaseCount
 // directement depuis les phases préloadées (pas de requêtes supplémentaires).
 // JournalierCount nécessite une requête séparée (CountJournaliers).
+//
+// Phase 4 — Strict access pour EMPLOYE :
+// Si l'user est EMPLOYE (ou SOUS_TRAITANT legacy), on filtre les tâches en
+// mémoire pour ne garder QUE celles où responsableId = auth.UserID. L'EMPLOYE
+// voit la structure du chantier (phases) mais ne voit QUE ses tâches assignées.
+// Les autres rôles (CHEF_PROJET+, GERANT, SUPER_ADMIN) voient toutes les tâches.
 func (uc *Usecase) Get(ctx context.Context, auth *database.AuthUser, id string) (*ChantierWithMeta, error) {
         if auth == nil {
                 return nil, domain.ErrUnauthorized
@@ -175,6 +181,11 @@ func (uc *Usecase) Get(ctx context.Context, auth *database.AuthUser, id string) 
         }
         if c == nil {
                 return nil, domain.ErrNotFound
+        }
+
+        // Phase 4 — Strict access : filtrer les tâches pour EMPLOYE/SOUS_TRAITANT
+        if auth.Role == "EMPLOYE" || auth.Role == "SOUS_TRAITANT" {
+                filterTachesByResponsable(&c.Phases, auth.UserID)
         }
 
         // Avancement + phaseCount depuis les phases préloadées
@@ -195,6 +206,23 @@ func (uc *Usecase) Get(ctx context.Context, auth *database.AuthUser, id string) 
                 PhaseCount:       int64(len(c.Phases)),
                 JournalierCount:  jourCount,
         }, nil
+}
+
+// filterTachesByResponsable filtre les tâches dans chaque phase pour ne garder
+// QUE celles où responsableId = userID. Les phases vides (sans tâches assignées
+// à l'user) sont conservées pour que l'EMPLOYE voie la structure du chantier.
+//
+// Cette fonction modifie le slice phases en place.
+func filterTachesByResponsable(phases *[]model.Phase, userID string) {
+        for i := range *phases {
+                filtered := make([]model.Tache, 0, len((*phases)[i].Taches))
+                for _, t := range (*phases)[i].Taches {
+                        if t.ResponsableID != nil && *t.ResponsableID == userID {
+                                filtered = append(filtered, t)
+                        }
+                }
+                (*phases)[i].Taches = filtered
+        }
 }
 
 // computeAvg retourne la moyenne arrondie d'un slice de float64.

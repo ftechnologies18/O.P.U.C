@@ -754,3 +754,38 @@ Stage Summary:
   3. L'EMPLOYE met à jour l'avancement (édition inline dans /chantiers/{id} ou via PUT)
   4. Le statut auto-passe à EN_COURS puis TERMINE selon l'avancement
 - Prêt pour commit + push → déploiement Vercel + Render + test production.
+
+---
+Task ID: PHASE-4
+Agent: Z.ai Code (tutor/assistant)
+Task: Accès strict aux tâches assignées pour EMPLOYE + notifications d'assignation.
+
+Work Log:
+- Phase 4.1 — Filtrage des tâches visibles par EMPLOYE dans GET /chantiers/{id} :
+  * usecase/chantier/chantier.go : méthode Get filtre les tâches si auth.Role == EMPLOYE/SOUS_TRAITANT
+  * Nouvelle fonction filterTachesByResponsable(phases, userID) : garde uniquement les tâches où responsableId = userID
+  * Les phases vides sont conservées (l'EMPLOYE voit la structure du chantier mais ne voit QUE ses tâches)
+  * Les autres rôles (CHEF_PROJET+, GERANT, SUPER_ADMIN) voient toutes les tâches (inchangé)
+- Phase 4.2 — Ajout Create au repo Notification + usecase :
+  * repository/gorm/notification_repo.go : méthode Create (genère ID + createdAt, bypass RLS car user-scoped)
+  * usecase/notification/notification.go : interface Repo étendue avec Create, méthode Usecase.Create(userID, titre, message, type, lien)
+- Phase 4.3 — Déclencher notifications d'assignation dans Phase usecase :
+  * usecase/phase/phase.go : interface Notifier (minimale, juste Create) pour découpler
+  * noopNotifier fallback si nil (backward-compatible)
+  * NewUsecase(repo, log, notif Notifier) — 3e paramètre
+  * CreateTache : si responsableId set et != auteur → notification "Nouvelle tâche assignée"
+  * UpdateTache : si responsableId change vers un nouvel user → notification "Tâche assignée"
+  * Notifications non-bloquantes (si échec → log Warn, pas d'erreur retournée)
+  * Lien = /chantiers/{phaseId} (le frontend redirige)
+- main.go : phaseUC = phase.NewUsecase(phaseRepo, log, notificationUC)
+
+Vérifications :
+- go build ./... : OK
+- go vet ./... : OK
+- bun run lint (frontend) : OK
+
+Stage Summary:
+- Strict access : un EMPLOYE consultant /chantiers/{id} ne voit QUE ses tâches assignées (plus les tâches non assignées ou assignées à d'autres)
+- Notifications : un EMPLOYE reçoit une notification in-app quand une tâche lui est assignée (création ou update)
+- Le compteur de notifications non lues (badge sidebar) se mettra à jour automatiquement
+- Prêt pour commit + push → test production.
