@@ -443,3 +443,75 @@ func (r *CarburantRepository) SumAchatsQuantiteInMonth(ctx context.Context, auth
         })
         return total, err
 }
+
+// ══════════════════════════════════════════════════════════════════
+// Phase C — Delete methods for EntreeCarburant, SortieCarburant, BonAchatCarburant, ReleveCompteurEngin
+// ══════════════════════════════════════════════════════════════════
+
+// DeleteEntree — supprime une entrée carburant par ID (RLS via JOIN Chantier). Idempotent.
+func (r *CarburantRepository) DeleteEntree(ctx context.Context, auth *database.AuthUser, id string) error {
+        return database.WithTenant(ctx, r.db, auth, func(tx *gorm.DB) error {
+                var exists int64
+                if err := tx.Model(&model.EntreeCarburant{}).
+                        Joins(`JOIN "Chantier" ON "Chantier".id = "EntreeCarburant"."chantierId"`).
+                        Where(`"EntreeCarburant".id = ?`, id).
+                        Count(&exists).Error; err != nil {
+                        return err
+                }
+                if exists == 0 {
+                        return nil
+                }
+                return tx.Where("id = ?", id).Delete(&model.EntreeCarburant{}).Error
+        })
+}
+
+// DeleteSortie — supprime une sortie carburant par ID (RLS via JOIN Chantier). Idempotent.
+func (r *CarburantRepository) DeleteSortie(ctx context.Context, auth *database.AuthUser, id string) error {
+        return database.WithTenant(ctx, r.db, auth, func(tx *gorm.DB) error {
+                var exists int64
+                if err := tx.Model(&model.SortieCarburant{}).
+                        Joins(`JOIN "Chantier" ON "Chantier".id = "SortieCarburant"."chantierId"`).
+                        Where(`"SortieCarburant".id = ?`, id).
+                        Count(&exists).Error; err != nil {
+                        return err
+                }
+                if exists == 0 {
+                        return nil
+                }
+                return tx.Where("id = ?", id).Delete(&model.SortieCarburant{}).Error
+        })
+}
+
+// DeleteAchat — supprime un bon d'achat carburant par ID (RLS via JOIN Chantier). Idempotent.
+func (r *CarburantRepository) DeleteAchat(ctx context.Context, auth *database.AuthUser, id string) error {
+        return database.WithTenant(ctx, r.db, auth, func(tx *gorm.DB) error {
+                var exists int64
+                if err := tx.Model(&model.BonAchatCarburant{}).
+                        Joins(`JOIN "Chantier" ON "Chantier".id = "BonAchatCarburant"."chantierId"`).
+                        Where(`"BonAchatCarburant".id = ?`, id).
+                        Count(&exists).Error; err != nil {
+                        return err
+                }
+                if exists == 0 {
+                        return nil
+                }
+                return tx.Where("id = ?", id).Delete(&model.BonAchatCarburant{}).Error
+        })
+}
+
+// DeleteReleve — supprime un relevé compteur par ID (RLS via JOIN Chantier). Idempotent.
+func (r *CarburantRepository) DeleteReleve(ctx context.Context, auth *database.AuthUser, id string) error {
+        return database.WithTenant(ctx, r.db, auth, func(tx *gorm.DB) error {
+                var exists int64
+                if err := tx.Model(&model.ReleveCompteurEngin{}).
+                        Joins(`JOIN "Chantier" ON "Chantier".id = "ReleveCompteurEngin"."chantierId"`).
+                        Where(`"ReleveCompteurEngin".id = ?`, id).
+                        Count(&exists).Error; err != nil {
+                        return err
+                }
+                if exists == 0 {
+                        return nil
+                }
+                return tx.Where("id = ?", id).Delete(&model.ReleveCompteurEngin{}).Error
+        })
+}

@@ -475,9 +475,13 @@ func NewRouter(d Deps) http.Handler {
 					// Static routes first
 					r.With(middleware.RequireAccess(model.DomainLogistique, model.PermLecture, d.DelegationRepo)).Get("/entrees", d.Carburant.ListEntrees)
 					r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Post("/entrees", d.Carburant.CreateEntree)
+						r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Delete("/entrees/{id}", d.Carburant.DeleteEntree)
 					r.With(middleware.RequireAccess(model.DomainLogistique, model.PermLecture, d.DelegationRepo)).Get("/sorties", d.Carburant.ListSorties)
+						r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Delete("/sorties/{id}", d.Carburant.DeleteSortie)
 					r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Post("/sorties", d.Carburant.CreateSortie)
+						r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Delete("/achats/{id}", d.Carburant.DeleteAchat)
 					r.With(middleware.RequireAccess(model.DomainLogistique, model.PermLecture, d.DelegationRepo)).Get("/achats", d.Carburant.ListAchats)
+						r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Delete("/releves/{id}", d.Carburant.DeleteReleve)
 					r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Post("/achats", d.Carburant.CreateAchat)
 					r.With(middleware.RequireAccess(model.DomainLogistique, model.PermLecture, d.DelegationRepo)).Get("/releves", d.Carburant.ListReleves)
 					r.With(middleware.RequireAccess(model.DomainLogistique, model.PermEcriture, d.DelegationRepo)).Post("/releves", d.Carburant.CreateReleve)
