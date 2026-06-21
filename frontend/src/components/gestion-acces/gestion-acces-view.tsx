@@ -102,8 +102,8 @@ interface User {
   entrepriseId: string | null
   createdAt: string
   updatedAt: string
-  _count: {
-    chantierAccess: number
+  _count?: {
+    chantierAccess?: number
   }
 }
 
@@ -979,7 +979,7 @@ function UsersTab({ session }: { session: any }) {
                             className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors"
                             onClick={() => openChantierDialog(user)}
                           >
-                            {user._count.chantierAccess}
+                            {user._count?.chantierAccess ?? 0}
                           </Badge>
                         </TableCell>
                         <TableCell className="pr-4">
