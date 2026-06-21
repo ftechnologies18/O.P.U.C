@@ -842,3 +842,45 @@ Stage Summary:
 - Les délégations manuelles (créées via /parametres/delegations) ne sont PAS affectées
   car elles n'ont pas le préfixe 'AUTO:' dans leur raison
 - Prêt pour commit + push → test production.
+
+---
+Task ID: RBAC-FRONTEND
+Agent: general-purpose
+Task: Filtrage sidebar + garde de page pour EMPLOYE selon fonction BTP.
+
+Work Log:
+- Lecture du worklog.md et de rbac.ts (compréhension de l'architecture 4 rôles + 8 fonctions BTP).
+- Lecture de app-layout.tsx (structure `SidebarContent`, `filteredSections`, nav items avec id/href/requiredRoles/canShow) et de `(app)/layout.tsx` (layout auth-gated simple).
+- Ajout dans `src/lib/rbac.ts` (après FONCTION_BADGE_CLASSES) :
+  • `FONCTION_PAGES` : map 8 fonctions → page-ids métier accessibles.
+  • `PERSONAL_PAGES` : ['dashboard', 'mes-taches', 'support'] (toujours visibles).
+  • `getFonctionPages(role, fonction)` : retourne `null` pour rôles non-EMPLOYE (pas de filtre), sinon `PERSONAL_PAGES + foncPages` pour EMPLOYE/SOUS_TRAITANT.
+- Modification de `src/components/layout/app-layout.tsx` :
+  • Import de `getFonctionPages`.
+  • Récupération de `fonction` depuis `session.user.fonction` dans `SidebarContent`.
+  • Calcul de `allowedPages = getFonctionPages(userRole, fonction)`.
+  • Dans le filtre `filteredSections` : après les checks existants (canShow / requiredRoles / canAccessPage), si `allowedPages !== null`, on dérive `pageId` depuis `item.href` (sans slash initial) ou `item.id`, et on masque l'item si `pageId` n'est pas dans la liste blanche.
+- Création de `src/components/layout/page-guard.tsx` :
+  • Composant client qui utilise `useSession`, `useRouter`, `usePathname`.
+  • Extrait le 1er segment du pathname (= page-id), vérifie s'il est dans `allowedPages`.
+  • Si EMPLOYE et page non autorisée → `router.replace('/dashboard')`.
+  • Cas spécial `mes-taches` (top-level route personnel) laissé passer.
+  • Ne fait rien pour les rôles non-EMPLOYE (allowedPages === null).
+- Modification de `src/app/(app)/layout.tsx` :
+  • Import de `PageGuard`.
+  • Wrap des children : `<AppLayout><PageGuard>{children}</PageGuard></AppLayout>`.
+- Lint : `bun run lint` → exit code 0, aucune erreur, aucun warning.
+- Pas de commit/push (le tuteur s'en chargera).
+
+Stage Summary:
+- **Fichiers modifiés** :
+  - `src/lib/rbac.ts` (+45 lignes : FONCTION_PAGES, PERSONAL_PAGES, getFonctionPages)
+  - `src/components/layout/app-layout.tsx` (import getFonctionPages, récupération `fonction`, calcul `allowedPages`, filtre supplémentaire dans `filteredSections`)
+  - `src/app/(app)/layout.tsx` (import + wrap `<PageGuard>`)
+- **Fichier créé** :
+  - `src/components/layout/page-guard.tsx` (41 lignes, garde de route client-side pour EMPLOYE)
+- **Lint** : `bun run lint` ✅ exit code 0, sans erreur ni warning.
+- **Comportement final** :
+  - SUPER_ADMIN / GERANT / CHEF_PROJET : sidebar et navigation inchangées (RBAC normal).
+  - EMPLOYE : ne voit dans la sidebar QUE les pages de sa fonction + dashboard/mes-taches/support ; toute tentative d'accès directe par URL à une page non autorisée est interceptée par `PageGuard` qui redirige vers `/dashboard`.
+  - EMPLOYE sans fonction : ne voit QUE les pages personnelles (dashboard, mes-taches, support).

@@ -65,6 +65,45 @@ export const FONCTION_BADGE_CLASSES: Record<UserFonction, string> = {
   CHEF_CHANTIER: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400 border-teal-200 dark:border-teal-800',
 }
 
+// ═══════════════════════════════════════════════════════════
+// FONCTION → PAGES ACCESSIBLES (RBAC strict par fonction)
+// ═══════════════════════════════════════════════════════════
+//
+// Un EMPLOYE ne voit QUE les pages listées ici + les pages personnelles
+// (dashboard, mes-taches, support). Les autres rôles ne sont pas affectés.
+//
+// Pages personnelles (toujours visibles pour tout user authentifié) :
+//   - dashboard, mes-taches, support
+//
+// Pages par fonction (pages métier accessibles) :
+export const FONCTION_PAGES: Record<string, string[]> = {
+  CHARGE_LOGISTIQUE: ['stocks', 'carburant', 'engins', 'sous-traitants'],
+  CHARGE_CARBURANT: ['carburant', 'engins'],
+  CHARGE_PLANNING: ['chantiers', 'planning'],
+  CHARGE_QUALITE: ['rapports', 'photos', 'documents'],
+  CHARGE_DOCUMENTATION: ['documents', 'photos'],
+  CHARGE_COMMERCIAL: ['clients', 'devis', 'contrats', 'facturation'],
+  CHARGE_RH: ['personnel', 'pointage', 'paie'],
+  CHEF_CHANTIER: ['chantiers', 'planning', 'pointage', 'photos', 'rapports', 'documents'],
+}
+
+// Pages personnelles — toujours visibles pour tout user authentifié (y compris EMPLOYE sans fonction)
+const PERSONAL_PAGES: string[] = ['dashboard', 'mes-taches', 'support']
+
+/**
+ * Get the list of page IDs accessible by an EMPLOYE based on their fonction.
+ * Returns PERSONAL_PAGES + fonction-specific pages.
+ * For non-EMPLOYE roles, returns null (meaning : use normal RBAC, no fonction filter).
+ */
+export function getFonctionPages(role: string | undefined, fonction: string | undefined): string[] | null {
+  // Only EMPLOYE (and legacy SOUS_TRAITANT) are restricted by fonction
+  if (role !== 'EMPLOYE' && role !== 'SOUS_TRAITANT') {
+    return null // null = no restriction, use normal RBAC
+  }
+  const foncPages = (fonction && FONCTION_PAGES[fonction]) || []
+  return [...PERSONAL_PAGES, ...foncPages]
+}
+
 export type PermissionLevel = 'AUCUN' | 'LECTURE' | 'ECRITURE' | 'GESTION'
 
 export type AppPage =

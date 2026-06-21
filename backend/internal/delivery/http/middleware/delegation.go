@@ -87,14 +87,15 @@ func RequireAccess(domain, level string, delRepo DelegationChecker) func(http.Ha
 // DOCUMENTS (full = GESTION), et accès limité à RH (ECRITURE max : pointage mais
 // pas de gestion de la paie).
 //
-// EMPLOYE a accès lecture seule à tous les domaines (LECTURE max).
-// (Phase 1 : SOUS_TRAITANT a été renommé EMPLOYE — on garde le case legacy
-// le temps de la migration des données.)
+// EMPLOYE n'a PLUS d'accès baseline à tous les domaines (Phase RBAC).
+// Accès limité à CHANTIER/LECTURE uniquement (pour consulter les chantiers
+// où il a des tâches assignées). Pour tout autre domaine, l'EMPLOYE doit
+// avoir une délégation (manuelle ou auto-grant via sa fonction BTP).
 //
-// Ces règles préservent la compatibilité avec le RBAC existant : un CHEF_PROJET
-// peut toujours faire son travail quotidien sans avoir besoin d'une délégation
-// explicite, mais le GERANT peut étendre ses droits via une délégation GESTION
-// (par exemple pour qu'il puisse gérer la paie).
+// Rationale : un EMPLOYE "CHARGE_RH" ne doit pas voir les stocks, un
+// "CHARGE_LOGISTIQUE" ne doit pas voir la paie. L'accès strict par fonction
+// est appliqué côté frontend (sidebar filtrée) ET côté backend (RequireAccess
+// sur les GET des domaines métier).
 func hasRoleAccess(role, domain, level string) bool {
         switch role {
         case "CHEF_PROJET":
@@ -107,8 +108,12 @@ func hasRoleAccess(role, domain, level string) bool {
                         return model.PermLevel(level) <= model.PermLevel(model.PermEcriture)
                 }
         case "EMPLOYE", "SOUS_TRAITANT": // SOUS_TRAITANT = legacy, à retirer après migration
-                // Read-only access to all domains
-                return model.PermLevel(level) <= model.PermLevel(model.PermLecture)
+                // Phase RBAC : EMPLOYE ne voit QUE CHANTIER en lecture (contexte tâches).
+                // Tout autre accès nécessite une délégation (auto-grant via fonction ou manuelle).
+                if domain == model.DomainChantier {
+                        return model.PermLevel(level) <= model.PermLevel(model.PermLecture)
+                }
+                return false
         }
         return false
 }

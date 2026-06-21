@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useSession } from '@/lib/auth-session'
 import { AppLayout } from '@/components/layout/app-layout'
+import { PageGuard } from '@/components/layout/page-guard'
 import { Loader2 } from 'lucide-react'
 
 /**
@@ -44,5 +45,9 @@ export default function AppLayoutRoute({
     return null
   }
 
-  return <AppLayout>{children}</AppLayout>
+  return (
+    <AppLayout>
+      <PageGuard>{children}</PageGuard>
+    </AppLayout>
+  )
 }

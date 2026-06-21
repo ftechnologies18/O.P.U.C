@@ -47,7 +47,7 @@ import {
   ListChecks,
 } from 'lucide-react'
 import { useSession } from '@/lib/auth-session'
-import { canAccessPage } from '@/lib/rbac'
+import { canAccessPage, getFonctionPages } from '@/lib/rbac'
 import type { UserRole, AppPage } from '@/lib/rbac'
 import { SearchCommand } from './search-command'
 import { UserMenu } from './user-menu'
@@ -212,8 +212,14 @@ function SidebarContent({
   const pathname = usePathname()
   const { data: session } = useSession()
   const userRole = (session?.user as any)?.role as UserRole | undefined
+  const fonction = (session?.user as any)?.fonction as string | undefined
   const isCoGerant = (session?.user as any)?.isCoGerant === true
   const compact = mode === 'compact'
+
+  // EMPLOYE (et legacy SOUS_TRAITANT) sont restreints par fonction :
+  // - `null`    → pas de filtre par fonction (rôles supérieurs, RBAC normal)
+  // - `string[]`→ liste blanche des page-ids autorisés pour cet EMPLOYE
+  const allowedPages = getFonctionPages(userRole, fonction)
 
   // Calcule l'ensemble des module-ids couverts par au moins une délégation active.
   const delegatedModuleIds = useMemo(() => {
@@ -248,7 +254,14 @@ function SidebarContent({
           'support', 'parametres', 'gestion-acces', 'admin-plateforme',
         ]
         if (knownPages.includes(item.id)) {
-          return canAccessPage(userRole, item.id as AppPage)
+          if (!canAccessPage(userRole, item.id as AppPage)) return false
+        }
+        // EMPLOYE / SOUS_TRAITANT : restriction stricte par fonction BTP.
+        // On dérive le page-id soit depuis `item.href` (sans le slash initial),
+        // soit depuis `item.id`. Si l'id n'est pas dans la liste blanche, on cache l'item.
+        if (allowedPages) {
+          const pageId = item.href ? item.href.replace(/^\//, '') : item.id
+          if (!allowedPages.includes(pageId)) return false
         }
         return true
       })
