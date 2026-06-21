@@ -110,7 +110,7 @@ const navSections: NavSection[] = [
     group: 'Gestion Chantier',
     items: [
       { id: 'chantiers', label: 'Chantiers', icon: Building2 },
-      { id: 'mes-taches', label: 'Mes Tâches', href: '/mes-taches', icon: ListChecks },
+      { id: 'mes-taches', label: 'Mes Tâches', href: '/mes-taches', icon: ListChecks, requiredRoles: ['CHEF_PROJET', 'EMPLOYE', 'SOUS_TRAITANT'] },
       { id: 'planning', label: 'Planning', icon: CalendarRange },
       { id: 'pointage', label: 'Pointage', icon: ClipboardList },
     ],

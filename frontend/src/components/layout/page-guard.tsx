@@ -13,10 +13,18 @@ import { getRolePages } from '@/lib/rbac'
  * - SUPER_ADMIN : redirigé vers /admin-plateforme s'il tente une page métier
  * - EMPLOYE / SOUS_TRAITANT : redirigé vers /dashboard s'il tente une page
  *   hors de sa fonction BTP
- * - GERANT / CHEF_PROJET : pas de restriction (null = RBAC normal)
+ * - GERANT : pas de whitelist (null), mais certaines pages sont interdites
+ *   (ex: mes-taches — le GERANT délègue, il n'exécute pas de tâches)
+ * - CHEF_PROJET : whitelist opérationnelle
  *
  * À placer dans le layout (app)/(app)/layout.tsx pour wrapper toutes les pages app.
  */
+
+// Pages interdites par rôle (même si allowedPages est null = pas de whitelist)
+const FORBIDDEN_PAGES_BY_ROLE: Record<string, string[]> = {
+  GERANT: ['mes-taches'], // Le GERANT délègue, il n'exécute pas de tâches
+}
+
 export function PageGuard({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
   const router = useRouter()
@@ -27,16 +35,22 @@ export function PageGuard({ children }: { children: React.ReactNode }) {
   const allowedPages = getRolePages(role, fonction)
 
   useEffect(() => {
-    if (!allowedPages || !pathname) return
+    if (!pathname) return
     // Extract page id from pathname (e.g., /stocks/entrees → stocks)
     const segments = pathname.split('/').filter(Boolean)
     if (segments.length === 0) return // root
     const pageId = segments[0] // first segment = page id
-    // Special case : mes-taches is a top-level route
-    if (pageId === 'mes-taches') return
+
+    // 1. Vérifie les pages interdites par rôle (même sans whitelist)
+    const forbidden = role ? (FORBIDDEN_PAGES_BY_ROLE[role] || []) : []
+    if (forbidden.includes(pageId)) {
+      router.replace('/dashboard')
+      return
+    }
+
+    // 2. Vérifie la whitelist (SUPER_ADMIN, EMPLOYE, CHEF_PROJET)
+    if (!allowedPages) return // GERANT sans restriction (hors pages interdites)
     if (!allowedPages.includes(pageId)) {
-      // SUPER_ADMIN est redirigé vers /admin-plateforme (son dashboard)
-      // Les autres rôles vers /dashboard
       const redirectUrl = role === 'SUPER_ADMIN' ? '/admin-plateforme' : '/dashboard'
       router.replace(redirectUrl)
     }
