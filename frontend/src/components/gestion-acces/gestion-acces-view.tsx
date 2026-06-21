@@ -516,10 +516,10 @@ function UsersTab({ session }: { session: any }) {
   const fetchUsers = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/v1/users')
+      const res = await fetch('/api/v1/users?pageSize=100')
       if (res.ok) {
         const json = await res.json()
-        setUsers(json.users || [])
+        setUsers(json.data || [])
       } else {
         toast.error("Erreur lors du chargement des utilisateurs")
       }
@@ -2073,10 +2073,10 @@ function AuditTab() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/users')
+      const res = await fetch('/api/v1/users?pageSize=100')
       if (res.ok) {
         const json = await res.json()
-        setAllUsers(json.users || [])
+        setAllUsers(json.data || [])
       }
     } catch {
       /* silent */
