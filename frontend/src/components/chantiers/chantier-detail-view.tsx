@@ -209,6 +209,23 @@ export function ChantierDetailView() {
   const [targetTaskId, setTargetTaskId] = useState<string | null>(null)
   const [targetPhaseIdForTask, setTargetPhaseIdForTask] = useState<string | null>(null)
 
+  // Available users (for task assignment — responsableId select)
+  // Fetched once on mount : CHEF_PROJET + EMPLOYE users of the tenant
+  const [availableUsers, setAvailableUsers] = useState<{ id: string; name: string; email: string; role: string; fonction?: string }[]>([])
+
+  useEffect(() => {
+    fetch('/api/v1/users?pageSize=100')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.data) {
+          // Filter : only CHEF_PROJET + EMPLOYE (not GERANT/SUPER_ADMIN — they have full access anyway)
+          const assignable = data.data.filter((u: any) => u.role === 'CHEF_PROJET' || u.role === 'EMPLOYE')
+          setAvailableUsers(assignable)
+        }
+      })
+      .catch(() => { /* silent fail — select will just be empty */ })
+  }, [])
+
   // ─── Fetch data ───
 
   const fetchChantier = useCallback(async () => {
@@ -1384,6 +1401,25 @@ export function ChantierDetailView() {
                   onChange={(e) => setTaskForm({ ...taskForm, dateFin: e.target.value })}
                 />
               </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="task-responsable">Responsable (assignation)</Label>
+              <select
+                id="task-responsable"
+                value={taskForm.responsableId}
+                onChange={(e) => setTaskForm({ ...taskForm, responsableId: e.target.value })}
+                className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">— Non assigné —</option>
+                {availableUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.role === 'EMPLOYE' ? 'Employé' : 'Chef de Projet'}{u.fonction ? ` · ${u.fonction.replace(/_/g, ' ').toLowerCase()}` : ''})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                L'utilisateur assigné retrouvera cette tâche dans « Mes Tâches ».
+              </p>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="task-precedente">Tâche précédente (dépendance)</Label>

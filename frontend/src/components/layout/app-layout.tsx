@@ -44,6 +44,7 @@ import {
   LifeBuoy,
   KeyRound,
   Crown,
+  ListChecks,
 } from 'lucide-react'
 import { useSession } from '@/lib/auth-session'
 import { canAccessPage } from '@/lib/rbac'
@@ -109,6 +110,7 @@ const navSections: NavSection[] = [
     group: 'Gestion Chantier',
     items: [
       { id: 'chantiers', label: 'Chantiers', icon: Building2 },
+      { id: 'mes-taches', label: 'Mes Tâches', href: '/mes-taches', icon: ListChecks },
       { id: 'planning', label: 'Planning', icon: CalendarRange },
       { id: 'pointage', label: 'Pointage', icon: ClipboardList },
     ],

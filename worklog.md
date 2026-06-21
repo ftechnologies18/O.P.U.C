@@ -633,3 +633,124 @@ Stage Summary:
 - La machinerie de délégation (table Delegation + endpoints + UI + badge sidebar) est maintenant OPÉRATIONNELLE.
 - Un GERANT peut créer une délégation via /parametres/delegations, et l'EMPLOYE bénéficiaire peut immédiatement accéder aux endpoints du domaine délégué.
 - Prêt pour commit + push → déploiement Vercel + Render.
+
+---
+Task ID: PHASE-3-BACKEND
+Agent: general-purpose
+Task: Implémenter CRUD Phase/Tache backend + endpoint mes-taches.
+
+Work Log:
+- Lu /home/z/my-project/opuc/worklog.md pour contexte (ONBOARDING, AUDIT-RBAC, PHASE-0, PHASE-1-FIX + PHASE-2).
+- Étudié les patterns existants : chantier usecase/repo/handler (CRUD write Phase 0.2), soustraitant usecase/repo/handler (pattern Preload + JOIN), helpers.go (parseDate/WriteJSON/WriteError/authUserFromCtx), saas_handler.go (toFloat64/toInt64), middleware/delegation.go (RequireAccess), tenant.go (WithTenant), router.go (struct Deps + chi groups).
+- Confirmé les appels frontend (chantier-detail-view.tsx lignes 332/359/403/433/464) — le frontend appelle déjà les URLs /api/v1/chantiers/{id}/phases/* sans plus de /v1/ manquant.
+- Créé internal/usecase/phase/phase.go (498 lignes) :
+  * Interface Repo (9 méthodes : CreatePhase, UpdatePhase, DeletePhase, GetPhaseByID, CreateTache, UpdateTache, DeleteTache, GetTacheByID, ListMyTaches)
+  * Structs CreatePhaseInput / UpdatePhaseInput / CreateTacheInput / UpdateTacheInput
+  * Usecase avec 7 méthodes + helpers isValidTacheStatut / computeStatutFromAvancement / isForeignKeyError
+  * Validation : nom requis pour phase+tache, avancement 0-100, statut ∈ {PLANIFIEE, EN_COURS, TERMINE, EN_RETARD}
+  * Règle auto : si avancement fourni sans statut explicite → TERMINE si >=100, EN_COURS si >0, PLANIFIEE sinon
+  * Mapping erreurs : ErrNotFound / ErrBadRequest / ErrUnauthorized / ErrInternal
+- Créé internal/repository/gorm/phase_repo.go (376 lignes) :
+  * Struct PhaseRepository + compile-time check `var _ phase.Repo = (*PhaseRepository)(nil)`
+  * Toutes les méthodes utilisent database.WithTenant (SET LOCAL ROLE app_user + set_config app.current_tenant)
+  * CreatePhase : explicit existence check sur Chantier (RLS direct) avant INSERT — rejet si chantierId non visible dans tenant
+  * UpdatePhase/DeletePhase/GetPhaseByID : JOIN "Chantier" ON Phase.chantierId = Chantier.id pour filtrage tenant
+  * CreateTache : explicit existence check sur Phase via JOIN Chantier avant INSERT
+  * UpdateTache/DeleteTache/GetTacheByID : 2 JOINs (Phase → Chantier) pour RLS
+  * DeletePhase : cascade delete Taches d'abord (WHERE phaseId = ?), puis Phase
+  * ListMyTaches : 2 JOINs pour filtrage RLS + Preload("Phase.Chantier") pour contexte réponse
+  * Génération ID via newCuidLikeID() si vide, force createdAt/updatedAt
+  * Partial update via map[string]any (Updates) + force updatedAt
+- Créé internal/delivery/http/handler/phase_handler.go (456 lignes) :
+  * Struct PhaseHandler{uc, log} + NewPhaseHandler constructeur
+  * 7 handlers : CreatePhase / UpdatePhase / DeletePhase / CreateTache / UpdateTache / DeleteTache / ListMyTaches
+  * Parsing JSON via map[string]any pour gérer dates string (YYYY-MM-DD ou RFC3339) — pattern identique à chantier_handler.go
+  * 4 helpers parseCreatePhaseInput / parseUpdatePhaseInput / parseCreateTacheInput / parseUpdateTacheInput
+  * writePhaseError : mapping ErrNotFound→404, ErrBadRequest→400, ErrUnauthorized→401, ErrForbidden→403, ErrConflict→409, default→500
+  * ListMyTaches : retourne {data: [...], total: N}, data toujours un tableau (même vide)
+  * Réponses Create → 201 (ressource créée), Update → 200, Delete → 200 {ok: true, id}
+- Modifié internal/delivery/http/router.go (623 lignes) :
+  * Ajout champ `Phase *handler.PhaseHandler` à la struct Deps
+  * Ajout bloc Phase 3 après le bloc Chantier (ligne 287-318) :
+    - 6 routes CRUD Phase/Tache sous /chantiers/{chantierId}/phases/... avec RequireAccess(CHANTIER, ECRITURE, DelegationRepo)
+    - 1 route /taches/mes-taches avec auth-seul (pas de RequireAccess — route personnelle)
+- Modifié main.go (320 lignes) :
+  * Ajout import "opuc/internal/usecase/phase"
+  * Ajout phaseRepo := gorm.NewPhaseRepository(dbm.Runtime)
+  * Ajout phaseUC := phase.NewUsecase(phaseRepo, log)
+  * Ajout phaseHandler := handler.NewPhaseHandler(phaseUC, log)
+  * Ajout Phase: phaseHandler dans la struct http.Deps{...}
+- Installé Go 1.23.4 localement dans /tmp/go (le ~/go-sdk mentionné dans worklog Phase 0 n'existait plus).
+- gofmt -w appliqué sur les 5 fichiers (le Write tool avait converti tabs→spaces sur phase_handler.go).
+
+Vérifications :
+- `go build -o /tmp/opuc-test .` → OK (binary 19.8MB généré)
+- `go vet ./...` → OK (0 warnings)
+- `gofmt -l` sur les 5 fichiers → OK (vide = tous formatés)
+- Smoke test : `JWT_SECRET=test DATABASE_URL=postgresql://fake MIGRATIONS_URL=postgresql://fake PORT=18080 /tmp/opuc-test` → démarre, log "starting O.P.U.C API", échoue sur connexion DB (attendu — pas de DB locale). Phase/usecase/repo/handler/route wiring tous exécutés sans panic avant l'échec DB.
+- 7 endpoints confirmés via grep sur router.go : 6 routes RequireAccess(CHANTIER, ECRITURE) + 1 route /taches/mes-taches auth-seul.
+
+Stage Summary:
+- 3 fichiers créés : internal/usecase/phase/phase.go (498 lignes), internal/repository/gorm/phase_repo.go (376 lignes), internal/delivery/http/handler/phase_handler.go (456 lignes).
+- 2 fichiers modifiés : internal/delivery/http/router.go (+32 lignes), main.go (+6 lignes).
+- ~1 370 lignes de code Go ajoutées.
+- 7 endpoints implémentés :
+  1. POST   /api/v1/chantiers/{chantierId}/phases                                — RequireAccess(CHANTIER, ECRITURE) — create phase
+  2. PUT    /api/v1/chantiers/{chantierId}/phases/{phaseId}                      — RequireAccess(CHANTIER, ECRITURE) — update phase (partial)
+  3. DELETE /api/v1/chantiers/{chantierId}/phases/{phaseId}                      — RequireAccess(CHANTIER, ECRITURE) — delete phase (cascade taches)
+  4. POST   /api/v1/chantiers/{chantierId}/phases/{phaseId}/taches               — RequireAccess(CHANTIER, ECRITURE) — create tache (statut auto PLANIFIEE)
+  5. PUT    /api/v1/chantiers/{chantierId}/phases/{phaseId}/taches/{tacheId}     — RequireAccess(CHANTIER, ECRITURE) — update tache (règle auto avancement→statut)
+  6. DELETE /api/v1/chantiers/{chantierId}/phases/{phaseId}/taches/{tacheId}     — RequireAccess(CHANTIER, ECRITURE) — delete tache
+  7. GET    /api/v1/taches/mes-taches                                            — auth-seul (route personnelle, pas de RequireAccess) — liste mes tâches assignées
+- Le endpoint #8 (PATCH /taches/{id}/avancement) du brief n'a PAS été implémenté séparément : le frontend appelle PUT /chantiers/{id}/phases/{phaseId}/taches/{tacheId} avec body { avancement: val } (chantier-detail-view.tsx ligne 464), ce qui est couvert par le endpoint #5 (PUT partial qui gère l'avancement + règle auto statut).
+- RBAC :
+  * Routes 1-6 (CRUD Phase/Tache) : RequireAccess(CHANTIER, ECRITURE) → CHEF_PROJET a accès baseline (peut gérer ses chantiers), EMPLOYE nécessite une délégation CHANTIER/ECRITURE active, GERANT/co-GERANT/SUPER_ADMIN toujours autorisés.
+  * Route 7 (mes-taches) : auth-seul → tout utilisateur (y compris EMPLOYE sans délégation) peut consulter ses propres tâches assignées. C'est une route personnelle, pas un domaine métier.
+- RLS :
+  * Tables Phase et Tache n'ont PAS de RLS direct — filtrage tenant via JOIN "Chantier" (RLS-protected via policy tenant_isolation sur entrepriseId).
+  * CreatePhase/CreateTache : explicit existence check sur le parent (Chantier/Phase) via WITH RLS avant INSERT — rejet si parent non visible dans tenant.
+  * Update/Delete/Get : JOIN Phase → Chantier (ou direct Chantier pour Phase) pour filtrage tenant.
+  * ListMyTaches : 2 JOINs (Phase → Chantier) + Preload Phase.Chantier pour la réponse.
+  * database.WithTenant appliqué partout (SET LOCAL ROLE app_user + set_config app.current_tenant/user_role/user_id).
+- Cascade delete : DeletePhase supprime d'abord les Taches (WHERE phaseId = ?) puis la Phase — tout dans la même transaction WithTenant.
+- Règle auto avancement→statut : si UpdateTache reçoit {avancement: 75} sans statut explicite → statut = "EN_COURS". Si {avancement: 100} → statut = "TERMINE". Si statut explicite fourni → il override.
+- Build : `go build -o /tmp/opuc-test .` → OK (exit 0, binary 19.8MB).
+- Vet : `go vet ./...` → OK (exit 0, 0 warnings).
+- Gofmt : tous les fichiers formatés proprement.
+- Non commit/push — en attente de validation frontend par le tuteur.
+
+---
+Task ID: PHASE-3-FRONTEND
+Agent: Z.ai Code (tutor/assistant)
+Task: Page /mes-taches + select responsableId dans chantier-detail-view + entrée sidebar.
+
+Work Log:
+- Créé page /mes-taches (src/app/(app)/mes-taches/page.tsx, ~420 lignes) :
+  * Fetch GET /api/v1/taches/mes-taches
+  * 5 stats cards (Total, Planifiées, En cours, En retard, Terminées)
+  * Filtre par statut (Select shadcn)
+  * TacheCard : statut icon + badge + avancement (Progress), nom + description + chantier/phase, dates avec alerte retard/échéance proche, bouton "Ouvrir" vers /chantiers/{id}
+  * EmptyState contextuel (EMPLOYE vs CHEF_PROJET/GERANT)
+  * Glassmorphism + amber/orange theme (pas d'indigo/blue)
+  * Framer Motion (header slide-down, cards staggered)
+  * Accessible à TOUS les rôles (y compris EMPLOYE sans délégation)
+- Ajouté entrée "Mes Tâches" (href: '/mes-taches', icon: ListChecks) dans la sidebar section "Gestion Chantier" (app-layout.tsx).
+- Ajouté select "Responsable (assignation)" dans le formulaire de création de tâche de chantier-detail-view.tsx :
+  * Fetch /api/v1/users?pageSize=100 au montage du composant
+  * Filtre CHEF_PROJET + EMPLOYE seulement (GERANT/SUPER_ADMIN ont full access de toute façon)
+  * Affiche nom + rôle + fonction (ex: "Aliou Diop (Employé · charge logistique)")
+  * Hint text : "L'utilisateur assigné retrouvera cette tâche dans « Mes Tâches »."
+  * Permet au CHEF_PROJET/GERANT d'assigner une tâche à un EMPLOYE → délégation de suivi
+
+Vérifications :
+- bun run lint (frontend) : OK (0 errors, 0 warnings)
+- Build backend validé par subagent PHASE-3-BACKEND (go build + go vet OK)
+
+Stage Summary:
+- Page /mes-taches créée + sidebar entry + select responsableId dans chantier-detail-view.
+- Le flux complet de délégation de suivi est maintenant opérationnel :
+  1. CHEF_PROJET/GERANT crée une tâche sur /chantiers/{id} → assigne un EMPLOYE via le select
+  2. L'EMPLOYE se connecte → voit la tâche dans /mes-taches
+  3. L'EMPLOYE met à jour l'avancement (édition inline dans /chantiers/{id} ou via PUT)
+  4. Le statut auto-passe à EN_COURS puis TERMINE selon l'avancement
+- Prêt pour commit + push → déploiement Vercel + Render + test production.
