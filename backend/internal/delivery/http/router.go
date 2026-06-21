@@ -265,9 +265,13 @@ func NewRouter(d Deps) http.Handler {
                         r.Group(func(r chi.Router) {
                                 r.Use(middleware.Auth(d.Signer))
                                 r.Route("/users", func(r chi.Router) {
-                                        // List + Create : SUPER_ADMIN ou GERANT
-                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Get("/", d.User.List)
-                                        r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/", d.User.Create)
+                                        // List + Create : GERANT uniquement
+                                        // Le SUPER_ADMIN (propriétaire SaaS) ne peut PAS gérer les users
+                                        // d'une entreprise cliente — c'est le GERANT qui le fait.
+                                        // Le SUPER_ADMIN accède aux données d'un tenant UNIQUEMENT via
+                                        // SupportAccess (mécanisme existant, limite 4h, audit log).
+                                        r.With(middleware.RequireRole("GERANT")).Get("/", d.User.List)
+                                        r.With(middleware.RequireRole("GERANT")).Post("/", d.User.Create)
 
                                         // ListAssignable : auth-seul (tous rôles) — pour le select "Responsable"
                                         // Déclaré AVANT /{id} pour éviter que chi ne matche "assignable" comme un ID.
@@ -278,9 +282,9 @@ func NewRouter(d Deps) http.Handler {
                                         r.Route("/{id}", func(r chi.Router) {
                                                 r.Get("/", d.User.Get)                                                   // tous authentifiés
                                                 r.Put("/", d.User.Update)                                                // tous authentifiés (auto-update possible)
-                                                r.With(middleware.RequireRole("SUPER_ADMIN")).Delete("/", d.User.Delete) // soft delete
-                                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/toggle-active", d.User.ToggleActive)
-                                                r.With(middleware.RequireRole("SUPER_ADMIN", "GERANT")).Post("/reset-password", d.User.ResetPassword)
+                                                r.With(middleware.RequireRole("GERANT")).Delete("/", d.User.Delete)       // soft delete (GERANT only)
+                                                r.With(middleware.RequireRole("GERANT")).Post("/toggle-active", d.User.ToggleActive)
+                                                r.With(middleware.RequireRole("GERANT")).Post("/reset-password", d.User.ResetPassword)
                                         })
                                 })
                         })
