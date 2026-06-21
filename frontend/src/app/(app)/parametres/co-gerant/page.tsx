@@ -166,11 +166,15 @@ export default function CoGerantPage() {
   }, [coGerants])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load()
   }, [load])
 
   useEffect(() => {
-    if (promoteOpen) loadUsers()
+    if (promoteOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadUsers()
+    }
   }, [promoteOpen, loadUsers])
 
   // ── Handlers ─────────────────────────────────────────────────

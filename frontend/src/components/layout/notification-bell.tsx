@@ -58,17 +58,6 @@ export function NotificationBell() {
 
   const unreadCount = notifications.filter((n) => !n.lu).length
 
-  useEffect(() => {
-    fetchNotifications()
-  }, [])
-
-  // Refresh when popover opens
-  useEffect(() => {
-    if (open) {
-      fetchNotifications()
-    }
-  }, [open])
-
   const fetchNotifications = async () => {
     try {
       const res = await fetch('/api/v1/notifications?limit=20')
@@ -82,6 +71,19 @@ export function NotificationBell() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchNotifications()
+  }, [])
+
+  // Refresh when popover opens
+  useEffect(() => {
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchNotifications()
+    }
+  }, [open])
 
   const markAsRead = async (id: string) => {
     try {

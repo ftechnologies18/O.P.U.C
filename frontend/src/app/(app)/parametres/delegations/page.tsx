@@ -231,11 +231,15 @@ export default function DelegationsPage() {
   }, [session?.user?.id])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load()
   }, [load])
 
   useEffect(() => {
-    if (formOpen) loadUsers()
+    if (formOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadUsers()
+    }
   }, [formOpen, loadUsers])
 
   // ── Helpers ──────────────────────────────────────────────────

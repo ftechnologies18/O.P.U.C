@@ -39,27 +39,7 @@ export function SetupTwoFactor({ open, onOpenChange, onComplete }: SetupTwoFacto
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
   const allDigitsFilled = digits.every((d) => d !== '')
 
-  // Reset state when dialog opens/closes
-  useEffect(() => {
-    if (open) {
-      setStep(1)
-      setSecret('')
-      setAuthUri('')
-      setDigits(Array(6).fill(''))
-      setBackupCodes([])
-      setError(false)
-      fetchSetupData()
-    }
-  }, [open])
-
-  // Focus first digit input when step changes to 2
-  useEffect(() => {
-    if (step === 2 && inputRefs.current[0]) {
-      setTimeout(() => inputRefs.current[0]?.focus(), 100)
-    }
-  }, [step])
-
-  const fetchSetupData = async () => {
+  async function fetchSetupData() {
     setLoading(true)
     try {
       const res = await fetch('/api/v1/auth/2fa/setup', { method: 'POST' })
@@ -79,6 +59,27 @@ export function SetupTwoFactor({ open, onOpenChange, onComplete }: SetupTwoFacto
       setLoading(false)
     }
   }
+
+  // Reset state when dialog opens/closes
+  useEffect(() => {
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStep(1)
+      setSecret('')
+      setAuthUri('')
+      setDigits(Array(6).fill(''))
+      setBackupCodes([])
+      setError(false)
+      fetchSetupData()
+    }
+  }, [open])
+
+  // Focus first digit input when step changes to 2
+  useEffect(() => {
+    if (step === 2 && inputRefs.current[0]) {
+      setTimeout(() => inputRefs.current[0]?.focus(), 100)
+    }
+  }, [step])
 
   const handleDigitChange = useCallback(
     (index: number, value: string) => {

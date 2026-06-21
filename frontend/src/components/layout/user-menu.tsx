@@ -137,7 +137,10 @@ function UserPanel({ onClose }: { onClose: () => void }) {
     paymentAlerts: true,
   })
 
-  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true)
+  }, [])
 
   const fetchUser = useCallback(async () => {
     try {
@@ -152,11 +155,15 @@ function UserPanel({ onClose }: { onClose: () => void }) {
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { fetchUser() }, [fetchUser])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchUser()
+  }, [fetchUser])
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('opuc-notif-prefs')
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (saved) setNotifPrefs(JSON.parse(saved))
     } catch { /* ignore */ }
   }, [])

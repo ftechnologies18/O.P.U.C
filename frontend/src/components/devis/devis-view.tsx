@@ -331,6 +331,7 @@ export function DevisView() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDevis(currentPage, searchQuery, statutFilter)
   }, [currentPage, fetchDevis, searchQuery, statutFilter])
 

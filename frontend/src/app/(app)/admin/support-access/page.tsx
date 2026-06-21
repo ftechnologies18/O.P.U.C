@@ -183,7 +183,10 @@ export default function AdminSupportAccessPage() {
   }, [statutFilter])
 
   useEffect(() => {
-    if (userRole === 'SUPER_ADMIN') load()
+    if (userRole === 'SUPER_ADMIN') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      load()
+    }
   }, [userRole, load])
 
   const entById = useMemo(() => new Map(entreprises.map((e) => [e.id, e])), [entreprises])
@@ -592,6 +595,7 @@ function CreateRequestDialog({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEntrepriseId('')
       setRaison('')
     }

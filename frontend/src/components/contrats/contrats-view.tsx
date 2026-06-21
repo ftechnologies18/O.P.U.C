@@ -379,10 +379,12 @@ export function ContratsView() {
   // ═══════════════════════════════════════════════════════════
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchClients()
   }, [fetchClients])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchContrats(currentPage, searchQuery, statutFilter, typeFilter, clientFilter)
   }, [currentPage, fetchContrats, searchQuery, statutFilter, typeFilter, clientFilter])
 

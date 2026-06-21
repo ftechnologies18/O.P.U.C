@@ -221,7 +221,10 @@ export default function AdminSubscriptionsPage() {
   }, [planFilter, statutFilter])
 
   useEffect(() => {
-    if (userRole === 'SUPER_ADMIN') load()
+    if (userRole === 'SUPER_ADMIN') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      load()
+    }
   }, [userRole, load])
 
   // Lookup maps
@@ -635,7 +638,10 @@ function ChangePlanDialog({
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    if (subscription) setPlan(subscription.plan)
+    if (subscription) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPlan(subscription.plan)
+    }
   }, [subscription])
 
   const handleSubmit = async () => {
@@ -798,6 +804,7 @@ function CreateSubscriptionDialog({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEntrepriseId('')
       setPlan('STARTER')
     }

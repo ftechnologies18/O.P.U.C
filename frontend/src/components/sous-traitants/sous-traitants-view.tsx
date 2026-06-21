@@ -360,10 +360,12 @@ export function SousTraitantsView() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSousTraitants()
   }, [fetchSousTraitants])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchChantiers()
   }, [fetchChantiers])
 

@@ -224,7 +224,10 @@ export default function EntrepriseDetailPage() {
   }, [id])
 
   useEffect(() => {
-    if (userRole === 'SUPER_ADMIN') load()
+    if (userRole === 'SUPER_ADMIN') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      load()
+    }
   }, [userRole, load])
 
   const handleSuspend = async () => {
@@ -768,7 +771,10 @@ function SupportAccessDialog({
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    if (open) setRaison('')
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRaison('')
+    }
   }, [open])
 
   const handleSubmit = async () => {
@@ -860,6 +866,7 @@ function EditEntrepriseDialog({
 
   useEffect(() => {
     if (entreprise && open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         nom: entreprise.nom || '',
         adresse: entreprise.adresse || '',

@@ -243,6 +243,7 @@ export function PhotosView() {
   // Sync selectedChantier from global store
   useEffect(() => {
     if (selectedChantierId && !selectedChantier) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedChantier(selectedChantierId)
     }
   }, [selectedChantierId, selectedChantier])
@@ -250,6 +251,7 @@ export function PhotosView() {
   // --- Fetch Phases for selected chantier ---
   useEffect(() => {
     if (!selectedChantier) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhases([])
       setTaches([])
       return
@@ -306,6 +308,7 @@ export function PhotosView() {
   }, [selectedChantier, categorieFilter, phaseFilter, dateDebut, dateFin, searchText])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPhotos()
   }, [fetchPhotos])
 

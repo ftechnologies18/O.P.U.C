@@ -228,7 +228,10 @@ export default function AdminPlateformePage() {
   }, [])
 
   useEffect(() => {
-    if (userRole === 'SUPER_ADMIN') loadAll()
+    if (userRole === 'SUPER_ADMIN') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadAll()
+    }
   }, [userRole, loadAll])
 
   // ── Derived: growth chart (entreprises créées par mois) ───────

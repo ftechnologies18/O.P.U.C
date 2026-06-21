@@ -464,6 +464,7 @@ function FacturesTab() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchClients()
   }, [fetchClients])
 
@@ -497,6 +498,7 @@ function FacturesTab() {
   )
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchFactures(currentPage, searchQuery, statutFilter, clientIdFilter, typeFactureFilter)
   }, [currentPage, fetchFactures, searchQuery, statutFilter, clientIdFilter, typeFactureFilter])
 
@@ -1383,6 +1385,7 @@ function CreateFactureDialog({
   // Fetch contrats when client changes
   useEffect(() => {
     if (!clientId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setContrats([])
       setContratId('')
       return
@@ -1660,6 +1663,7 @@ function EditFactureDialog({
 
   useEffect(() => {
     if (!clientId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setContrats([])
       setContratId('')
       return

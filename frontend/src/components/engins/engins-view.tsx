@@ -493,17 +493,20 @@ export function EnginsView() {
   // ── Effects ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchChantiers()
     fetchEnginOptions()
     fetchFournisseurOptions()
   }, [fetchChantiers, fetchEnginOptions, fetchFournisseurOptions])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchEngins()
   }, [fetchEngins])
 
   useEffect(() => {
     if (activeTab === 'locations') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchLocations()
     }
   }, [activeTab, fetchLocations])

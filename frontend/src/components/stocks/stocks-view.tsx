@@ -239,6 +239,7 @@ export function StocksView() {
   // Auto-select chantier from global store
   useEffect(() => {
     if (selectedChantierId && !activeChantierId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveChantierId(selectedChantierId)
     }
   }, [selectedChantierId, activeChantierId])
@@ -264,6 +265,7 @@ export function StocksView() {
   }, [activeChantierId, categorieFilter])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchStocks()
   }, [fetchStocks])
 
@@ -322,6 +324,7 @@ export function StocksView() {
 
   useEffect(() => {
     if (activeTab === 'entrees') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchEntrees()
       fetchTaches()
     }

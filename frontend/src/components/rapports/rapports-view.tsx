@@ -254,6 +254,7 @@ export function RapportsView() {
   }, [filterChantierId, currentMonth, searchQuery])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadRapports()
   }, [loadRapports])
 

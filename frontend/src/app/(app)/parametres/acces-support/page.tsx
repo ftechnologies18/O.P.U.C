@@ -145,7 +145,10 @@ export default function AccesSupportPage() {
   }, [])
 
   useEffect(() => {
-    if (userRole && userRole !== 'SOUS_TRAITANT' && userRole !== 'EMPLOYE') load()
+    if (userRole && userRole !== 'SOUS_TRAITANT' && userRole !== 'EMPLOYE') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      load()
+    }
   }, [userRole, load])
 
   const handleAction = async () => {

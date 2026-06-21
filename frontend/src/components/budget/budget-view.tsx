@@ -225,6 +225,7 @@ export function BudgetView() {
   // Auto-select from global store
   useEffect(() => {
     if (selectedChantierId && !activeChantierId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveChantierId(selectedChantierId)
     }
   }, [selectedChantierId, activeChantierId])
@@ -252,6 +253,7 @@ export function BudgetView() {
   }, [activeChantierId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchBudget()
   }, [fetchBudget])
 

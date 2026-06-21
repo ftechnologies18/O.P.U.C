@@ -85,6 +85,7 @@ export function useOfflineSync(): UseOfflineSyncReturn {
     const handleOnline = () => setIsOnline(true)
     const handleOffline = () => setIsOnline(false)
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOnline(navigator.onLine)
 
     window.addEventListener('online', handleOnline)

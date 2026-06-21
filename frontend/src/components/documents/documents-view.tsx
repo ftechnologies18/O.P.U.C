@@ -311,6 +311,7 @@ export function DocumentsView() {
   // Sync selectedChantier from global store
   useEffect(() => {
     if (selectedChantierId && !selectedChantier) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedChantier(selectedChantierId)
     }
   }, [selectedChantierId, selectedChantier])
@@ -318,6 +319,7 @@ export function DocumentsView() {
   // --- Fetch Phases ---
   useEffect(() => {
     if (!selectedChantier) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhases([])
       return
     }
@@ -364,6 +366,7 @@ export function DocumentsView() {
   }, [selectedChantier, typeFilter, statutFilter, phaseFilter, searchText])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDocuments()
   }, [fetchDocuments])
 

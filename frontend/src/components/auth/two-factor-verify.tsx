@@ -103,16 +103,6 @@ export function TwoFactorVerify({ userId, onVerified, onCancel }: TwoFactorVerif
     inputRefs.current[focusIndex]?.focus()
   }, [])
 
-  // Auto-submit when all 6 digits are filled
-  useEffect(() => {
-    if (allDigitsFilled && !loading && !error) {
-      const timer = setTimeout(() => {
-        submitCode(digits.join(''))
-      }, 400)
-      return () => clearTimeout(timer)
-    }
-  }, [allDigitsFilled, digits, loading])
-
   const submitCode = async (code: string) => {
     setLoading(true)
     setError(false)
@@ -139,6 +129,16 @@ export function TwoFactorVerify({ userId, onVerified, onCancel }: TwoFactorVerif
       setLoading(false)
     }
   }
+
+  // Auto-submit when all 6 digits are filled
+  useEffect(() => {
+    if (allDigitsFilled && !loading && !error) {
+      const timer = setTimeout(() => {
+        submitCode(digits.join(''))
+      }, 400)
+      return () => clearTimeout(timer)
+    }
+  }, [allDigitsFilled, digits, loading])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

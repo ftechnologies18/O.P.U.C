@@ -290,6 +290,7 @@ export function PointageView() {
   }, [chantierId, selectedDate])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadFormData()
   }, [loadFormData])
 
@@ -507,6 +508,7 @@ export function PointageView() {
 
   // ── Reset history when chantier changes ─────────────
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHistoryData([])
   }, [chantierId])
 

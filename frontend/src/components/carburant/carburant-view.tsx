@@ -360,6 +360,7 @@ export function CarburantView() {
   }, [activeChantierId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCarburantData()
   }, [fetchCarburantData])
 
@@ -385,6 +386,7 @@ export function CarburantView() {
 
   useEffect(() => {
     if (activeTab === 'consommation') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchStats()
     }
   }, [activeTab, fetchStats])
@@ -392,6 +394,7 @@ export function CarburantView() {
   // ─── Auto-set activeTab based on mode ─────────────────────────────
   useEffect(() => {
     if (modeCarburant === 'ACHAT_DIRECT' && activeTab === 'stock') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab('achats')
     } else if (modeCarburant === 'STOCK_PHYSIQUE' && activeTab === 'achats') {
       setActiveTab('stock')

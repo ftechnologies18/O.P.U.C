@@ -441,6 +441,7 @@ export function PaieView() {
   }, [chantierId, filterTab, currentWeekStart])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPaiements()
   }, [loadPaiements])
 
@@ -658,6 +659,7 @@ export function PaieView() {
   }, [salMois, salAnnee, salFilter, salSearch])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSalaires()
   }, [loadSalaires])
 

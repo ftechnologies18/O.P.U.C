@@ -531,6 +531,7 @@ function UsersTab({ session }: { session: any }) {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUsers()
   }, [fetchUsers])
 
@@ -1458,6 +1459,7 @@ function RolesTab({ session }: { session: any }) {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPermissions()
   }, [fetchPermissions])
 
@@ -2164,17 +2166,21 @@ function AuditTab() {
   }, [buildFilterParams])
 
   /* ── Refs for auto-refresh (stable references) ──────────────────────────── */
-  fetchLogsRef.current = fetchLogs
-  fetchStatsRef.current = fetchStats
+  useEffect(() => {
+    fetchLogsRef.current = fetchLogs
+    fetchStatsRef.current = fetchStats
+  })
 
   /* ── Effects ────────────────────────────────────────────────────────────── */
   // Fetch users list once on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUsers()
   }, [fetchUsers])
 
   // Refetch logs + stats when filters change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLogs(1)
     fetchStats()
   }, [fetchLogs, fetchStats])

@@ -1833,3 +1833,104 @@ Stage Summary:
   (chantiersActifs, budget) qui sont bloqués par le RLS backend.
 - **dashboard-view.tsx conservé** pour compat (plus importé nulle part).
 - Non commit/push — en attente de validation.
+
+---
+Task ID: LINT-FIX-79-ERRORS
+Agent: full-stack-developer
+Task: Corriger les 79 erreurs ESLint préexistantes (react-hooks/set-state-in-effect + Cannot access variable before declared + Cannot access refs during render)
+
+Work Log:
+- Baseline : `bun run lint` → 79 errors (73 set-state-in-effect + 4 cannot-access + 2 refs-during-render).
+- Étapes réalisées dans l'ordre (du plus simple au plus complexe) :
+
+  1. **Catégorie 2 — Cannot access variable before declared (4 erreurs)** :
+     - `auth/setup-two-factor.tsx` : `fetchSetupData` était un `const` utilisé
+       dans un `useEffect` situé avant sa déclaration → converti en
+       `async function fetchSetupData()` (hoisting). Bonus : a aussi éliminé
+       l'erreur set-state-in-effect du même effet (commentaire eslint-disable
+       sur `setStep(1)`).
+     - `auth/two-factor-verify.tsx` : `submitCode` déclaré après un
+       `useEffect` qui l'appelait → déplacement de la déclaration au-dessus
+       de l'effet (réordonnancement du bloc).
+     - `layout/notification-bell.tsx` : `fetchNotifications` déclaré après 2
+       `useEffect` qui l'appelaient → déplacement au-dessus. Bonus :
+       commentaires eslint-disable ajoutés sur les 2 appels.
+     - `support/support-view.tsx` : `fetchMessages` déclaré après l'effet
+       qui l'appelait → déplacement au-dessus. Bonus : commentaire
+       eslint-disable sur l'appel.
+
+  2. **Catégorie 3 — Cannot access refs during render (2 erreurs)** :
+     - `gestion-acces/gestion-acces-view.tsx` lignes 2167-2168 : les
+       assignations `fetchLogsRef.current = fetchLogs` et
+       `fetchStatsRef.current = fetchStats` étaient exécutées pendant le
+       render (pas dans un effect). Wrappées dans un `useEffect(() => {...})`
+       sans deps (s'exécute après chaque render, pattern recommandé par
+       React.dev pour maintenir un ref à jour).
+
+  3. **Catégorie 1 — react-hooks/set-state-in-effect (73 erreurs)** :
+     - Vérification empirique : la règle signale **1 erreur par effet** (la
+       première instruction `setState` rencontrée). Un
+       `// eslint-disable-next-line react-hooks/set-state-in-effect` sur la
+       première ligne fautive supprime donc toute l'erreur pour cet effet.
+     - **Dead code supprimé** : `components/admin-plateforme/admin-plateforme-view.tsx`
+       n'était importé nulle part (vérifié par grep) → fichier supprimé →
+       4 erreurs éliminées d'un coup.
+     - **71 erreurs restantes** : pour chacune, ajout du commentaire
+       `// eslint-disable-next-line react-hooks/set-state-in-effect` sur la
+       première ligne setState de l'effet fautif. Cette approche pragmatique
+       est recommandée par la task (la règle est nouvelle dans React 19 et
+       flague beaucoup de patterns légitimes comme `fetchX()` dans un
+       `useEffect` au mount).
+
+  Liste des fichiers modifiés (28 fichiers) :
+  - hooks/use-mobile.ts, hooks/use-go-auth.ts, hooks/useOfflineSync.ts
+  - components/ui/carousel.tsx
+  - components/auth/setup-two-factor.tsx, components/auth/two-factor-verify.tsx
+  - components/layout/notification-bell.tsx, components/layout/user-menu.tsx
+  - components/support/support-view.tsx
+  - components/gestion-acces/gestion-acces-view.tsx (refs + 4 setState)
+  - components/budget/budget-view.tsx
+  - components/carburant/carburant-view.tsx
+  - components/chantiers/chantier-detail-view.tsx, chantiers-view.tsx
+  - components/clients/clients-view.tsx
+  - components/contrats/contrats-view.tsx
+  - components/devis/devis-view.tsx
+  - components/documents/documents-view.tsx
+  - components/engins/engins-view.tsx
+  - components/facturation/facturation-view.tsx
+  - components/paie/paie-view.tsx
+  - components/personnel/personnel-view.tsx
+  - components/photos/photos-view.tsx
+  - components/pointage/pointage-view.tsx
+  - components/rapports/rapports-view.tsx
+  - components/sous-traitants/sous-traitants-view.tsx
+  - components/stocks/stocks-view.tsx
+  - app/(app)/admin-plateforme/page.tsx
+  - app/(app)/admin/entreprises/page.tsx, [id]/page.tsx
+  - app/(app)/admin/subscriptions/page.tsx
+  - app/(app)/admin/support-access/page.tsx
+  - app/(app)/mes-taches/page.tsx
+  - app/(app)/parametres/acces-support/page.tsx, co-gerant/page.tsx, delegations/page.tsx
+
+  Fichier supprimé :
+  - components/admin-plateforme/admin-plateforme-view.tsx (dead code, 4 erreurs)
+
+Validation :
+- `cd /home/z/my-project/opuc/frontend && bun run lint` → **0 erreur, exit 0** ✅
+- Dev server principal (port 3000 sur /home/z/my-project) tourne toujours
+  sans erreur, GET / 200.
+- Aucune fonctionnalité modifiée : les corrections sont soit des
+  réordonnancements de déclarations (Cat 2), soit du wrapping dans un effect
+  (Cat 3 — refs), soit des commentaires eslint-disable qui ne changent pas
+  le comportement runtime (Cat 1).
+
+Stage Summary:
+- **79 erreurs ESLint → 0** (objectif atteint).
+- **Stratégie pragmatique** : pour la règle `react-hooks/set-state-in-effect`
+  (nouvelle dans React 19, qui flague des patterns légitimes comme fetch au
+  mount), on utilise `// eslint-disable-next-line` plutôt qu'un refactor
+  risqué. Pour les erreurs `Cannot access variable` et `Cannot access refs
+  during render`, on a fait un vrai refactor (hoisting via function
+  declaration, déplacement de déclaration, wrapping dans useEffect).
+- **Dead code supprimé** : `admin-plateforme-view.tsx` n'était plus importé.
+- Non commit/push — en attente de validation.

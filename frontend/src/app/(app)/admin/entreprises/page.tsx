@@ -201,7 +201,10 @@ export default function AdminEntreprisesPage() {
   }, [page, search, statusFilter])
 
   useEffect(() => {
-    if (userRole === 'SUPER_ADMIN') load()
+    if (userRole === 'SUPER_ADMIN') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      load()
+    }
   }, [userRole, load])
 
   // Debounced search
@@ -214,6 +217,7 @@ export default function AdminEntreprisesPage() {
   }, [search])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load()
   }, [page, statusFilter])
 
@@ -710,7 +714,10 @@ function SupportAccessDialog({
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   useEffect(() => {
-    if (entreprise) setRaison('')
+    if (entreprise) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRaison('')
+    }
   }, [entreprise])
 
   const handleSubmit = async () => {

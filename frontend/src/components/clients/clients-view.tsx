@@ -433,6 +433,7 @@ export function ClientsView() {
   // ── Load on tab change / filter change ─────────────────────
   useEffect(() => {
     if (activeTab === 'liste') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchClients(currentPage, searchQuery, statutFilter, typeFilter)
     } else if (activeTab === 'dashboard') {
       fetchStats()

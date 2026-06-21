@@ -505,12 +505,6 @@ function TicketDetailDialog({
   const [messages, setMessages] = useState<TicketMessage[]>([])
   const [loadingMessages, setLoadingMessages] = useState(false)
 
-  useEffect(() => {
-    if (open && ticket) {
-      fetchMessages(ticket.id)
-    }
-  }, [open, ticket])
-
   const fetchMessages = async (ticketId: string) => {
     setLoadingMessages(true)
     try {
@@ -525,6 +519,13 @@ function TicketDetailDialog({
       setLoadingMessages(false)
     }
   }
+
+  useEffect(() => {
+    if (open && ticket) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchMessages(ticket.id)
+    }
+  }, [open, ticket])
 
   if (!ticket) return null
 
@@ -718,6 +719,7 @@ function TicketsTab({
   )
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTickets(currentPage)
   }, [currentPage, fetchTickets])
 
@@ -1689,6 +1691,7 @@ export function SupportView() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchStats()
     fetchClients()
     fetchUsers()

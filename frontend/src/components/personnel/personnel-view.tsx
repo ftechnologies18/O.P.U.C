@@ -503,14 +503,17 @@ export function PersonnelView() {
 
   // Reset specialty filter when phase changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSpecialtyFilter('TOUS')
   }, [phaseFilter])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchJournaliers()
   }, [fetchJournaliers])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchChantiers()
   }, [fetchChantiers])
 

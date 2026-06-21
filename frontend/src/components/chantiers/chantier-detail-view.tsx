@@ -251,6 +251,7 @@ export function ChantierDetailView() {
   }, [selectedChantierId, router])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchChantier()
   }, [fetchChantier])
 
