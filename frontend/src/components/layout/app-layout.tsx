@@ -235,18 +235,36 @@ function SidebarContent({
   }, [myDelegations])
 
   // Filter nav sections based on user's role + RBAC permissions.
-  // - Si `canShow` est défini, il a la priorité sur tout.
-  // - Si `requiredRoles` est défini, le rôle doit être dans la liste.
-  // - Sinon, fallback `canAccessPage` (AppPage connus).
-  // - Items sans requiredRoles et sans AppPage mapping → visibles par défaut.
+  //
+  // Priorité des filtres (du plus restrictif au moins restrictif) :
+  // 1. allowedPages (SUPER_ADMIN / EMPLOYE) : whitelist stricte — si l'item
+  //    n'est pas dans la liste, il est masqué QUELLE QUE SOIT la raison
+  //    (canShow, requiredRoles, canAccessPage). C'est la priorité absolue
+  //    car SUPER_ADMIN ne doit voir QUE les pages admin, et EMPLOYE ne
+  //    doit voir QUE les pages de sa fonction.
+  // 2. canShow : predicate customisé (ex: GERANT principal uniquement)
+  // 3. requiredRoles : whitelist de rôles
+  // 4. canAccessPage : fallback RBAC (niveau minimum par page)
+  // 5. Items sans filtre → visibles par défaut
   const filteredSections = navSections
     .map(section => ({
       ...section,
       items: section.items.filter(item => {
         if (!userRole) return false
+
+        // 1. Whitelist stricte (SUPER_ADMIN / EMPLOYE) — priorité absolue
+        if (allowedPages) {
+          const pageId = item.href ? item.href.replace(/^\//, '') : item.id
+          if (!allowedPages.includes(pageId)) return false
+        }
+
+        // 2. canShow (predicate customisé)
         if (item.canShow) return item.canShow({ role: userRole, isCoGerant })
+
+        // 3. requiredRoles (whitelist de rôles)
         if (item.requiredRoles) return item.requiredRoles.includes(userRole)
-        // Try RBAC if the id maps to an AppPage
+
+        // 4. canAccessPage (fallback RBAC niveau minimum)
         const knownPages: string[] = [
           'dashboard', 'chantiers', 'planning', 'pointage', 'personnel', 'paie',
           'sous-traitants', 'budget', 'stocks', 'engins', 'carburant', 'rapports',
@@ -256,13 +274,8 @@ function SidebarContent({
         if (knownPages.includes(item.id)) {
           if (!canAccessPage(userRole, item.id as AppPage)) return false
         }
-        // EMPLOYE / SOUS_TRAITANT : restriction stricte par fonction BTP.
-        // On dérive le page-id soit depuis `item.href` (sans le slash initial),
-        // soit depuis `item.id`. Si l'id n'est pas dans la liste blanche, on cache l'item.
-        if (allowedPages) {
-          const pageId = item.href ? item.href.replace(/^\//, '') : item.id
-          if (!allowedPages.includes(pageId)) return false
-        }
+
+        // 5. Default : visible
         return true
       })
     }))
