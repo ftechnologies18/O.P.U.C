@@ -157,7 +157,8 @@ func main() {
 
         // ── 6. Usecases ─────────────────────────────────────────────
         authUC := auth.NewUsecase(userRepo, signer, log)
-        usersUC := iam.NewUsersUsecase(userRepo, log)
+        // Phase 5 : on injecte delegationRepo pour l'auto-grant (délégation auto selon fonction)
+        usersUC := iam.NewUsersUsecase(userRepo, log, delegationRepo)
         chantierUC := chantier.NewUsecase(chantierRepo, log)
         dashboardUC := dashboard.NewUsecase(dashboardRepo, log)
         notificationUC := notification.NewUsecase(notificationRepo, log)

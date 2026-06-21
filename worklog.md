@@ -789,3 +789,56 @@ Stage Summary:
 - Notifications : un EMPLOYE reçoit une notification in-app quand une tâche lui est assignée (création ou update)
 - Le compteur de notifications non lues (badge sidebar) se mettra à jour automatiquement
 - Prêt pour commit + push → test production.
+
+---
+Task ID: PHASE-5
+Agent: Z.ai Code (tutor/assistant)
+Task: Auto-grant délégation selon la fonction BTP de l'EMPLOYE.
+
+Work Log:
+- Phase 5.1 — Mapping fonction → (domaine, permission) dans domain/enums.go :
+  * Nouveau type FonctionDelegation { Domain, Permission string }
+  * FonctionToDelegation(f Fonction) retourne le mapping :
+    - CHARGE_LOGISTIQUE, CHARGE_CARBURANT → LOGISTIQUE/ECRITURE
+    - CHARGE_PLANNING, CHEF_CHANTIER → CHANTIER/ECRITURE
+    - CHARGE_QUALITE, CHARGE_DOCUMENTATION → DOCUMENTS/ECRITURE
+    - CHARGE_COMMERCIAL → COMMERCIAL/ECRITURE
+    - CHARGE_RH → RH/ECRITURE
+  * Toutes en ECRITURE (pas GESTION — réservé au GERANT pour actions critiques)
+  * FonctionToDelegationString(s) — wrapper qui accepte string nullable
+- Phase 5.2 — Méthodes auto-grant au repo Delegation :
+  * CreateAutoGrant(ctx, userID, entrepriseID, fromUserID, domain, permission, fonction)
+    - Idempotent : check doublon par raison LIKE 'AUTO:%' + toUserId + domain + ACTIF
+    - Raison = 'AUTO: <fonction>' (ex: 'AUTO: CHARGE_LOGISTIQUE')
+    - Utilise Migrations DB (bypass RLS) car opération système
+  * RevokeAutoGrantByUser(ctx, userID, entrepriseID)
+    - Révoque TOUTES les délégations auto actives d'un user (raison LIKE 'AUTO:%')
+    - Retourne le nombre de délégations révoquées
+- Phase 5.3 — Interface AutoDelegator + injection dans UsersUsecase :
+  * usecase/iam/users.go : interface AutoDelegator (CreateAutoGrant + RevokeAutoGrantByUser)
+  * noopAutoDelegator fallback (backward-compatible)
+  * NewUsersUsecase(repo, log, deleg AutoDelegator) — 3e paramètre
+  * Create : après création user EMPLOYE + fonction → CreateAutoGrant si mapping existe
+  * Update : si fonction OU role change → adjustAutoGrant (revoke + re-create)
+  * adjustAutoGrant : revoke toutes les auto existantes, puis create la nouvelle si EMPLOYE + fonction valide
+  * Non-bloquant : erreurs auto-grant loggées en Warn, ne faille pas l'opération user
+- Phase 5.4 — main.go wiring :
+  * usersUC = iam.NewUsersUsecase(userRepo, log, delegationRepo)
+
+Vérifications :
+- go build ./... : OK
+- go vet ./... : OK
+- bun run lint (frontend) : OK
+
+Stage Summary:
+- Auto-grant opérationnel : créer un EMPLOYE avec fonction CHARGE_LOGISTIQUE →
+  délégation LOGISTIQUE/ECRITURE créée automatiquement (raison 'AUTO: CHARGE_LOGISTIQUE')
+- L'EMPLOYE peut immédiatement faire des POST/PUT/DELETE sur /stocks, /carburant/*,
+  /sous-traitants/* SANS que le GERANT n'ait à créer une délégation manuelle
+- Si la fonction change (ex: CHARGE_LOGISTIQUE → CHARGE_RH) → l'ancienne auto-grant
+  est révoquée + la nouvelle (RH/ECRITURE) est créée automatiquement
+- Si le role change (ex: EMPLOYE → CHEF_PROJET) → toutes les auto-grants sont révoquées
+  (le CHEF_PROJET a déjà l'accès baseline via hasRoleAccess)
+- Les délégations manuelles (créées via /parametres/delegations) ne sont PAS affectées
+  car elles n'ont pas le préfixe 'AUTO:' dans leur raison
+- Prêt pour commit + push → test production.

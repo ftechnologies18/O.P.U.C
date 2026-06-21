@@ -442,3 +442,100 @@ func (r *DelegationRepository) GetUserByID(ctx context.Context, userID string) (
         }
         return &u, nil
 }
+
+// ══════════════════════════════════════════════════════════════════
+// Phase 5 — Auto-grant (délégations automatiques selon la fonction BTP)
+// ══════════════════════════════════════════════════════════════════
+//
+// Les délégations auto sont identifiées par un préfixe "AUTO:" dans le champ
+// Raison (ex: "AUTO: CHARGE_LOGISTIQUE"). Cela permet de les distinguer des
+// délégations manuelles créées par le GERANT via /parametres/delegations.
+//
+// Ces méthodes utilisent la connexion Migrations (bypass RLS) car :
+//   - L'auto-grant est une opération système déclenchée par le usecase IAM
+//   - Le userID + entrepriseID viennent du contexte auth (sécurisé)
+//   - Évite les conflits avec WithTenant (qui set LOCAL ROLE app_user)
+
+// AutoGrantPrefix — préfixe des délégations auto dans le champ Raison.
+const AutoGrantPrefix = "AUTO:"
+
+// CreateAutoGrant — crée une délégation auto (idempotente).
+//
+// Si une délégation auto ACTIVE existe déjà pour le même (userID, domaine),
+// on ne fait rien (idempotent). Sinon, on crée une nouvelle délégation avec :
+//   - statut = ACTIF
+//   - permissions = level fourni (toujours ECRITURE pour les auto-grants)
+//   - raison = "AUTO: <fonction>" (ex: "AUTO: CHARGE_LOGISTIQUE")
+//   - fromUserID = systemUserID (le GERANT qui crée le user, ou un ID système)
+//
+// Retourne la délégation créée, ou nil si idempotent (déjà existante).
+func (r *DelegationRepository) CreateAutoGrant(ctx context.Context, userID, entrepriseID, fromUserID, domain, permission, fonction string) (*model.Delegation, error) {
+        if r.migrationsDB == nil {
+                return nil, fmt.Errorf("migrations DB is required for CreateAutoGrant")
+        }
+        if userID == "" || entrepriseID == "" || domain == "" || permission == "" {
+                return nil, nil
+        }
+
+        // Check idempotence : une délégation auto ACTIVE existe-t-elle déjà ?
+        raison := AutoGrantPrefix + " " + fonction
+        var existing model.Delegation
+        err := r.migrationsDB.WithContext(ctx).
+                Where(`"toUserId" = ? AND domain = ? AND "entrepriseId" = ? AND statut = ? AND raison LIKE ?`,
+                        userID, domain, entrepriseID, model.DelegationStatutActif, AutoGrantPrefix+"%").
+                First(&existing).Error
+        if err == nil {
+                // Déjà existante — idempotent, on ne fait rien
+                return &existing, nil
+        }
+        if !errors.Is(err, gorm.ErrRecordNotFound) {
+                return nil, fmt.Errorf("check existing auto-grant: %w", err)
+        }
+
+        // Crée la nouvelle délégation auto
+        now := time.Now().UTC()
+        d := model.Delegation{
+                ID:           newCuidLikeID(),
+                EntrepriseID: entrepriseID,
+                FromUserID:   fromUserID,
+                ToUserID:     userID,
+                Domain:       domain,
+                Permissions:  permission,
+                Statut:       model.DelegationStatutActif,
+                Raison:       &raison,
+                CreatedAt:    now,
+                UpdatedAt:    now,
+        }
+        if err := r.migrationsDB.WithContext(ctx).Create(&d).Error; err != nil {
+                return nil, fmt.Errorf("create auto-grant: %w", err)
+        }
+        return &d, nil
+}
+
+// RevokeAutoGrantByUser — révoque TOUTES les délégations auto actives d'un user.
+//
+// Utilisé quand la fonction d'un EMPLOYE change ou est retirée : on révoque
+// l'ancienne délégation auto avant d'en créer une nouvelle (ou aucune si la
+// nouvelle fonction n'a pas de mapping).
+//
+// Retourne le nombre de délégations révoquées. Idempotent.
+func (r *DelegationRepository) RevokeAutoGrantByUser(ctx context.Context, userID, entrepriseID string) (int64, error) {
+        if r.migrationsDB == nil {
+                return 0, fmt.Errorf("migrations DB is required for RevokeAutoGrantByUser")
+        }
+        if userID == "" {
+                return 0, nil
+        }
+        now := time.Now().UTC()
+        res := r.migrationsDB.WithContext(ctx).Model(&model.Delegation{}).
+                Where(`"toUserId" = ? AND statut = ? AND raison LIKE ?`,
+                        userID, model.DelegationStatutActif, AutoGrantPrefix+"%").
+                Updates(map[string]any{
+                        "statut":    model.DelegationStatutRevoque,
+                        "updatedAt": now,
+                })
+        if res.Error != nil {
+                return 0, fmt.Errorf("revoke auto-grant: %w", res.Error)
+        }
+        return res.RowsAffected, nil
+}

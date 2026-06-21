@@ -73,6 +73,52 @@ func IsValidFonctionString(s string) bool {
         return IsValidFonction(Fonction(s))
 }
 
+// FonctionDelegation — mapping fonction BTP → (domaine, permission) pour l'auto-grant.
+// Phase 5 : quand un EMPLOYE est créé avec une fonction, on crée automatiquement
+// une délégation pour le domaine correspondant avec le niveau ECRITURE.
+//
+// Rationale :
+//   - Toutes les fonctions "CHARGE_*" mappent vers le domaine métier correspondant
+//     (LOGISTIQUE, COMMERCIAL, RH, DOCUMENTS, CHANTIER).
+//   - Le niveau est ECRITURE (pas GESTION) : l'EMPLOYE peut créer/modifier/supprimer
+//     des entités du domaine, mais pas faire les actions critiques réservées au
+//     GERANT (ex: generate paie, delete chantier, create subscription).
+//   - CHEF_CHANTIER mape vers CHANTIER/ECRITURE (gestion opérationnelle des chantiers).
+//
+// Une fonction qui ne mappe vers aucun domaine retourne ("", "").
+// Dans ce cas, aucune délégation auto n'est créée.
+type FonctionDelegation struct {
+        Domain     string
+        Permission string // toujours ECRITURE pour les auto-grants
+}
+
+// FonctionToDelegation retourne le mapping fonction → (domaine, permission).
+// Retourne FonctionDelegation{"", ""} si la fonction n'a pas de mapping.
+func FonctionToDelegation(f Fonction) FonctionDelegation {
+        switch f {
+        case FonctionChargeLogistique, FonctionChargeCarburant:
+                return FonctionDelegation{Domain: "LOGISTIQUE", Permission: "ECRITURE"}
+        case FonctionChargePlanning, FonctionChefChantier:
+                return FonctionDelegation{Domain: "CHANTIER", Permission: "ECRITURE"}
+        case FonctionChargeQualite, FonctionChargeDocumentation:
+                return FonctionDelegation{Domain: "DOCUMENTS", Permission: "ECRITURE"}
+        case FonctionChargeCommercial:
+                return FonctionDelegation{Domain: "COMMERCIAL", Permission: "ECRITURE"}
+        case FonctionChargeRH:
+                return FonctionDelegation{Domain: "RH", Permission: "ECRITURE"}
+        }
+        return FonctionDelegation{}
+}
+
+// FonctionToDelegationString — wrapper qui accepte une string (nullable).
+// Retourne FonctionDelegation{"", ""} si la fonction est vide ou inconnue.
+func FonctionToDelegationString(s string) FonctionDelegation {
+        if s == "" {
+                return FonctionDelegation{}
+        }
+        return FonctionToDelegation(Fonction(s))
+}
+
 // StatutChantier — cycle de vie d'un chantier BTP
 type StatutChantier string
 

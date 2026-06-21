@@ -74,15 +74,43 @@ type UpdateUserInput struct {
         Active    *bool   `json:"active,omitempty"`
 }
 
+// AutoDelegator — interface pour l'auto-grant de délégations (Phase 5).
+// Implémentée par *gorm.DelegationRepository. Définie ici (côté iam) pour
+// éviter une dépendance circulaire (delegation repo ne dépend pas de iam).
+//
+// Méthodes :
+//   - CreateAutoGrant : crée une délégation auto (idempotente)
+//   - RevokeAutoGrantByUser : révoque toutes les délégations auto d'un user
+type AutoDelegator interface {
+        CreateAutoGrant(ctx context.Context, userID, entrepriseID, fromUserID, domain, permission, fonction string) (*model.Delegation, error)
+        RevokeAutoGrantByUser(ctx context.Context, userID, entrepriseID string) (int64, error)
+}
+
+// noopAutoDelegator — AutoDelegator qui ne fait rien (backward-compatible).
+type noopAutoDelegator struct{}
+
+func (noopAutoDelegator) CreateAutoGrant(_ context.Context, _, _, _, _, _, _ string) (*model.Delegation, error) {
+        return nil, nil
+}
+func (noopAutoDelegator) RevokeAutoGrantByUser(_ context.Context, _, _ string) (int64, error) {
+        return 0, nil
+}
+
 // UsersUsecase — cas d'usage IAM pour les users.
 type UsersUsecase struct {
-        repo UsersRepo
-        log  *slog.Logger
+        repo  UsersRepo
+        log   *slog.Logger
+        deleg AutoDelegator // Phase 5 : auto-grant de délégations selon la fonction
 }
 
 // NewUsersUsecase constructeur.
-func NewUsersUsecase(repo UsersRepo, log *slog.Logger) *UsersUsecase {
-        return &UsersUsecase{repo: repo, log: log}
+// deleg est optionnel (nil → noopAutoDelegator). Passer un *gorm.DelegationRepository
+// pour activer l'auto-grant (Phase 5).
+func NewUsersUsecase(repo UsersRepo, log *slog.Logger, deleg AutoDelegator) *UsersUsecase {
+        if deleg == nil {
+                deleg = noopAutoDelegator{}
+        }
+        return &UsersUsecase{repo: repo, log: log, deleg: deleg}
 }
 
 // validRoles — ensemble des rôles valides (cf. enums.go).
@@ -247,6 +275,24 @@ func (uc *UsersUsecase) Create(ctx context.Context, auth *database.AuthUser, in 
                 "fonction", created.Fonction,
                 "by", auth.UserID,
         )
+
+        // Phase 5 — Auto-grant : si EMPLOYE avec fonction, créer une délégation auto
+        if created.IsEmploye() && created.Fonction != nil && *created.Fonction != "" && created.EntrepriseID != nil && *created.EntrepriseID != "" {
+                fonction := *created.Fonction
+                fd := domain.FonctionToDelegationString(fonction)
+                if fd.Domain != "" && fd.Permission != "" {
+                        _, err := uc.deleg.CreateAutoGrant(ctx, created.ID, *created.EntrepriseID, auth.UserID, fd.Domain, fd.Permission, fonction)
+                        if err != nil {
+                                uc.log.Warn("iam.Create: auto-grant failed (non-blocking)",
+                                        "err", err, "user", created.ID, "fonction", fonction)
+                        } else {
+                                uc.log.Info("auto-grant delegation created",
+                                        "user", created.ID, "fonction", fonction,
+                                        "domain", fd.Domain, "permission", fd.Permission)
+                        }
+                }
+        }
+
         return created, nil
 }
 
@@ -317,8 +363,55 @@ func (uc *UsersUsecase) Update(ctx context.Context, auth *database.AuthUser, id 
                 return nil, domain.ErrNotFound
         }
 
+        // Phase 5 — Auto-grant : si fonction a changé (ou role a changé), ajuster la délégation auto
+        if in.Fonction != nil || in.Role != nil {
+                uc.adjustAutoGrant(ctx, auth, updated)
+        }
+
         uc.log.Info("user updated", "id", id, "by", auth.UserID, "fields", keysOf(updates))
         return updated, nil
+}
+
+// adjustAutoGrant — ajuste la délégation auto d'un user après un Update.
+//
+// Règles :
+//   - Si le user n'est plus EMPLOYE (role changé) → révoquer toutes ses délégations auto
+//   - Si le user est EMPLOYE avec une fonction qui mappe vers un domaine → révoquer l'ancienne + créer la nouvelle
+//   - Si le user est EMPLOYE sans fonction (ou fonction sans mapping) → révoquer les auto existantes
+//
+// Non-bloquant : si une erreur survient, on log en Warn mais on ne faille pas l'Update.
+func (uc *UsersUsecase) adjustAutoGrant(ctx context.Context, auth *database.AuthUser, u *model.User) {
+        if u.EntrepriseID == nil || *u.EntrepriseID == "" {
+                return
+        }
+        entrepriseID := *u.EntrepriseID
+
+        // 1. Révoque toutes les auto-grants existantes (idempotent)
+        n, err := uc.deleg.RevokeAutoGrantByUser(ctx, u.ID, entrepriseID)
+        if err != nil {
+                uc.log.Warn("iam.adjustAutoGrant: revoke failed (non-blocking)", "err", err, "user", u.ID)
+                return
+        }
+        if n > 0 {
+                uc.log.Info("auto-grant delegations revoked", "user", u.ID, "count", n)
+        }
+
+        // 2. Si le user est EMPLOYE avec une fonction qui mappe → créer la nouvelle auto-grant
+        if u.IsEmploye() && u.Fonction != nil && *u.Fonction != "" {
+                fonction := *u.Fonction
+                fd := domain.FonctionToDelegationString(fonction)
+                if fd.Domain != "" && fd.Permission != "" {
+                        _, err := uc.deleg.CreateAutoGrant(ctx, u.ID, entrepriseID, auth.UserID, fd.Domain, fd.Permission, fonction)
+                        if err != nil {
+                                uc.log.Warn("iam.adjustAutoGrant: create failed (non-blocking)",
+                                        "err", err, "user", u.ID, "fonction", fonction)
+                        } else {
+                                uc.log.Info("auto-grant delegation (re)created",
+                                        "user", u.ID, "fonction", fonction,
+                                        "domain", fd.Domain, "permission", fd.Permission)
+                        }
+                }
+        }
 }
 
 // Delete — soft delete (active=false), idempotent.
