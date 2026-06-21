@@ -86,8 +86,8 @@ import { cn } from '@/lib/utils'
 interface Affectation {
   id: string
   chantierId: string
-  dateDebut: string
-  dateFin: string | null
+  dateDebut?: string | null
+  dateFin?: string | null
   actif: boolean
   chantier: {
     id: string
@@ -113,7 +113,8 @@ interface Journalier {
   nbCongesRestants: number
   poste: string | null
   departement: string | null
-  affectations: Affectation[]
+  // ⚠️ Optionnel : omis par l'API Go quand le tableau est vide (omitempty).
+  affectations?: Affectation[]
   createdAt: string
 }
 
@@ -383,7 +384,7 @@ function formatSpecialty(specialite: string | null): string {
   return specialite.charAt(0).toUpperCase() + specialite.slice(1)
 }
 
-function formatDate(date: string | null): string {
+function formatDate(date: string | null | undefined): string {
   if (!date) return '—'
   try {
     return format(parseISO(date), 'dd MMM yyyy', { locale: fr })
@@ -472,8 +473,8 @@ export function PersonnelView() {
       const res = await fetch(`/api/v1/personnel?${params.toString()}`)
       if (res.ok) {
         const json = await res.json()
-        setJournaliers(json.journaliers)
-        setKpi(json.kpi)
+        setJournaliers(json.journaliers || [])
+        setKpi(json.kpi || null)
       } else {
         toast.error('Erreur lors du chargement du personnel')
       }
@@ -1019,7 +1020,7 @@ export function PersonnelView() {
           >
             {journaliers.map((journalier, index) => {
               const activeAffectations = getActiveAffectations(
-                journalier.affectations
+                journalier.affectations || []
               )
               const specialtyKey = journalier.specialite
                 ?.toLowerCase()

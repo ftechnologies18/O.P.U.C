@@ -70,9 +70,10 @@ interface BudgetData {
   coutTotal: number
   ecart: number
   ecartPourcentage: number
-  niveauAlerte: 'OK' | 'ATTENTION' | 'CRITIQUE'
-  historique: { mois: string; cout: number }[]
-  repartition: {
+  niveauAlerte: 'OK' | 'ATTENTION' | 'CRITIQUE' | string
+  // ⚠️ Optionnels : l'API Go peut omettre ces tableaux s'ils sont vides.
+  historique?: { mois: string; cout: number }[]
+  repartition?: {
     categorie: string
     reel: number
     pourcentage: number
@@ -290,7 +291,7 @@ export function BudgetView() {
 
   // ─── Chart data: historical ────────────────────────────────────────
   const historicalData = budget
-    ? budget.historique.map((h) => ({
+    ? (budget.historique || []).map((h) => ({
         mois: h.mois,
         dépenses: h.cout,
         budget: budget.budgetPrevisionnel,
@@ -731,7 +732,7 @@ export function BudgetView() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {budget.repartition.map((row) => {
+                      {(budget.repartition || []).map((row) => {
                         const ecartVal =
                           budget.budgetPrevisionnel - row.reel
                         const pctConso =

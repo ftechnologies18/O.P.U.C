@@ -80,7 +80,7 @@ interface EnginInfo {
   etat: string
   typeLocation: string | null
   createdAt: string
-  _count: {
+  _count?: {
     locations: number
   }
 }
@@ -424,11 +424,14 @@ export function EnginsView() {
 
   const fetchFournisseurOptions = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/sous-traitants?type=FOURNISSEUR')
+      // L'API Go retourne `{ data: [...], total, page, pageSize }` (et non
+      // `sousTraitants`). Le paramètre `type=FOURNISSEUR` filtre les
+      // sous-traitants de type fournisseur.
+      const res = await fetch('/api/v1/sous-traitants?type=FOURNISSEUR&pageSize=500')
       if (res.ok) {
         const json = await res.json()
         setFournisseurOptions(
-          (json.sousTraitants || []).map((f: { id: string; raisonSociale: string | null; nom: string | null; prenom: string | null }) => ({
+          (json.data || []).map((f: { id: string; raisonSociale: string | null; nom: string | null; prenom: string | null }) => ({
             id: f.id,
             raisonSociale: f.raisonSociale,
             nom: f.nom,
@@ -453,8 +456,8 @@ export function EnginsView() {
       const res = await fetch(`/api/v1/engins?${params.toString()}`)
       if (res.ok) {
         const json = await res.json()
-        setEngins(json.engins)
-        setEnginKpi(json.kpi)
+        setEngins(json.engins || [])
+        setEnginKpi(json.kpi || null)
       } else {
         toast.error('Erreur lors du chargement des engins')
       }
@@ -478,8 +481,8 @@ export function EnginsView() {
       const res = await fetch(`/api/v1/locations?${params.toString()}`)
       if (res.ok) {
         const json = await res.json()
-        setLocations(json.locations)
-        setLocationKpi(json.kpi)
+        setLocations(json.locations || [])
+        setLocationKpi(json.kpi || null)
       } else {
         toast.error('Erreur lors du chargement des locations')
       }
@@ -1120,13 +1123,13 @@ export function EnginsView() {
                               variant="outline"
                               className={cn(
                                 'text-xs',
-                                engin._count.locations > 0
+                                (engin._count?.locations ?? 0) > 0
                                   ? 'bg-amber-50 text-amber-700 border-amber-200'
                                   : 'bg-gray-50 text-gray-500 border-gray-200'
                               )}
                             >
                               <Truck className="w-3 h-3 mr-0.5" />
-                              {engin._count.locations} location{engin._count.locations > 1 ? 's' : ''}
+                              {engin._count?.locations ?? 0} location{(engin._count?.locations ?? 0) > 1 ? 's' : ''}
                             </Badge>
                           </div>
                         </CardContent>

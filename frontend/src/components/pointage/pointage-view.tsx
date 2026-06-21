@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useSession } from '@/lib/auth-session'
-import { format, subDays, startOfWeek, addWeeks, parseISO } from 'date-fns'
+import { format, subDays, startOfWeek, addWeeks, addDays, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { toast } from 'sonner'
 import {
@@ -87,8 +86,8 @@ interface JournalierAffectation {
   id: string
   journalierId: string
   chantierId: string
-  dateDebut: string
-  dateFin: string | null
+  dateDebut?: string | null
+  dateFin?: string | null
   actif: boolean
   journalier: Journalier
 }
@@ -105,11 +104,11 @@ interface PointageExisting {
   id: string
   journalierId: string
   chantierId: string
-  chefChantierId: string
+  chefChantierId?: string
   dateTravail: string
   tauxJournalier: number
   present: boolean
-  observation: string | null
+  observation?: string | null
   valide: boolean
   journalier?: Journalier
 }
@@ -118,7 +117,8 @@ interface SummaryEntry {
   journalier: Journalier
   days: number
   totalAmount: number
-  details: Array<{
+  // Optionnel : l'agrégation client-side ne fournit pas le détail par pointage.
+  details?: Array<{
     dateTravail: string
     present: boolean
     tauxJournalier: number
@@ -155,10 +155,7 @@ function toDateStr(date: Date): string {
 
 // ── Main Component ─────────────────────────────────────
 export function PointageView() {
-  const { data: session } = useSession()
   const { selectedChantierId, setSelectedChantierId } = useAppStore()
-
-  const userId = (session?.user as { id?: string })?.id || ''
 
   // Selection
   const [chantierId, setChantierId] = useState<string>(selectedChantierId || '')
@@ -236,30 +233,60 @@ export function PointageView() {
   }
 
   // ── Fetch form data (affectations + existing pointages + last taux) ──
+  // ⚠️ L'API Go n'expose pas `/api/v1/pointage/affectations` ni
+  // `/api/v1/chantiers/{id}/affectations`. On récupère les journaliers via
+  // `/api/v1/personnel?chantierId=X` (qui pré-charge `affectations.chantier`),
+  // puis on filtre les affectations actives sur ce chantier côté client.
   const loadFormData = useCallback(async () => {
     if (!chantierId) return
 
     setLoadingForm(true)
     try {
-      // 1. Fetch active affectations
-      const affRes = await fetch(`/api/v1/pointage/affectations?chantierId=${chantierId}`)
-      if (!affRes.ok) throw new Error('Erreur affectations')
-      const affData = await affRes.json()
-      const affs: JournalierAffectation[] = affData.affectations || []
+      // 1. Fetch journaliers with affectations for this chantier.
+      //    La réponse est `{ journaliers: [...], kpi: {...}, total, page, pageSize }`.
+      const persRes = await fetch(`/api/v1/personnel?chantierId=${chantierId}&pageSize=500`)
+      let affs: JournalierAffectation[] = []
+      if (persRes.ok) {
+        const persData = await persRes.json()
+        const journaliers: any[] = persData.journaliers || []
+        // Extrait les affectations actives pointant vers CE chantier.
+        for (const j of journaliers) {
+          const jsAffectations: any[] = j.affectations || []
+          for (const aff of jsAffectations) {
+            if (aff.chantierId === chantierId && aff.actif !== false) {
+              affs.push({
+                id: aff.id,
+                journalierId: aff.journalierId || j.id,
+                chantierId: aff.chantierId,
+                dateDebut: aff.dateDebut,
+                dateFin: aff.dateFin || null,
+                actif: aff.actif !== false,
+                journalier: {
+                  id: j.id,
+                  nom: j.nom,
+                  prenom: j.prenom,
+                  specialite: j.specialite || null,
+                },
+              })
+            }
+          }
+        }
+      }
       setAffectations(affs)
 
-      // 2. Fetch existing pointages for the selected date
+      // 2. Fetch existing pointages for the selected date.
+      //    Réponse : { data: [...], total, page, pageSize }.
       const dateStr = toDateStr(selectedDate)
       const ptgRes = await fetch(`/api/v1/pointage?chantierId=${chantierId}&date=${dateStr}`)
-      const ptgData = ptgRes.ok ? await ptgRes.json() : { pointages: [] }
-      const existing: PointageExisting[] = ptgData.pointages || []
+      const ptgData = ptgRes.ok ? await ptgRes.json() : { data: [] }
+      const existing: PointageExisting[] = ptgData.data || []
 
-      // 3. Fetch all pointages for this chantier to find last taux
-      const allRes = await fetch(`/api/v1/pointage?chantierId=${chantierId}`)
-      const allData = allRes.ok ? await allRes.json() : { pointages: [] }
+      // 3. Fetch all pointages for this chantier to find last taux.
+      const allRes = await fetch(`/api/v1/pointage?chantierId=${chantierId}&pageSize=500`)
+      const allData = allRes.ok ? await allRes.json() : { data: [] }
       const tauxMap: Record<string, number> = {}
       const dateMap: Record<string, string> = {}
-      for (const p of (allData.pointages || [])) {
+      for (const p of (allData.data || [])) {
         if (p.present && p.tauxJournalier > 0) {
           const prev = tauxMap[p.journalierId]
           const prevDate = dateMap[p.journalierId]
@@ -308,44 +335,44 @@ export function PointageView() {
   }
 
   // ── Save pointages ──────────────────────────────────
+  // L'API Go n'expose pas de route batch : on POST chaque pointage
+  // individuellement (un POST `/api/v1/pointage` par journalier présent).
+  // Les requêtes sont lancées en parallèle pour limiter la latence.
   async function savePointages() {
     if (!chantierId || pointageRows.length === 0) return
 
     setSaving(true)
     try {
-      const body = {
-        chantierId,
-        date: toDateStr(selectedDate),
-        chefChantierId: userId,
-        pointages: pointageRows.map((r) => ({
-          journalierId: r.journalierId,
-          present: r.present,
-          tauxJournalier: r.present ? r.tauxJournalier : 0,
-          observation: r.observation || null,
-        })),
+      const dateStr = toDateStr(selectedDate)
+      // On ne POST que les journaliers présents (les absents n'ont pas de taux).
+      const toSave = pointageRows.filter((r) => r.present)
+      if (toSave.length === 0) {
+        toast.info('Aucun journalier présent à enregistrer')
+        return
       }
 
-      const res = await fetch('/api/v1/pointage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
+      const results = await Promise.allSettled(
+        toSave.map((r) =>
+          fetch('/api/v1/pointage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              journalierId: r.journalierId,
+              chantierId,
+              dateTravail: dateStr,
+              tauxJournalier: r.tauxJournalier,
+              present: r.present,
+              observation: r.observation || null,
+            }),
+          })
+        )
+      )
 
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || "Erreur lors de l'enregistrement")
-      }
-
-      const data = await res.json()
-      const skipped =
-        (data.pointages || []).filter(
-          (p: PointageExisting & { skipped?: boolean }) => p.skipped
-        ).length || 0
-      const saved = (data.pointages || []).length - skipped
-
-      if (skipped > 0) {
+      const saved = results.filter((r) => r.status === 'fulfilled' && r.value.ok).length
+      const failed = results.length - saved
+      if (failed > 0) {
         toast.warning(
-          `${saved} pointage(s) enregistré(s), ${skipped} ignoré(s) (validé(s))`
+          `${saved} pointage(s) enregistré(s), ${failed} en échec (doublon possible)`
         )
       } else {
         toast.success(`${saved} pointage(s) enregistré(s) avec succès`)
@@ -455,6 +482,9 @@ export function PointageView() {
   }
 
   // ── Fetch history ───────────────────────────────────
+  // L'API Go ne supporte pas `dateDebut`/`dateFin` sur GET /pointage : on
+  // récupère tous les pointages du chantier (pageSize=500) puis on filtre
+  // côté client sur les 7 derniers jours.
   useEffect(() => {
     if (activeTab !== 'historique' || !chantierId) return
     if (historyData.length > 0) return // already loaded
@@ -462,14 +492,32 @@ export function PointageView() {
     async function load() {
       setLoadingHistory(true)
       try {
-        const fin = toDateStr(subDays(new Date(), 1))
-        const debut = toDateStr(subDays(new Date(), 7))
+        const cutoff = subDays(new Date(), 7)
         const res = await fetch(
-          `/api/v1/pointage?chantierId=${chantierId}&dateDebut=${debut}&dateFin=${fin}`
+          `/api/v1/pointage?chantierId=${chantierId}&pageSize=500`
         )
         if (res.ok) {
           const data = await res.json()
-          setHistoryData(data.pointages || [])
+          const all: PointageExisting[] = data.data || []
+          // Filtrage client-side sur les 7 derniers jours.
+          const filtered = all.filter((p) => {
+            try {
+              return new Date(p.dateTravail) >= cutoff
+            } catch {
+              return false
+            }
+          })
+          // Enrichir avec les infos journalier si manquantes (l'API ne pré-charge
+          // pas `journalier` dans la liste des pointages).
+          const jourMap = new Map<string, Journalier>()
+          for (const aff of affectations) {
+            jourMap.set(aff.journalierId, aff.journalier)
+          }
+          const enriched = filtered.map((p) => ({
+            ...p,
+            journalier: p.journalier || jourMap.get(p.journalierId),
+          }))
+          setHistoryData(enriched)
         }
       } catch {
         toast.error("Erreur lors du chargement de l'historique")
@@ -478,9 +526,13 @@ export function PointageView() {
       }
     }
     load()
-  }, [activeTab, chantierId])
+  }, [activeTab, chantierId, affectations])
 
   // ── Fetch weekly summary ────────────────────────────
+  // L'API Go /api/v1/pointage/summary ne renvoie qu'un agrégat global
+  // (total, presentCount, absentCount, totalCost) — pas de breakdown par
+  // journalier. Pour le tableau "Résumé Hebdo", on fetch tous les pointages
+  // du chantier et on agrège côté client sur la semaine sélectionnée.
   useEffect(() => {
     if (activeTab !== 'resume' || !chantierId) return
 
@@ -489,13 +541,60 @@ export function PointageView() {
       try {
         const ref = addWeeks(new Date(), summaryWeekOffset)
         const ws = startOfWeek(ref, { weekStartsOn: 1 })
-        const isoWeek = format(ws, "yyyy-'W'II")
+        const we = addDays(ws, 6)
+        const weEnd = new Date(we)
+        weEnd.setHours(23, 59, 59, 999)
 
         const res = await fetch(
-          `/api/v1/pointage/summary?chantierId=${chantierId}&semaine=${isoWeek}`
+          `/api/v1/pointage?chantierId=${chantierId}&pageSize=500`
         )
         if (res.ok) {
-          setSummaryData(await res.json())
+          const data = await res.json()
+          const all: PointageExisting[] = data.data || []
+          // Filtrage client-side sur la semaine.
+          const inRange = all.filter((p) => {
+            try {
+              const d = new Date(p.dateTravail)
+              return d >= ws && d <= weEnd
+            } catch {
+              return false
+            }
+          })
+          // Agrégation par journalier.
+          const jourMap = new Map<string, Journalier>()
+          for (const aff of affectations) {
+            jourMap.set(aff.journalierId, aff.journalier)
+          }
+          const summaryMap = new Map<
+            string,
+            { journalier: Journalier; days: number; totalAmount: number }
+          >()
+          let grandTotal = 0
+          let totalDays = 0
+          for (const p of inRange) {
+            if (!p.present) continue
+            const jour = p.journalier || jourMap.get(p.journalierId)
+            if (!jour) continue
+            const entry = summaryMap.get(p.journalierId) || {
+              journalier: jour,
+              days: 0,
+              totalAmount: 0,
+            }
+            entry.days += 1
+            entry.totalAmount += p.tauxJournalier || 0
+            summaryMap.set(p.journalierId, entry)
+            grandTotal += p.tauxJournalier || 0
+            totalDays += 1
+          }
+          setSummaryData({
+            weekStart: ws.toISOString(),
+            weekEnd: we.toISOString(),
+            summary: Array.from(summaryMap.values()),
+            grandTotal,
+            totalDays,
+          })
+        } else {
+          setSummaryData(null)
         }
       } catch {
         toast.error('Erreur lors du chargement du résumé hebdomadaire')
@@ -504,7 +603,7 @@ export function PointageView() {
       }
     }
     load()
-  }, [activeTab, chantierId, summaryWeekOffset])
+  }, [activeTab, chantierId, summaryWeekOffset, affectations])
 
   // ── Reset history when chantier changes ─────────────
   useEffect(() => {

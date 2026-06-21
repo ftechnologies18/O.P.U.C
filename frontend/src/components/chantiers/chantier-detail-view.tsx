@@ -68,6 +68,9 @@ import {
 
 // ─── Types ────────────────────────────────────────────────
 
+// Note: Les tableaux `taches` et `journaliers` sont OMIT de la réponse JSON
+// quand ils sont vides (Go omitempty). Le code doit donc toujours utiliser
+// `(field || [])` pour y accéder de manière défensive.
 interface Tache {
   id: string
   nom: string
@@ -80,8 +83,8 @@ interface Tache {
   responsableId?: string
   tachePrecedenteId?: string
   responsable?: { id: string; name: string } | null
-  sortiesStock: { id: string }[]
-  photos: { id: string }[]
+  sortiesStock?: { id: string }[]
+  photos?: { id: string }[]
 }
 
 interface Phase {
@@ -92,8 +95,9 @@ interface Phase {
   avancement: number
   dateDebut?: string
   dateFin?: string
-  taches: Tache[]
-  photos: { id: string }[]
+  // ⚠️ Optionnel car omis par l'API Go quand le tableau est vide (omitempty).
+  taches?: Tache[]
+  photos?: { id: string }[]
 }
 
 interface JournalierAffectation {
@@ -124,15 +128,22 @@ interface ChantierDetail {
   entrepriseId?: string
   createdAt: string
   updatedAt: string
+  // Les champs ci-dessous sont optionnels : l'API Go GET /chantiers/{id} ne les
+  // retourne pas (pas de Preload Entreprise, JournalierAffectation, Equipement).
   entreprise?: { id: string; nom: string; telephone?: string; email?: string }
   phases: Phase[]
-  journaliers: JournalierAffectation[]
-  equipements: { equipement: { id: string; designation: string; immatriculation?: string; etat: string } }[]
-  _count: { pointages: number; photos: number; rapports: number; contratsST: number }
+  journaliers?: JournalierAffectation[]
+  equipements?: { equipement: { id: string; designation: string; immatriculation?: string; etat: string } }[]
+  // _count = { phases, journaliers } (format réel API Go).
+  // Les autres clés (pointages, photos, rapports, contratsST) ne sont PAS
+  // retournées — on utilise des fallbacks à 0 dans le rendu.
+  _count: { phases: number; journaliers: number; pointages?: number; photos?: number; rapports?: number; contratsST?: number }
   avancementGlobal: number
-  budgetReel: number
-  coutPersonnel: number
-  coutSousTraitants: number
+  // Champs absents de l'API Go actuelle — laissés optionnels pour ne pas casser
+  // si on les réintroduit plus tard. Le rendu utilise des fallbacks.
+  budgetReel?: number
+  coutPersonnel?: number
+  coutSousTraitants?: number
 }
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -236,8 +247,11 @@ export function ChantierDetailView() {
       if (res.ok) {
         const data = await res.json()
         setChantier(data)
-        // Auto-expand all phases
-        const ids = new Set(data.phases.map((p: Phase) => p.id))
+        // Auto-expand all phases (defensive: data.phases peut être absent si la
+        // réponse API est inattendue)
+        const ids = new Set<string>(
+          ((data.phases as Phase[] | undefined) || []).map((p) => p.id)
+        )
         setExpandedPhases(ids)
       } else {
         toast.error('Chantier non trouvé')
@@ -518,7 +532,7 @@ export function ChantierDetailView() {
 
   const getAllTasks = (): Tache[] => {
     if (!chantier) return []
-    return chantier.phases.flatMap((p) => p.taches)
+    return chantier.phases.flatMap((p) => p.taches || [])
   }
 
   // ─── Render ───
@@ -572,15 +586,18 @@ export function ChantierDetailView() {
     },
     {
       title: 'Journaliers affectés',
-      value: String(chantier.journaliers.length),
+      // Defensive: l'API Go ne retourne pas `journaliers` (juste _count.journaliers).
+      value: String(chantier._count?.journaliers ?? (chantier.journaliers?.length ?? 0)),
       icon: Users,
       color: 'text-orange-600',
       bg: 'bg-orange-50',
       border: 'border-orange-200',
     },
     {
-      title: 'Pointages totaux',
-      value: String(chantier._count.pointages),
+      title: 'Phases',
+      // Defensive: _count.pointages n'existe pas dans l'API Go — on affiche
+      // le nombre de phases à la place (info équivalente et toujours disponible).
+      value: String(chantier._count?.phases ?? chantier.phases?.length ?? 0),
       icon: ClipboardList,
       color: 'text-sky-600',
       bg: 'bg-sky-50',
@@ -741,7 +758,7 @@ export function ChantierDetailView() {
                 <InfoItem
                   icon={ClipboardList}
                   label="Budget réel"
-                  value={fmtCurrency(chantier.budgetReel)}
+                  value={chantier.budgetReel != null ? fmtCurrency(chantier.budgetReel) : undefined}
                 />
               </div>
             </CardContent>
@@ -753,7 +770,7 @@ export function ChantierDetailView() {
               <CardTitle className="text-[17px] font-semibold">Timeline des phases</CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-5">
-              {chantier.phases.length === 0 ? (
+              {(chantier.phases || []).length === 0 ? (
                 <p className="text-[15px] text-muted-foreground py-4 text-center">
                   Aucune phase définie
                 </p>
@@ -817,7 +834,7 @@ export function ChantierDetailView() {
 
         {/* ─── Tab 2: Phases & Tâches ─── */}
         <TabsContent value="phases" className="space-y-4 mt-4">
-          {chantier.phases.length === 0 ? (
+          {(chantier.phases || []).length === 0 ? (
             <Card className="border shadow-sm">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 mb-4">
@@ -839,6 +856,7 @@ export function ChantierDetailView() {
             <>
               {chantier.phases.map((phase) => {
                 const isExpanded = expandedPhases.has(phase.id)
+                const phaseTaches = phase.taches || []
                 return (
                   <Card key={phase.id} className="border shadow-sm">
                     <Collapsible
@@ -873,7 +891,7 @@ export function ChantierDetailView() {
                               {phase.nom}
                             </span>
                             <span className="text-sm text-muted-foreground">
-                              ({phase.taches.length} tâche{phase.taches.length !== 1 ? 's' : ''})
+                              ({phaseTaches.length} tâche{phaseTaches.length !== 1 ? 's' : ''})
                             </span>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
@@ -912,12 +930,12 @@ export function ChantierDetailView() {
                       <CollapsibleContent>
                         <Separator />
                         <div className="px-4 lg:px-5 py-3 space-y-2">
-                          {phase.taches.length === 0 ? (
+                          {phaseTaches.length === 0 ? (
                             <p className="text-sm text-muted-foreground text-center py-3">
                               Aucune tâche dans cette phase
                             </p>
                           ) : (
-                            phase.taches.map((tache) => (
+                            phaseTaches.map((tache) => (
                               <div
                                 key={tache.id}
                                 className="flex items-center gap-2 p-2.5 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors group"
@@ -1043,11 +1061,11 @@ export function ChantierDetailView() {
             <CardHeader className="pb-2 px-5 pt-5">
               <CardTitle className="text-[17px] font-semibold flex items-center gap-2">
                 <Users className="w-4.5 h-4.5 text-amber-500" />
-                Journaliers affectés ({chantier.journaliers.length})
+                Journaliers affectés ({(chantier.journaliers || []).length})
               </CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-5">
-              {chantier.journaliers.length === 0 ? (
+              {(chantier.journaliers || []).length === 0 ? (
                 <div className="flex flex-col items-center py-8">
                   <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 mb-4">
                     <Users className="w-8 h-8 text-amber-500" />
@@ -1058,7 +1076,7 @@ export function ChantierDetailView() {
                 </div>
               ) : (
                 <div className="divide-y divide-border">
-                  {chantier.journaliers.map((aff) => {
+                  {(chantier.journaliers || []).map((aff) => {
                     const j = aff.journalier
                     return (
                       <div
@@ -1067,8 +1085,8 @@ export function ChantierDetailView() {
                       >
                         {/* Avatar */}
                         <div className="w-9 h-9 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 text-sm font-bold shrink-0">
-                          {j.prenom[0]}
-                          {j.nom[0]}
+                          {j.prenom?.[0] || ''}
+                          {j.nom?.[0] || ''}
                         </div>
 
                         <div className="flex-1 min-w-0">

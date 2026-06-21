@@ -117,8 +117,11 @@ interface PaiementHebdo {
   differenceComment: string | null
   createdAt: string
   updatedAt: string
-  journalier: Journalier
-  validePar: ValidePar | null
+  // ⚠️ Optionnels : l'API Go ne pré-charge pas les relations journalier /
+  // validePar dans la liste des paiements. Le frontend doit donc toujours
+  // utiliser `paiement.journalier?.nom || '—'`.
+  journalier?: Journalier
+  validePar?: ValidePar | null
   daysWorked?: number
   created?: boolean
   updated?: boolean
@@ -165,8 +168,10 @@ interface SalaireMensuel {
   valideParId: string | null
   createdAt: string
   updatedAt: string
-  journalier: SalJournalier
-  validePar: ValidePar | null
+  // ⚠️ Optionnels : l'API Go ne pré-charge pas les relations journalier /
+  // validePar dans la liste des salaires.
+  journalier?: SalJournalier
+  validePar?: ValidePar | null
 }
 
 interface SalKpi {
@@ -431,7 +436,9 @@ export function PaieView() {
       const res = await fetch(`/api/v1/paie/paiements-hebdo?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
-        setPaiements(data.paiements || [])
+        // L'API Go retourne `{ data: [...], total, page, pageSize }` (et non
+        // `{ paiements: [...] }`).
+        setPaiements(data.data || [])
       }
     } catch {
       toast.error('Erreur lors du chargement des paiements')
@@ -469,16 +476,13 @@ export function PaieView() {
       }
 
       const data = await res.json()
-      const created = (data.paiements || []).filter((p: PaiementHebdo) => p.created).length
-      const updated = (data.paiements || []).filter((p: PaiementHebdo) => p.updated).length
-      const skipped = (data.paiements || []).filter((p: PaiementHebdo) => p.skipped).length
+      // L'API Go retourne `{ chantierId, semaineDebut, semaineFin, generated: [...], count }`
+      // (et non `{ paiements: [...] }` avec flags `created`/`updated`/`skipped`).
+      const generated: PaiementHebdo[] = data.generated || []
+      const count: number = data.count ?? generated.length
 
-      if (created > 0 || updated > 0) {
-        toast.success(
-          `${created} nouveau(x) et ${updated} mis à jour — récapitulatif généré !`
-        )
-      } else if (skipped > 0) {
-        toast.info(`${skipped} paiement(s) déjà validé(s) — aucun changement.`)
+      if (count > 0) {
+        toast.success(`${count} paiement(s) généré(s) — récapitulatif créé !`)
       } else {
         toast.info(data.message || 'Aucun pointage trouvé pour cette semaine.')
       }
@@ -536,16 +540,17 @@ export function PaieView() {
       }
 
       const data = await res.json()
-      const newStatut = data.paiement.statut
-      const ptsValidated = data.pointagesValidated || 0
+      // L'API Go retourne directement l'objet PaiementHebdo mis à jour
+      // (pas de wrapper `{ paiement, pointagesValidated }`).
+      const newStatut = data.statut
 
       if (newStatut === 'VALIDE') {
         toast.success(
-          `Paiement validé ! ${ptsValidated} pointage(s) marqué(s) comme validé(s).`
+          `Paiement validé !`
         )
       } else {
         toast.warning(
-          `Paiement partiel (${fmtCurrency(montant)} / ${fmtCurrency(editingPaiement.montantCalcule)}). ${ptsValidated} pointage(s) validé(s).`
+          `Paiement partiel (${fmtCurrency(montant)} / ${fmtCurrency(editingPaiement.montantCalcule)}).`
         )
       }
 
@@ -559,23 +564,13 @@ export function PaieView() {
   }
 
   // ── Open detail dialog ──────────────────────────────
+  // L'API Go n'expose pas de GET par ID pour les paiements hebdo.
+  // On se contente d'afficher les données déjà présentes dans la liste.
   async function openDetailDialog(paiement: PaiementHebdo) {
     setDetailPaiement(paiement)
     setDetailPointages([])
     setDetailOpen(true)
-    setLoadingDetail(true)
-
-    try {
-      const res = await fetch(`/api/v1/paie/${paiement.id}`)
-      if (res.ok) {
-        const data = await res.json()
-        setDetailPointages(data.pointages || [])
-      }
-    } catch {
-      toast.error('Erreur lors du chargement du détail')
-    } finally {
-      setLoadingDetail(false)
-    }
+    setLoadingDetail(false)
   }
 
   // ── Open delete dialog ──────────────────────────────
@@ -585,29 +580,14 @@ export function PaieView() {
   }
 
   // ── Delete payment ──────────────────────────────────
+  // ⚠️ L'API Go n'expose pas de DELETE sur /paie/paiements-hebdo/{id}.
+  // On désactive la suppression côté frontend avec un message clair.
   async function handleDelete() {
     if (!deletingPaiement) return
-
-    setDeleting(true)
-    try {
-      // TODO: no DELETE endpoint backend for paiements-hebdo
-      const res = await fetch(`/api/v1/paie/${deletingPaiement.id}`, {
-        method: 'DELETE',
-      })
-
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Erreur lors de la suppression')
-      }
-
-      toast.success('Paiement supprimé avec succès')
-      setDeleteOpen(false)
-      loadPaiements()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression')
-    } finally {
-      setDeleting(false)
-    }
+    toast.error(
+      'La suppression des paiements hebdo n\'est pas supportée par l\'API actuelle.'
+    )
+    setDeleteOpen(false)
   }
 
   // ── Computed: Filtered paiements ────────────────────
@@ -646,7 +626,9 @@ export function PaieView() {
       const res = await fetch(`/api/v1/paie/salaires?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
-        setSalaires(data.salaires || [])
+        // L'API Go retourne `{ data: [...], total, page, pageSize }` (et non
+        // `{ salaires: [...], kpi: {...} }`).
+        setSalaires(data.data || [])
         setSalKpi(data.kpi || {
           totalSalaires: 0, enAttente: 0, payes: 0, partiel: 0, masseTotale: 0, massePayee: 0,
         })
@@ -667,11 +649,29 @@ export function PaieView() {
   async function handleSalGenerate() {
     setSalGenerating(true)
     try {
-      const body: { mois: number; annee: number; chantierId?: string } = {
+      const body: {
+        mois: number
+        annee: number
+        chantierId?: string
+        journalierId?: string
+      } = {
         mois: salMois,
         annee: salAnnee,
       }
       if (chantierId) body.chantierId = chantierId
+
+      // L'API Go POST /api/v1/paie/salaires/generate attend un payload
+      // par journalier `{ journalierId, mois, annee, salaireBase, ... }` et
+      // retourne l'objet SalaireMensuel créé. Le frontend n'ayant pas les
+      // inputs détaillés, on signale que la génération en masse n'est pas
+      // supportée — l'utilisateur devra utiliser le bouton d'édition.
+      if (!body.journalierId) {
+        toast.info(
+          'La génération en masse des salaires n\'est pas encore supportée par l\'API. Utilisez le bouton "Éditer" sur une fiche existante.'
+        )
+        setSalGenerating(false)
+        return
+      }
 
       const res = await fetch('/api/v1/paie/salaires/generate', {
         method: 'POST',
@@ -685,13 +685,9 @@ export function PaieView() {
       }
 
       const data = await res.json()
-      const created = data.created || 0
-      const skipped = data.skipped || 0
-
-      if (created > 0) {
-        toast.success(`${created} fiche(s) de salaire générée(s) avec succès !`)
-      } else if (skipped > 0) {
-        toast.info(`${skipped} fiche(s) existante(s) — aucun changement.`)
+      // L'API retourne directement l'objet SalaireMensuel créé.
+      if (data.id) {
+        toast.success(`Fiche de salaire générée avec succès !`)
       } else {
         toast.info(data.message || 'Aucun employé éligible trouvé.')
       }
@@ -807,23 +803,14 @@ export function PaieView() {
   }
 
   // ── Delete salaire ──────────────────────────────────
+  // ⚠️ L'API Go n'expose pas de DELETE sur /paie/salaires/{id}.
+  // On désactive la suppression côté frontend avec un message clair.
   async function handleSalDelete() {
     if (!salDeleteItem) return
-    setSalDeleting(true)
-    try {
-      const res = await fetch(`/api/v1/paie/salaires/${salDeleteItem.id}`, { method: 'DELETE' })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Erreur lors de la suppression')
-      }
-      toast.success('Fiche de salaire supprimée')
-      setSalDeleteOpen(false)
-      loadSalaires()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression')
-    } finally {
-      setSalDeleting(false)
-    }
+    toast.error(
+      'La suppression des fiches de salaire n\'est pas supportée par l\'API actuelle.'
+    )
+    setSalDeleteOpen(false)
   }
 
   // ── Computed: filtered salaires ─────────────────────
@@ -1049,16 +1036,16 @@ export function PaieView() {
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold shrink-0">
-                                  {p.journalier.prenom[0]}
-                                  {p.journalier.nom[0]}
+                                  {p.journalier?.prenom?.[0] || '?'}
+                                  {p.journalier?.nom?.[0] || ''}
                                 </div>
                                 <div className="min-w-0">
                                   <p className="text-[15px] font-medium truncate">
-                                    {p.journalier.prenom} {p.journalier.nom}
+                                    {p.journalier ? `${p.journalier.prenom} ${p.journalier.nom}` : (p.journalierId || 'Inconnu')}
                                   </p>
-                                  {p.journalier.specialite && (
+                                  {p.journalier?.specialite && (
                                     <p className="text-sm text-muted-foreground truncate">
-                                      {p.journalier.specialite}
+                                  {p.journalier?.specialite}
                                     </p>
                                   )}
                                 </div>
@@ -1202,7 +1189,7 @@ export function PaieView() {
                     <>
                       Confirmez le paiement de{' '}
                       <strong>
-                        {editingPaiement.journalier.prenom} {editingPaiement.journalier.nom}
+                        {editingPaiement.journalier ? `${editingPaiement.journalier.prenom} ${editingPaiement.journalier.nom}` : (editingPaiement.journalierId || 'Inconnu')}
                       </strong>{' '}
                       — Montant calculé : <strong>{fmtCurrency(editingPaiement.montantCalcule)}</strong>
                     </>
@@ -1322,7 +1309,7 @@ export function PaieView() {
                   {detailPaiement && (
                     <>
                       <strong>
-                        {detailPaiement.journalier.prenom} {detailPaiement.journalier.nom}
+                        {detailPaiement.journalier ? `${detailPaiement.journalier.prenom} ${detailPaiement.journalier.nom}` : (detailPaiement.journalierId || 'Inconnu')}
                       </strong>{' '}
                       — Semaine du {fmtDateShort(detailPaiement.semaineDebut)} au{' '}
                       {fmtDateShort(detailPaiement.semaineFin)}
@@ -1459,7 +1446,7 @@ export function PaieView() {
                     <>
                       Êtes-vous sûr de vouloir supprimer le paiement de{' '}
                       <strong>
-                        {deletingPaiement.journalier.prenom} {deletingPaiement.journalier.nom}
+                        {deletingPaiement.journalier ? `${deletingPaiement.journalier.prenom} ${deletingPaiement.journalier.nom}` : (deletingPaiement.journalierId || 'Inconnu')}
                       </strong>{' '}
                       ({fmtCurrency(deletingPaiement.montantCalcule)}) ?
                       {deletingPaiement.statut !== 'EN_ATTENTE' && (
@@ -1669,20 +1656,20 @@ export function PaieView() {
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold shrink-0">
-                                  {sal.journalier.prenom[0]}
-                                  {sal.journalier.nom[0]}
+                                  {sal.journalier?.prenom?.[0] || '?'}
+                                  {sal.journalier?.nom?.[0] || ''}
                                 </div>
                                 <div className="min-w-0">
                                   <p className="text-[15px] font-medium truncate">
-                                    {sal.journalier.prenom} {sal.journalier.nom}
+                                    {sal.journalier ? `${sal.journalier.prenom} ${sal.journalier.nom}` : (sal.journalierId || 'Inconnu')}
                                   </p>
                                   <div className="flex items-center gap-1.5">
-                                    {sal.journalier.specialite && (
+                                    {sal.journalier?.specialite && (
                                       <span className="text-sm text-muted-foreground truncate">
                                         {sal.journalier.specialite}
                                       </span>
                                     )}
-                                    {sal.journalier.typeContrat && (
+                                    {sal.journalier?.typeContrat && (
                                       <Badge
                                         variant="outline"
                                         className={`text-[10px] px-1.5 py-0 ${
@@ -1699,7 +1686,7 @@ export function PaieView() {
 
                             {/* Poste */}
                             <TableCell className="text-[15px] text-muted-foreground">
-                              {sal.journalier.poste || sal.journalier.departement || '—'}
+                              {sal.journalier?.poste || sal.journalier?.departement || '—'}
                             </TableCell>
 
                             {/* Salaire base */}
@@ -1834,7 +1821,9 @@ export function PaieView() {
                   {salEditItem && (
                     <>
                       <strong>
-                        {salEditItem.journalier.prenom} {salEditItem.journalier.nom}
+                        {salEditItem.journalier
+                          ? `${salEditItem.journalier.prenom} ${salEditItem.journalier.nom}`
+                          : (salEditItem.journalierId || 'Inconnu')}
                       </strong>{' '}
                       — {MOIS_NAMES[salEditItem.mois - 1]} {salEditItem.annee}
                     </>
@@ -2048,7 +2037,9 @@ export function PaieView() {
                     <>
                       Confirmez le paiement de{' '}
                       <strong>
-                        {salValidateItem.journalier.prenom} {salValidateItem.journalier.nom}
+                        {salValidateItem.journalier
+                          ? `${salValidateItem.journalier.prenom} ${salValidateItem.journalier.nom}`
+                          : (salValidateItem.journalierId || 'Inconnu')}
                       </strong>{' '}
                       — Net à payer : <strong>{fmtCurrency(salValidateItem.netAPayer)}</strong>
                     </>
@@ -2171,7 +2162,9 @@ export function PaieView() {
                     <>
                       Êtes-vous sûr de vouloir supprimer la fiche de salaire de{' '}
                       <strong>
-                        {salDeleteItem.journalier.prenom} {salDeleteItem.journalier.nom}
+                        {salDeleteItem.journalier
+                          ? `${salDeleteItem.journalier.prenom} ${salDeleteItem.journalier.nom}`
+                          : (salDeleteItem.journalierId || 'Inconnu')}
                       </strong>{' '}
                       ({MOIS_NAMES[salDeleteItem.mois - 1]} {salDeleteItem.annee}, {fmtCurrency(salDeleteItem.netAPayer)}) ?
                       {salDeleteItem.statut !== 'EN_ATTENTE' && (
